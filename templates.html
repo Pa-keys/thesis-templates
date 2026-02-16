@@ -39,8 +39,8 @@
             <input type="text" id="religion" placeholder="Religion" required>
             <input type="text" id="birthday" placeholder="Birthday" required>
             <input type="text" id="birthPlace" placeholder="Birth Place" required>
-            <input type="text" id="address" placeholder="Adress" required>
-            <input type="number" id="contactNumber" placeholder="Contact Number" required>
+            <input type="text" id="address" placeholder="Address" required>
+            <input type="tel" id="contactNumber" placeholder="09XXXXXXXXX" pattern="[0-9]*">
             <input type="text" id="educationalAttain" placeholder="Educational Attainment" required>
             <input type="text" id="employmentStatus" placeholder="Employment Status" required>
 
@@ -53,7 +53,8 @@
     </div>
 
     <div class="table-container">
-        <h3>Current Patient List</h3>
+    <h3>Current Patient List</h3>
+    <input type="text" id="searchInput" placeholder="Search by name (First, Middle, or Last)..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
         <table>
             <thead>
                 <tr>
