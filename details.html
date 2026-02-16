@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Full Profile</title>
+    <link rel="stylesheet" href="template.css">
+</head>
+<body>
+    <div class="form-container">
+        <button onclick="window.location.href='templates.html'">← Back to List</button>
+        <h2 id="fullName">Patient Profile</h2>
+        <hr>
+        <div id="fullDetails">
+            </div>
+    </div>
+
+    <script>
+        // Get the ID from the URL (?id=X)
+        const urlParams = new URLSearchParams(window.location.search);
+        const patientId = urlParams.get('id');
+        const records = JSON.parse(localStorage.getItem('patientRecords')) || [];
+        const patient = records[patientId];
+
+        if (patient) {
+            document.getElementById('fullName').innerText = `${patient.firstName} ${patient.lastName}`;
+            
+            const detailsDiv = document.getElementById('fullDetails');
+            detailsDiv.innerHTML = `
+                <p><strong>Last Name:</strong> ${patient.lastName}</p>
+                <p><strong>First Name:</strong> ${patient.firstName}</p>
+                <p><strong>Middle Name:</strong> ${patient.middleName}</p>
+                <p><strong>Age:</strong> ${patient.age}</p>
+                <p><strong>Sex:</strong> ${patient.sex}</p>
+                <p><strong>Blood Type:</strong> ${patient.bloodType}</p>
+                <p><strong>Birthday:</strong> ${patient.birthday}</p>
+                <p><strong>Address:</strong> ${patient.address}</p>
+                <p><strong>Contact:</strong> ${patient.contactNumber}</p>
+                <p><strong>Nationality:</strong> ${patient.nationality}</p>
+                <p><strong>Birthplace:</strong> ${patient.birthPlace}</p>
+                <p><strong>Educational Attainment:</strong> ${patient.educationalAttain}</p>
+                <p><strong>Employment Status:</strong> ${patient.employmentStatus}</p>
+                <p><strong>Relative:</strong> ${patient.relativeName} (${patient.relativeRelation})</p>
+            `;
+        } else {
+            document.body.innerHTML = "<h1>Patient not found</h1>";
+        }
+    </script>
+</body>
+</html>
