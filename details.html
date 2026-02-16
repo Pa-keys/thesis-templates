@@ -2,48 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Patient Full Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Full Profile | MediSens</title>
     <link rel="stylesheet" href="template.css">
 </head>
 <body>
+
     <div class="form-container">
-        <button onclick="window.location.href='templates.html'">← Back to List</button>
-        <h2 id="fullName">Patient Profile</h2>
+        <div class="button-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button onclick="window.location.href='templates.html'">← Back</button>
+            <button id="editBtn" onclick="toggleEdit()">Edit Record</button>
+            <button id="deleteBtn" style="background-color: #e53e3e; color: white;">Delete Record</button>
+        </div>
+
+        <h2 id="fullNameTitle">Patient Profile</h2>
         <hr>
+
         <div id="fullDetails">
             </div>
+
+        <form id="editForm" style="display: none;">
+            <h3>Edit Patient Information</h3>
+            
+            <label>First Name</label>
+            <input type="text" id="editFN" required>
+            
+            <label>Middle Name</label>
+            <input type="text" id="editMN" required>
+            
+            <label>Last Name</label>
+            <input type="text" id="editLN" required>
+            
+            <label>Age</label>
+            <input type="number" id="editAge" required>
+
+            <label>Address</label>
+            <input type="text" id="editAddress" required>
+
+            <label>Contact Number</label>
+            <input type="number" id="editContact" required>
+
+            <label>Blood Type</label>
+            <select id="editBlood">
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+            </select>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="submit" style="background-color: #38a169; color: white;">Save Changes</button>
+                <button type="button" onclick="toggleEdit()">Cancel</button>
+            </div>
+        </form>
     </div>
 
-    <script>
-        // Get the ID from the URL (?id=X)
-        const urlParams = new URLSearchParams(window.location.search);
-        const patientId = urlParams.get('id');
-        const records = JSON.parse(localStorage.getItem('patientRecords')) || [];
-        const patient = records[patientId];
-
-        if (patient) {
-            document.getElementById('fullName').innerText = `${patient.firstName} ${patient.lastName}`;
-            
-            const detailsDiv = document.getElementById('fullDetails');
-            detailsDiv.innerHTML = `
-                <p><strong>Last Name:</strong> ${patient.lastName}</p>
-                <p><strong>First Name:</strong> ${patient.firstName}</p>
-                <p><strong>Middle Name:</strong> ${patient.middleName}</p>
-                <p><strong>Age:</strong> ${patient.age}</p>
-                <p><strong>Sex:</strong> ${patient.sex}</p>
-                <p><strong>Blood Type:</strong> ${patient.bloodType}</p>
-                <p><strong>Birthday:</strong> ${patient.birthday}</p>
-                <p><strong>Address:</strong> ${patient.address}</p>
-                <p><strong>Contact:</strong> ${patient.contactNumber}</p>
-                <p><strong>Nationality:</strong> ${patient.nationality}</p>
-                <p><strong>Birthplace:</strong> ${patient.birthPlace}</p>
-                <p><strong>Educational Attainment:</strong> ${patient.educationalAttain}</p>
-                <p><strong>Employment Status:</strong> ${patient.employmentStatus}</p>
-                <p><strong>Relative:</strong> ${patient.relativeName} (${patient.relativeRelation})</p>
-            `;
-        } else {
-            document.body.innerHTML = "<h1>Patient not found</h1>";
-        }
-    </script>
+    <script src="details.js"></script>
 </body>
 </html>
