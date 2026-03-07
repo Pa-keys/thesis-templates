@@ -1,0 +1,21 @@
+{
+  "name": "crud-feature",
+  "version": "1.0.0",
+  "main": "details.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

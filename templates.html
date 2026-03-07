@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="module" src="templates.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Patient Registration</title>
+    <link rel="stylesheet" href="template.css">
+    <style>
+        .topbar {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .topbar span {
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .logout-btn {
+            background-color: #e53e3e;
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            width: auto;
+        }
+        .logout-btn:hover { background-color: #c53030; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <span id="userEmail">Loading...</span>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+
+    <div class="form-container">
+        <h2>Patient Registration</h2>
+        <form id="patientForm">
+            <input type="text" id="firstName" placeholder="First Name" required>
+            <input type="text" id="middleName" placeholder="Middle Name" required>
+            <input type="text" id="lastName" placeholder="Last Name" required>
+            <input type="number" id="age" placeholder="Age" required>
+            
+            <div class="radio-section">
+                <label>Sex:</label>
+                <input type="radio" name="sex" value="Male" id="male" required> Male
+                <input type="radio" name="sex" value="Female" id="female" required> Female
+            </div>
+
+            <input type="text" id="nationality" placeholder="Nationality" required>
+
+            <select id="bloodType" required>
+                <option value="" disabled selected>Select Blood Type</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+            </select>
+
+            <input type="text" id="religion" placeholder="Religion" required>
+            <input type="date" id="birthday" required> 
+            <input type="text" id="birthPlace" placeholder="Birth Place" required>
+            <input type="text" id="address" placeholder="Address" required>
+            <input type="tel" id="contactNumber" placeholder="09XXXXXXXXX" pattern="[0-9]*">
+            <input type="text" id="educationalAttain" placeholder="Educational Attainment" required>
+            <input type="text" id="employmentStatus" placeholder="Employment Status" required>
+
+            <input type="text" id="relativeName" placeholder="Relative's Name">
+            <input type="text" id="relativeRelation" placeholder="Relative Relationship">
+            <input type="text" id="relativeAddress" placeholder="Relative Address">
+
+            <button type="submit" id="saveBtn">Save Record</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <h3>Current Patient List</h3>
+        <input type="text" id="searchInput" placeholder="Search by name..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>Age</th>
+                    <th>Sex</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+</body>
+</html>
