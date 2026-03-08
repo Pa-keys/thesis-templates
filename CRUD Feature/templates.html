@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediSens | Patient Registration</title>
     <link rel="stylesheet" href="template.css">
 </head>
+
 <body>
 
     <div class="form-container">
@@ -15,7 +17,7 @@
             <input type="text" id="middleName" placeholder="Middle Name" required>
             <input type="text" id="lastName" placeholder="Last Name" required>
             <input type="number" id="age" placeholder="Age" required>
-            
+
             <div class="radio-section">
                 <label>Sex:</label>
                 <input type="radio" name="sex" value="Male" id="male" required> Male
@@ -53,8 +55,9 @@
     </div>
 
     <div class="table-container">
-    <h3>Current Patient List</h3>
-    <input type="text" id="searchInput" placeholder="Search by name (First, Middle, or Last)..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+        <h3>Current Patient List</h3>
+        <input type="text" id="searchInput" placeholder="Search by name (First, Middle, or Last)..."
+            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
         <table>
             <thead>
                 <tr>
@@ -70,4 +73,5 @@
 
     <script src="templates.js"></script>
 </body>
+
 </html>
