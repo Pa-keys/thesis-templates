@@ -16,7 +16,7 @@ if (patient) {
 // 1. DISPLAY FULL INFORMATION (View Mode)
 function renderView() {
     document.getElementById('fullNameTitle').innerText = `${patient.firstName} ${patient.lastName}`;
-    
+
     detailsDiv.innerHTML = `
         <div class="profile-section">
             <h3>Personal Information</h3>
@@ -40,15 +40,27 @@ function renderView() {
     `;
 }
 
-// 2. PRE-FILL EDIT FORM (Crucial for showing existing data)
 function prefillForm() {
     document.getElementById('editFN').value = patient.firstName || "";
     document.getElementById('editMN').value = patient.middleName || "";
     document.getElementById('editLN').value = patient.lastName || "";
     document.getElementById('editAge').value = patient.age || "";
     document.getElementById('editAddress').value = patient.address || "";
-    // THIS LINE FIXES THE CONTACT NUMBER ISSUE
     document.getElementById('editContact').value = patient.contactNumber || "";
+
+    document.getElementById('editBlood').value = patient.bloodType || "O+";
+
+    if (patient.sex === "Male") document.getElementById('male').checked = true;
+    if (patient.sex === "Female") document.getElementById('female').checked = true;
+
+    document.getElementById('editReligion').value = patient.religion || "";
+    document.getElementById('editBirthday').value = patient.birthday || "";
+    document.getElementById('editBirthPlace').value = patient.birthPlace || "";
+    document.getElementById('editEducationalAttain').value = patient.educationalAttain || "";
+    document.getElementById('editEmploymentStatus').value = patient.employmentStatus || "";
+    document.getElementById('editRelativeName').value = patient.relativeName || "";
+    document.getElementById('editRelativeRelation').value = patient.relativeRelation || "";
+    document.getElementById('editRelativeAddress').value = patient.relativeAddress || "";
 }
 
 function toggleEdit() {
@@ -58,24 +70,36 @@ function toggleEdit() {
     document.getElementById('editBtn').innerText = isViewing ? "Cancel Editing" : "Edit Record";
 }
 
-// 3. SAVE UPDATED DATA
 form.addEventListener('submit', (e) => {
     e.preventDefault();
-    
-    // Update the record with new values
-    records[patientId].firstName = document.getElementById('editFN').value;
-    records[patientId].middleName = document.getElementById('editMN').value;
-    records[patientId].lastName = document.getElementById('editLN').value;
-    records[patientId].age = document.getElementById('editAge').value;
-    records[patientId].address = document.getElementById('editAddress').value;
-    records[patientId].contactNumber = document.getElementById('editContact').value;
+
+    const selectedSex = document.querySelector('input[name="sex"]:checked').value;
+
+    records[patientId] = {
+        ...records[patientId],
+        firstName: document.getElementById('editFN').value,
+        middleName: document.getElementById('editMN').value,
+        lastName: document.getElementById('editLN').value,
+        age: document.getElementById('editAge').value,
+        address: document.getElementById('editAddress').value,
+        contactNumber: document.getElementById('editContact').value,
+        sex: selectedSex,
+        bloodType: document.getElementById('editBlood').value,
+        religion: document.getElementById('editReligion').value,
+        birthday: document.getElementById('editBirthday').value,
+        birthPlace: document.getElementById('editBirthPlace').value,
+        educationalAttain: document.getElementById('editEducationalAttain').value,
+        employmentStatus: document.getElementById('editEmploymentStatus').value,
+        relativeName: document.getElementById('editRelativeName').value,
+        relativeRelation: document.getElementById('editRelativeRelation').value,
+        relativeAddress: document.getElementById('editRelativeAddress').value
+    };
 
     localStorage.setItem('patientRecords', JSON.stringify(records));
     alert("Record Updated Successfully!");
-    location.reload(); 
+    location.reload();
 });
 
-// 4. DELETE LOGIC
 document.getElementById('deleteBtn').onclick = () => {
     if (confirm("Permanently delete this record?")) {
         records.splice(patientId, 1);
