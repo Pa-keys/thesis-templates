@@ -1,14 +1,14 @@
-import { supabase } from './shared/supabase';
+import { supabase } from '../shared/supabase';
 
 type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
-    doctor:     'doctor.html',
-    nurse:      'nurse.html',
-    BHW:        'bhw.html',
-    pharmacist: 'pharmacist.html',
-    labaratory: 'laboratory.html',
-    admin:      'admin.html',
+    doctor:     '/pages/doctor.html',
+    nurse:      '/pages/nurse.html',
+    BHW:        '/pages/bhw.html',
+    pharmacist: '/pages/pharmacist.html',
+    labaratory: '/pages/laboratory.html',
+    admin:      '/pages/admin.html',
 };
 
 // If already logged in, redirect immediately
@@ -86,7 +86,6 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') (window as any).handleLogin();
 });
 
-// Extend window type for handleLogin
 declare global {
     interface Window {
         handleLogin: () => Promise<void>;

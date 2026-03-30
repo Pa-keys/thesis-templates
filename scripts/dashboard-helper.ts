@@ -1,5 +1,5 @@
-import { supabase } from './shared/supabase';
-import { requireRole, logout } from './shared/auth';
+import { supabase } from '../shared/supabase';
+import { requireRole, logout } from '../shared/auth';
 
 interface Patient { id: string; firstName: string; lastName: string; age: number | null; sex: string; bloodType: string; contactNumber: string; }
 

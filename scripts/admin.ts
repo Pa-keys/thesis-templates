@@ -1,6 +1,6 @@
-import { supabase } from './shared/supabase';
-import { requireRole, logout } from './shared/auth';
-import { initDashboard } from './shared/dashboard-helper';
+import { supabase } from '../shared/supabase';
+import { requireRole, logout } from '../shared/auth';
+import { initDashboard } from '../scripts/dashboard-helper';
 
 // Load users for admin panel
 async function loadUsers(): Promise<void> {

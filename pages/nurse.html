@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediSens | BHW Dashboard</title>
-    <link rel="stylesheet" href="dashboard.css">
+    <title>MediSens | Nurse Dashboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
 </head>
 <body>
 
@@ -19,7 +19,7 @@
         </div>
     </div>
     <div class="nav-group-label">Main Menu</div>
-    <a class="nav-item active" href="bhw.html"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a class="nav-item active" href="nurse.html"><span class="nav-icon">🏠</span> Dashboard</a>
     <a class="nav-item" href="templates.html"><span class="nav-icon">📁</span> Records</a>
     <a class="nav-item" href="templates.html"><span class="nav-icon">➕</span> New Record</a>
     
@@ -28,10 +28,10 @@
     <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
     <div class="sidebar-bottom">
         <div class="user-card">
-            <div class="user-av av-coral" id="sidebarAv">?</div>
+            <div class="user-av av-green" id="sidebarAv">?</div>
             <div class="user-info">
                 <div class="user-name" id="sidebarName">Loading...</div>
-                <div class="user-role">Barangay Health Worker</div>
+                <div class="user-role">Nurse</div>
             </div>
             <button class="logout-icon-btn" id="logoutBtn" title="Sign out">⇥</button>
         </div>
@@ -46,9 +46,9 @@
             <div class="topbar-user-wrap">
                 <div class="topbar-user-text">
                     <div class="topbar-user-name" id="topbarName">Loading...</div>
-                    <div class="topbar-user-role">Barangay Health Worker</div>
+                    <div class="topbar-user-role">Nurse</div>
                 </div>
-                <div class="topbar-av av-coral" id="topbarAv">?</div>
+                <div class="topbar-av av-green" id="topbarAv">?</div>
             </div>
         </div>
     </div>
@@ -83,10 +83,10 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon-wrap si-green">📍</div>
+                <div class="stat-icon-wrap si-green">💊</div>
                 <div class="stat-body">
-                    <div class="stat-label">With Address</div>
-                    <div class="stat-val" id="withAddress">—</div>
+                    <div class="stat-label">Vitals Taken</div>
+                    <div class="stat-val" id="vitalsCount">—</div>
                 </div>
             </div>
         </div>
@@ -95,8 +95,8 @@
             <div class="card">
                 <div class="card-hd">
                     <div>
-                        <div class="card-title">New Intake Queue</div>
-                        <div class="card-sub">Waiting for registration</div>
+                        <div class="card-title">Patient Queue</div>
+                        <div class="card-sub">Waiting for vitals</div>
                     </div>
                     <span style="background:var(--blue);color:white;border-radius:20px;padding:3px 11px;font-size:0.75rem;font-weight:700;" id="queueCount">0</span>
                 </div>
@@ -146,6 +146,6 @@
     </div>
 </div>
 
-<script type="module" src="bhw.ts"></script>
+<script type="module" src="../scripts/nurse.ts"></script>
 </body>
 </html>
