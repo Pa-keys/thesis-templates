@@ -22,6 +22,10 @@ interface PatientForm {
     contactNumber: string;
     educationalAttain: string;
     employmentStatus: string;
+    philhealthNo: string;
+    philhealthStatus: string;
+    category: string;
+    categoryOthers: string;
     relativeName: string;
     relativeRelation: string;
     relativeAddress: string;
@@ -39,10 +43,21 @@ const EMPTY_FORM: PatientForm = {
     nationality: '', bloodType: '', religion: '',
     birthday: '', birthPlace: '', address: '',
     contactNumber: '', educationalAttain: '', employmentStatus: '',
+    philhealthNo: '', philhealthStatus: '', category: '', categoryOthers: '',
     relativeName: '', relativeRelation: '', relativeAddress: '',
 };
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as const;
+
+const EDUCATION_LEVELS = [
+    'No Formal Education', 'Elementary Level', 'Elementary Graduate',
+    'High School Level', 'High School Graduate', 'Vocational',
+    'College Level', 'College Graduate', 'Post-Graduate'
+] as const;
+
+const EMPLOYMENT_STATUSES = [
+    'Employed', 'Unemployed', 'Self-Employed', 'Student', 'Retired'
+] as const;
 
 const searchInputStyle: React.CSSProperties = {
     width: '100%',
@@ -93,14 +108,20 @@ function Templates() {
         if (session) fetchAndDisplayRecords();
     }, [session, fetchAndDisplayRecords]);
 
-    // 4. Handle form input
+    // 4. Handle form inputs
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         const { id, value } = e.target;
         setForm(f => ({ ...f, [id]: value }));
     };
 
-    const handleSex = (e: React.ChangeEvent<HTMLInputElement>): void => {
-        setForm(f => ({ ...f, sex: e.target.value }));
+    const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+        const { name, value } = e.target;
+        setForm(f => ({ ...f, [name]: value }));
+        
+        // Clear 'Others' text input if 4Ps is selected to prevent stale data
+        if (name === 'category' && value === '4Ps') {
+            setForm(f => ({ ...f, categoryOthers: '' }));
+        }
     };
 
     // 5. Save new record
@@ -140,8 +161,8 @@ function Templates() {
 
                     <div className="radio-section">
                         <label>Sex:</label>
-                        <input type="radio" name="sex" value="Male" checked={form.sex === 'Male'} onChange={handleSex} required /> Male
-                        <input type="radio" name="sex" value="Female" checked={form.sex === 'Female'} onChange={handleSex} required /> Female
+                        <input type="radio" name="sex" value="Male" checked={form.sex === 'Male'} onChange={handleRadioChange} required /> Male
+                        <input type="radio" name="sex" value="Female" checked={form.sex === 'Female'} onChange={handleRadioChange} required /> Female
                     </div>
 
                     <input type="text" id="nationality" placeholder="Nationality" value={form.nationality} onChange={handleChange} required />
@@ -158,8 +179,54 @@ function Templates() {
                     <input type="text" id="birthPlace" placeholder="Birth Place" value={form.birthPlace} onChange={handleChange} required />
                     <input type="text" id="address" placeholder="Address" value={form.address} onChange={handleChange} required />
                     <input type="tel" id="contactNumber" placeholder="09XXXXXXXXX" value={form.contactNumber} onChange={handleChange} pattern="[0-9]*" />
-                    <input type="text" id="educationalAttain" placeholder="Educational Attainment" value={form.educationalAttain} onChange={handleChange} required />
-                    <input type="text" id="employmentStatus" placeholder="Employment Status" value={form.employmentStatus} onChange={handleChange} required />
+                    
+                    <select id="educationalAttain" value={form.educationalAttain} onChange={handleChange} required>
+                        <option value="" disabled>Select Educational Attainment</option>
+                        {EDUCATION_LEVELS.map(level => (
+                            <option key={level} value={level}>{level}</option>
+                        ))}
+                    </select>
+
+                    <select id="employmentStatus" value={form.employmentStatus} onChange={handleChange} required>
+                        <option value="" disabled>Select Employment Status</option>
+                        {EMPLOYMENT_STATUSES.map(status => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+
+                    <hr style={{ margin: '20px 0' }} />
+                    <h4>PhilHealth & Categorization</h4>
+
+                    <input type="text" id="philhealthNo" placeholder="PHILHEALTH NO." value={form.philhealthNo} onChange={handleChange} />
+
+                    <div className="radio-section">
+                        <label>Status:</label>
+                        <input type="radio" name="philhealthStatus" value="MEMBER" checked={form.philhealthStatus === 'MEMBER'} onChange={handleRadioChange} /> MEMBER
+                        <input type="radio" name="philhealthStatus" value="DEPENDENT" checked={form.philhealthStatus === 'DEPENDENT'} onChange={handleRadioChange} /> DEPENDENT
+                        <input type="radio" name="philhealthStatus" value="NONE" checked={form.philhealthStatus === 'NONE'} onChange={handleRadioChange} /> NONE
+                    </div>
+
+                    <div className="radio-section" style={{ alignItems: 'flex-start' }}>
+                        <label>Category:</label>
+                        <input type="radio" name="category" value="4Ps" checked={form.category === '4Ps'} onChange={handleRadioChange} /> 4Ps
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <input type="radio" name="category" value="Other/s" checked={form.category === 'Other/s'} onChange={handleRadioChange} /> Other/s
+                            {form.category === 'Other/s' && (
+                                <input 
+                                    type="text" 
+                                    id="categoryOthers" 
+                                    placeholder="Please specify" 
+                                    value={form.categoryOthers} 
+                                    onChange={handleChange} 
+                                    style={{ margin: 0, padding: '5px', width: '200px' }} 
+                                    required 
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <hr style={{ margin: '20px 0' }} />
+                    <h4>Emergency Contact</h4>
 
                     <input type="text" id="relativeName" placeholder="Relative's Name" value={form.relativeName} onChange={handleChange} />
                     <input type="text" id="relativeRelation" placeholder="Relative Relationship" value={form.relativeRelation} onChange={handleChange} />
