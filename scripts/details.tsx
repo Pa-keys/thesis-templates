@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { createClient } from '@supabase/supabase-js';
+import PatientConsent from './patient_consent'; 
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -82,6 +83,7 @@ function Details() {
         philhealthNo: '', philhealthStatus: '', category: '', categoryOthers: '',
         relativeName: '', relativeRelation: '', relativeAddress: ''
     });
+    const [showConsentForm, setShowConsentForm] = useState<boolean>(false);
 
     // 1. Load patient on mount
     useEffect(() => {
@@ -241,7 +243,7 @@ function Details() {
             )}
 
             {/* Read-only view */}
-            {patient && !editing && (
+            {patient && !editing && !showConsentForm && (
                 <>
                     <h2 id="fullNameTitle">{patient.firstName} {patient.lastName}</h2>
                     <hr />
@@ -274,7 +276,38 @@ function Details() {
                             <p><strong>Relative Address:</strong> {patient.relativeAddress || 'N/A'}</p>
                         </div>
                     </div>
+                    
+                    {/* NEW: Button to open the consent form */}
+                    <div style={{ marginTop: '20px' }}>
+                        <button 
+                            onClick={() => setShowConsentForm(true)} 
+                            style={{ backgroundColor: '#2b6cb0', color: 'white', width: '100%', padding: '12px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
+                        >
+                            Proceed to Patient Consent →
+                        </button>
+                    </div>
                 </>
+            )}
+
+            {/* NEW: Render the Consent Form when the button is clicked */}
+            {patient && !editing && showConsentForm && (
+                <div>
+                    <button 
+                        onClick={() => setShowConsentForm(false)} 
+                        style={{ marginBottom: '15px', backgroundColor: '#718096', color: 'white', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+                    >
+                        ← Back to Details
+                    </button>
+                    <PatientConsent 
+                        patientId={patient.id} 
+                        patientName={`${patient.firstName} ${patient.lastName}`}
+                        onConsentSaved={() => {
+                            setShowConsentForm(false);
+                            // Refresh patient data to reflect new consent status if needed
+                            loadPatient(); 
+                        }}
+                    />
+                </div>
             )}
 
             {/* Edit form */}

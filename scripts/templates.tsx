@@ -98,8 +98,7 @@ function Templates() {
         if (error) { console.error('Error fetching:', error.message); return; }
 
         const searchLower = filterText.toLowerCase();
-        const filtered = (records as Patient[]).filter(({ firstName = '', middleName = '', lastName = '' }) =>
-            `${firstName} ${middleName} ${lastName}`.toLowerCase().includes(searchLower)
+        const filtered = (records as Patient[]).filter(({ firstName = '', middleName = '', lastName = '' }: Patient) =>            `${firstName} ${middleName} ${lastName}`.toLowerCase().includes(searchLower)
         );
         setPatients(filtered);
     }, []);
