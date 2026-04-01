@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Laboratory Dashboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-mark">
+            <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/><path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/></svg>
+        </div>
+        <div class="logo-text">
+            <div class="l-name">MediSens</div>
+            <div class="l-sub">Rural Health Unit</div>
+        </div>
+    </div>
+    <div class="nav-group-label">Main Menu</div>
+    <a class="nav-item active" href="laboratory.html"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a class="nav-item" href="templates.html"><span class="nav-icon">📁</span> Records</a>
+    
+    
+    
+    <div class="nav-group-label">System</div>
+    <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
+    <div class="sidebar-bottom">
+        <div class="user-card">
+            <div class="user-av av-indigo" id="sidebarAv">?</div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarName">Loading...</div>
+                <div class="user-role">Laboratory</div>
+            </div>
+            <button class="logout-icon-btn" id="logoutBtn" title="Sign out">⇥</button>
+        </div>
+    </div>
+</aside>
+
+<div class="main">
+    <div class="topbar">
+        <div class="topbar-left"><div class="topbar-page">Dashboard</div></div>
+        <div class="topbar-right">
+            <div class="online-pill"><div class="pulse-dot"></div>System Online</div>
+            <div class="topbar-user-wrap">
+                <div class="topbar-user-text">
+                    <div class="topbar-user-name" id="topbarName">Loading...</div>
+                    <div class="topbar-user-role">Laboratory</div>
+                </div>
+                <div class="topbar-av av-indigo" id="topbarAv">?</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="welcome-row">
+            <div><h1>Good day! 👋</h1><p>Here's your overview for today.</p></div>
+            <div class="sync-chip"><div class="sync-dot"></div>System Online &bull; Live</div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-blue">👥</div>
+                <div class="stat-body">
+                    <div class="stat-label">Total Patients</div>
+                    <div class="stat-val" id="totalPatients">—</div>
+                    <div class="stat-hint up">↑ All registered</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-blue">♂</div>
+                <div class="stat-body">
+                    <div class="stat-label">Male</div>
+                    <div class="stat-val" id="totalMale">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-pink">♀</div>
+                <div class="stat-body">
+                    <div class="stat-label">Female</div>
+                    <div class="stat-val" id="totalFemale">—</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-indigo">🧪</div>
+                <div class="stat-body">
+                    <div class="stat-label">Blood Types</div>
+                    <div class="stat-val" id="uniqueBlood">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2-3">
+            <div class="card">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Test Worklist</div>
+                        <div class="card-sub">Pending lab tests</div>
+                    </div>
+                    <span style="background:var(--blue);color:white;border-radius:20px;padding:3px 11px;font-size:0.75rem;font-weight:700;" id="queueCount">0</span>
+                </div>
+                <div id="patientQueue"><div class="loading-msg">Loading...</div></div>
+                <button class="view-all-link" onclick="window.location.href='templates.html'">View all patients →</button>
+            </div>
+            <div class="card">
+                <div class="card-hd">
+                    <div><div class="card-title">Quick Actions</div></div>
+                </div>
+                <div class="quick-actions">
+                    <a href="#" class="qa-btn" style="opacity:0.4;pointer-events:none;"><span class="qa-icon">➕</span>Register</a>
+                    <a href="templates.html" class="qa-btn"><span class="qa-icon">🔍</span>Search</a>
+                    <a href="#" class="qa-btn"><span class="qa-icon">🔄</span>Sync</a>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-hd">
+                <div>
+                    <div class="card-title">Patient Records <span class="readonly-tag">View Only</span></div>
+                    <div class="card-sub">Click a row to view full profile</div>
+                </div>
+                
+            </div>
+            <div class="toolbar">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search patients by name...">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th><th>Age</th><th>Sex</th><th>Blood Type</th><th>Contact</th><th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" class="loading-msg">Loading patients...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../scripts/laboratory.ts"></script>
+</body>
+</html>

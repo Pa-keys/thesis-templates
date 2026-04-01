@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Doctor Dashboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-mark">
+            <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/><path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/></svg>
+        </div>
+        <div class="logo-text">
+            <div class="l-name">MediSens</div>
+            <div class="l-sub">Rural Health Unit</div>
+        </div>
+    </div>
+
+    <div class="nav-group-label">Main Menu</div>
+    <a class="nav-item active" href="doctor.html"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a class="nav-item" href="templates.html"><span class="nav-icon">📁</span> Records</a>
+    <a class="nav-item" href="templates.html"><span class="nav-icon">➕</span> New Record</a>
+    <a class="nav-item" href="#"><span class="nav-icon">📊</span> Analytics</a>
+
+    <div class="nav-group-label">System</div>
+    <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
+
+    <div class="sidebar-bottom">
+        <div class="user-card">
+            <div class="user-av av-blue" id="sidebarAv">D</div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarName">Loading...</div>
+                <div class="user-role">General Practitioner</div>
+            </div>
+            <button class="logout-icon-btn" id="logoutBtn" title="Sign out">⇥</button>
+        </div>
+    </div>
+</aside>
+
+<!-- ═══════ MAIN ═══════ -->
+<div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-page">Dashboard</div>
+        </div>
+        <div class="topbar-right">
+            <div class="online-pill">
+                <div class="pulse-dot"></div>
+                System Online
+            </div>
+            <div class="topbar-user-wrap">
+                <div class="topbar-user-text">
+                    <div class="topbar-user-name" id="topbarName">Loading...</div>
+                    <div class="topbar-user-role">General Practitioner</div>
+                </div>
+                <div class="topbar-av av-blue" id="topbarAv">D</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+        <!-- Welcome -->
+        <div class="welcome-row">
+            <div>
+                <h1>Good day! 👋</h1>
+                <p>Here's your overview for today.</p>
+            </div>
+            <div class="sync-chip">
+                <div class="sync-dot"></div>
+                System Online &bull; Last sync 2m ago
+            </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-blue">👥</div>
+                <div class="stat-body">
+                    <div class="stat-label">Total Patients</div>
+                    <div class="stat-val" id="totalPatients">—</div>
+                    <div class="stat-hint up">↑ +12% this month</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-green">📅</div>
+                <div class="stat-body">
+                    <div class="stat-label">Visits Today</div>
+                    <div class="stat-val" id="visitsToday">—</div>
+                    <div class="stat-hint">8 remaining appts</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-pink">📋</div>
+                <div class="stat-body">
+                    <div class="stat-label">Pending Reports</div>
+                    <div class="stat-val" id="pendingReports">—</div>
+                    <div class="stat-hint down">Needs review</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap si-indigo">⚡</div>
+                <div class="stat-body">
+                    <div class="stat-label">Avg Wait Time</div>
+                    <div class="stat-val">14<span style="font-size:1rem;font-weight:600">min</span></div>
+                    <div class="stat-hint up">↓ 2min from last week</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle row -->
+        <div class="grid-2-3">
+            <!-- Patient queue -->
+            <div class="card">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">Patient Queue</div>
+                        <div class="card-sub">Waiting today</div>
+                    </div>
+                    <span style="background:var(--blue);color:white;border-radius:20px;padding:3px 11px;font-size:0.75rem;font-weight:700;" id="queueCount">0</span>
+                </div>
+                <div id="patientQueue"><div class="loading-msg">Loading...</div></div>
+                <button class="view-all-link" onclick="window.location.href='templates.html'">View all patients →</button>
+            </div>
+
+            <!-- Visit trends chart + morbidity -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div class="card">
+                    <div class="card-hd">
+                        <div>
+                            <div class="card-title">Visit Trends</div>
+                            <div class="card-sub">Last 7 days</div>
+                        </div>
+                        <span style="color:var(--green);font-size:1.1rem;">↗</span>
+                    </div>
+                    <canvas id="visitChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom row -->
+        <div class="grid-2">
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-hd">
+                    <div class="card-title">Quick Actions</div>
+                </div>
+                <div class="quick-actions">
+                    <a href="templates.html" class="qa-btn"><span class="qa-icon">➕</span>Register</a>
+                    <a href="templates.html" class="qa-btn"><span class="qa-icon">🔍</span>Search</a>
+                    <a href="#" class="qa-btn"><span class="qa-icon">🔄</span>Sync</a>
+                </div>
+            </div>
+
+            <!-- Morbidity Analytics -->
+            <div class="card">
+                <div class="card-hd">
+                    <div class="card-title">Morbidity Analytics</div>
+                    <div class="card-sub">Top conditions this month</div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-hd"><span class="progress-label">🤒 Fever &amp; Cold</span><span class="progress-val">38%</span></div>
+                    <div class="progress-track"><div class="progress-fill pf-blue" style="width:38%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-hd"><span class="progress-label">❤️ Hypertension</span><span class="progress-val">24%</span></div>
+                    <div class="progress-track"><div class="progress-fill pf-pink" style="width:24%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-hd"><span class="progress-label">🩸 Diabetes</span><span class="progress-val">18%</span></div>
+                    <div class="progress-track"><div class="progress-fill pf-indigo" style="width:18%"></div></div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-hd"><span class="progress-label">🌬️ Respiratory</span><span class="progress-val">12%</span></div>
+                    <div class="progress-track"><div class="progress-fill pf-green" style="width:12%"></div></div>
+                </div>
+                <button class="morb-btn">🩺 Full Morbidity Analytics →</button>
+            </div>
+        </div>
+
+        <!-- Full table -->
+        <div class="card" style="margin-top:0;">
+            <div class="card-hd">
+                <div>
+                    <div class="card-title">All Patient Records</div>
+                    <div class="card-sub">Click a row to open full profile</div>
+                </div>
+                <a href="templates.html" class="btn btn-primary btn-sm">➕ New Record</a>
+            </div>
+            <div class="toolbar">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search patients by name...">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>Blood Type</th>
+                            <th>Contact</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="6" class="loading-msg">Loading patients...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script type="module" src="../scripts/doctor.ts"></script>
+</body>
+</html>
