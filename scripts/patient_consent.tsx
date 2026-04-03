@@ -1,3 +1,5 @@
+/// &lt;reference types="vite/client" /&gt;
+
 import React, { useState, useRef } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { createClient } from '@supabase/supabase-js';
@@ -234,7 +236,7 @@ function SigPad({
     onClear,
 }: {
     label: string;
-    sigRef: React.RefObject<SignatureCanvas>;
+    sigRef: React.RefObject<SignatureCanvas | null>;
     penColor?: string;
     onClear: () => void;
 }) {
@@ -287,8 +289,8 @@ export default function PatientConsent({ patientId, patientName, onConsentSaved 
     const [rhuPersonnel, setRhuPersonnel] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const patientSigCanvas = useRef<SignatureCanvas>(null);
-    const personnelSigCanvas = useRef<SignatureCanvas>(null);
+    const patientSigCanvas = useRef<SignatureCanvas | null>(null);
+    const personnelSigCanvas = useRef<SignatureCanvas | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
