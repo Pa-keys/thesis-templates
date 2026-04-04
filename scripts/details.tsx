@@ -11,8 +11,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 interface Patient {
     id: string; firstName: string; middleName: string; lastName: string;
     age: number | null; sex: string; birthday: string; birthPlace: string;
-    bloodType: string; nationality: string; religion: string;
-    address: string; contactNumber: string;
+    bloodType: string; nationality: string; religion: string; civilStatus: string;
+    suffix: string; address: string; contactNumber: string;
     educationalAttain: string; employmentStatus: string;
     philhealthNo: string; philhealthStatus: string;
     category: string; categoryOthers: string;
@@ -65,8 +65,8 @@ function Details() {
     const [editForm, setEditForm] = useState<EditForm>({
         firstName: '', middleName: '', lastName: '', age: '', sex: '',
         nationality: '', bloodType: 'O+', religion: '', birthday: '',
-        birthPlace: '', address: '', contactNumber: '',
-        educationalAttain: '', employmentStatus: '',
+        birthPlace: '', address: '', contactNumber: '', civilStatus: '',
+        suffix: '', educationalAttain: '', employmentStatus: '',
         philhealthNo: '', philhealthStatus: '', category: '', categoryOthers: '',
         relativeName: '', relativeRelation: '', relativeAddress: ''
     });
@@ -91,6 +91,8 @@ function Details() {
             religion:          data.religion           || '',
             birthday:          data.birthday           || '',
             birthPlace:        data.birthPlace         || '',
+            suffix:            data.suffix             || '',
+            civilStatus:       data.civilStatus          || '',
             address:           data.address            || '',
             contactNumber:     data.contactNumber      || '',
             educationalAttain: data.educationalAttain  || '',
