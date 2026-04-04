@@ -1,3 +1,5 @@
+/// &lt;reference types="vite/client" /&gt;
+
 import React, { useState, useRef } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { createClient } from '@supabase/supabase-js';
@@ -12,17 +14,287 @@ interface ConsentProps {
     onConsentSaved: () => void;
 }
 
+// ─── Inline styles matching the details.html design system ───────────────────
+const styles: Record<string, React.CSSProperties> = {
+    page: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+    },
+
+    // ── Card shell ──
+    card: {
+        background: '#FFFFFF',
+        borderRadius: '16px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
+        border: '1px solid #E2E8F0',
+        overflow: 'hidden',
+    },
+    cardHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '16px 24px',
+        background: '#EFF6FF',
+        borderBottom: '1px solid #DBEAFE',
+    },
+    cardHeaderIcon: {
+        width: '30px',
+        height: '30px',
+        borderRadius: '7px',
+        background: '#2563EB',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '0.85rem',
+        flexShrink: 0,
+    },
+    cardHeaderTitle: {
+        fontSize: '0.9rem',
+        fontWeight: 700,
+        color: '#2563EB',
+    },
+    cardBody: {
+        padding: '24px',
+    },
+
+    // ── Consent text ──
+    consentText: {
+        fontSize: '0.875rem',
+        color: '#475569',
+        lineHeight: '1.75',
+        background: '#F8FAFC',
+        border: '1px solid #E2E8F0',
+        borderRadius: '10px',
+        padding: '16px 20px',
+    },
+    consentHighlight: {
+        color: '#1E3A8A',
+        fontWeight: 600,
+    },
+
+    // ── Signature block ──
+    sigSection: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '8px',
+    },
+    sigLabel: {
+        fontSize: '0.68rem',
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.8px',
+        color: '#475569',
+    },
+    sigWrapper: {
+        border: '1.5px dashed #CBD5E1',
+        borderRadius: '12px',
+        background: '#F8FAFC',
+        overflow: 'hidden',
+        position: 'relative' as const,
+        transition: 'border-color 0.15s',
+    },
+    sigWrapperFocused: {
+        borderColor: '#2563EB',
+        background: '#FAFBFF',
+    },
+    sigHint: {
+        position: 'absolute' as const,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '0.75rem',
+        color: '#CBD5E1',
+        fontWeight: 500,
+        pointerEvents: 'none' as const,
+        userSelect: 'none' as const,
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        gap: '4px',
+    },
+    clearBtn: {
+        alignSelf: 'flex-start' as const,
+        padding: '5px 12px',
+        border: '1.5px solid #E2E8F0',
+        borderRadius: '7px',
+        background: '#F1F5F9',
+        color: '#64748B',
+        fontFamily: 'inherit',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+    },
+
+    // ── Sig grid ──
+    sigGrid: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '24px',
+    },
+
+    // ── Input field ──
+    inputGroup: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: '5px',
+    },
+    inputLabel: {
+        fontSize: '0.68rem',
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.8px',
+        color: '#475569',
+    },
+    input: {
+        padding: '9px 12px',
+        border: '1.5px solid #E2E8F0',
+        borderRadius: '12px',
+        fontFamily: 'inherit',
+        fontSize: '0.875rem',
+        color: '#0F172A',
+        background: '#F1F5F9',
+        outline: 'none',
+        minHeight: '40px',
+    },
+    inputDisabled: {
+        padding: '9px 12px',
+        border: '1.5px solid #E2E8F0',
+        borderRadius: '12px',
+        fontFamily: 'inherit',
+        fontSize: '0.875rem',
+        color: '#64748B',
+        background: '#F8FAFC',
+        outline: 'none',
+        minHeight: '40px',
+    },
+
+    // ── Personnel grid ──
+    personnelGrid: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '20px',
+    },
+
+    // ── Divider ──
+    divider: {
+        height: '1px',
+        background: '#E2E8F0',
+        margin: '4px 0',
+    },
+
+    // ── Submit button ──
+    submitBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        width: '100%',
+        padding: '13px 24px',
+        background: '#2563EB',
+        color: 'white',
+        border: 'none',
+        borderRadius: '12px',
+        fontFamily: 'inherit',
+        fontSize: '0.9rem',
+        fontWeight: 700,
+        cursor: 'pointer',
+        boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
+        transition: 'background 0.15s, transform 0.1s',
+        marginTop: '4px',
+    },
+    submitBtnDisabled: {
+        background: '#93C5FD',
+        cursor: 'not-allowed',
+        boxShadow: 'none',
+        transform: 'none',
+    },
+
+    // ── Badge ──
+    badge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '3px 10px',
+        background: '#EFF6FF',
+        border: '1px solid #BFDBFE',
+        borderRadius: '20px',
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        color: '#1D4ED8',
+        marginLeft: 'auto',
+    },
+};
+
+// ─── Signature Pad Sub-Component ──────────────────────────────────────────────
+function SigPad({
+    label,
+    sigRef,
+    penColor = 'black',
+    onClear,
+}: {
+    label: string;
+    sigRef: React.RefObject<SignatureCanvas | null>;
+    penColor?: string;
+    onClear: () => void;
+}) {
+    const [active, setActive] = useState(false);
+    const [hasContent, setHasContent] = useState(false);
+
+    return (
+        <div style={styles.sigSection}>
+            <div style={styles.sigLabel}>{label}</div>
+            <div style={{ ...styles.sigWrapper, ...(active ? styles.sigWrapperFocused : {}) }}>
+                {!hasContent && (
+                    <div style={styles.sigHint}>
+                        <span style={{ fontSize: '1.2rem' }}>✍️</span>
+                        <span>Sign here</span>
+                    </div>
+                )}
+                <SignatureCanvas
+                    ref={sigRef}
+                    penColor={penColor}
+                    onBegin={() => { setActive(true); setHasContent(true); }}
+                    onEnd={() => setActive(false)}
+                    canvasProps={{
+                        width: 380,
+                        height: 160,
+                        style: { display: 'block', width: '100%', height: '160px' },
+                    }}
+                />
+            </div>
+            <button
+                type="button"
+                style={styles.clearBtn}
+                onClick={() => { onClear(); setHasContent(false); }}
+                onMouseEnter={e => {
+                    (e.target as HTMLButtonElement).style.background = '#E2E8F0';
+                    (e.target as HTMLButtonElement).style.color = '#0F172A';
+                }}
+                onMouseLeave={e => {
+                    (e.target as HTMLButtonElement).style.background = '#F1F5F9';
+                    (e.target as HTMLButtonElement).style.color = '#64748B';
+                }}
+            >
+                ↺ Clear
+            </button>
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function PatientConsent({ patientId, patientName, onConsentSaved }: ConsentProps) {
     const [rhuPersonnel, setRhuPersonnel] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // We now have two separate references for the two signature pads
-    const patientSigCanvas = useRef<SignatureCanvas>(null);
-    const personnelSigCanvas = useRef<SignatureCanvas>(null);
+
+    const patientSigCanvas = useRef<SignatureCanvas | null>(null);
+    const personnelSigCanvas = useRef<SignatureCanvas | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (patientSigCanvas.current?.isEmpty()) {
             alert("Please provide the patient's signature.");
             return;
@@ -33,17 +305,14 @@ export default function PatientConsent({ patientId, patientName, onConsentSaved 
         }
 
         setIsSubmitting(true);
-        
+
         try {
-            // Extract both images
             const patientSignatureDataUrl = patientSigCanvas.current?.getCanvas().toDataURL('image/png');
             const personnelSignatureDataUrl = personnelSigCanvas.current?.getCanvas().toDataURL('image/png');
 
-            console.log("Sending data to Supabase..."); // Helpful for debugging!
-
             const { data, error } = await supabase
-                .from('patients') 
-                .update({ 
+                .from('patients')
+                .update({
                     consent_signed: true,
                     consent_signature: patientSignatureDataUrl,
                     consent_personnel: rhuPersonnel,
@@ -51,84 +320,136 @@ export default function PatientConsent({ patientId, patientName, onConsentSaved 
                     consent_date: new Date().toISOString()
                 })
                 .eq('id', patientId)
-                .select(); // Added .select() to force Supabase to return the updated row
-
-            console.log("Supabase response:", { data, error });
+                .select();
 
             if (error) {
                 alert("Database Error: " + error.message);
             } else if (!data || data.length === 0) {
-                alert("Update blocked! This is likely due to Row Level Security (RLS) policies in Supabase.");
+                alert("Update blocked! Check Row Level Security (RLS) policies in Supabase.");
             } else {
                 alert("Consent successfully recorded!");
-                onConsentSaved(); 
+                onConsentSaved();
             }
-
         } catch (err: any) {
-            console.error("Critical System Error:", err);
             alert("A critical error occurred: " + err.message);
         } finally {
-            // CRITICAL FIX: This guarantees the button will always un-freeze, no matter what happens
             setIsSubmitting(false);
         }
     };
 
-    const clearPatientSignature = () => patientSigCanvas.current?.clear();
-    const clearPersonnelSignature = () => personnelSigCanvas.current?.clear();
-
     return (
-        <form onSubmit={handleSubmit} className="form-container" style={{ marginTop: '20px', borderTop: '4px solid #2c3e50' }}>
-            <h3 style={{ marginBottom: '5px' }}>Patient Consent</h3>
-            <hr style={{ marginBottom: '15px' }} />
+        <form onSubmit={handleSubmit} style={styles.page}>
 
-            <div style={{ marginBottom: '25px', fontSize: '0.9rem', color: '#4a5568', lineHeight: '1.6' }}>
-                <p>I hereby give my consent to the Malvar Rural Health Unit to collect, process, and store my personal and medical information for the purpose of healthcare delivery, diagnosis, treatment, and referral. I understand that my records will be kept confidential in accordance with the Data Privacy Act of 2012. I certify that the information provided is true and correct to the best of my knowledge.</p>
-            </div>
-
-            {/* Patient Signature Section */}
-            <div style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#4a5568', display: 'block', marginBottom: '8px' }}>
-                    Patient Signature
-                </label>
-                <div style={{ border: '2px dashed #cbd5e0', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
-                    <SignatureCanvas 
-                        ref={patientSigCanvas} 
-                        penColor="black"
-                        canvasProps={{width: 500, height: 180, className: 'sigCanvas'}} 
-                    />
+            {/* ── Section I: Consent Text ── */}
+            <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                    <div style={styles.cardHeaderIcon}>📋</div>
+                    <div style={styles.cardHeaderTitle}>IV. Patient Consent &amp; Data Privacy</div>
+                    <div style={styles.badge}>
+                        <span>🔒</span> RA 10173
+                    </div>
                 </div>
-                <button type="button" onClick={clearPatientSignature} style={{ marginTop: '10px', padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#e2e8f0', color: '#4a5568', cursor: 'pointer' }}>Clear Patient Signature</button>
-            </div>
-
-            {/* NEW: RHU Personnel Signature Section */}
-            <div style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#4a5568', display: 'block', marginBottom: '8px' }}>
-                    RHU Personnel Signature
-                </label>
-                <div style={{ border: '2px dashed #cbd5e0', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
-                    <SignatureCanvas 
-                        ref={personnelSigCanvas} 
-                        penColor="#2b6cb0" // Giving the staff a blue pen color to distinguish it!
-                        canvasProps={{width: 500, height: 180, className: 'sigCanvas'}} 
-                    />
-                </div>
-                <button type="button" onClick={clearPersonnelSignature} style={{ marginTop: '10px', padding: '8px', border: 'none', borderRadius: '4px', backgroundColor: '#e2e8f0', color: '#4a5568', cursor: 'pointer' }}>Clear Personnel Signature</button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label>Patient Name</label>
-                    <input type="text" value={patientName} disabled style={{ backgroundColor: '#edf2f7' }} />
-                </div>
-                
-                <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label>RHU Personnel (Printed Name)</label>
-                    <input type="text" placeholder="Print Name" value={rhuPersonnel} onChange={e => setRhuPersonnel(e.target.value)} required />
+                <div style={styles.cardBody}>
+                    <p style={styles.consentText}>
+                        I hereby give my consent to the{' '}
+                        <span style={styles.consentHighlight}>Malvar Rural Health Unit</span> to collect,
+                        process, and store my personal and medical information for the purpose of healthcare
+                        delivery, diagnosis, treatment, and referral. I understand that my records will be
+                        kept confidential in accordance with the{' '}
+                        <span style={styles.consentHighlight}>Data Privacy Act of 2012 (RA 10173)</span>.
+                        I certify that the information provided is true and correct to the best of my knowledge.
+                    </p>
                 </div>
             </div>
 
-            <button type="submit" disabled={isSubmitting} style={{ marginTop: '20px', width: '100%', padding: '12px', border: 'none', borderRadius: '5px', backgroundColor: '#38a169', color: 'white', cursor: 'pointer', fontSize: '16px' }}>
-                {isSubmitting ? 'Saving...' : 'Confirm Consent'}
+            {/* ── Section II: Signatures ── */}
+            <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                    <div style={styles.cardHeaderIcon}>✍️</div>
+                    <div style={styles.cardHeaderTitle}>Signatures</div>
+                </div>
+                <div style={styles.cardBody}>
+                    <div style={styles.sigGrid}>
+                        <SigPad
+                            label="Patient Signature"
+                            sigRef={patientSigCanvas}
+                            penColor="#0F172A"
+                            onClear={() => patientSigCanvas.current?.clear()}
+                        />
+                        <SigPad
+                            label="RHU Personnel Signature"
+                            sigRef={personnelSigCanvas}
+                            penColor="#1D4ED8"
+                            onClear={() => personnelSigCanvas.current?.clear()}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Section III: Printed Names ── */}
+            <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                    <div style={styles.cardHeaderIcon}>🪪</div>
+                    <div style={styles.cardHeaderTitle}>Printed Names</div>
+                </div>
+                <div style={styles.cardBody}>
+                    <div style={styles.personnelGrid}>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.inputLabel}>Patient Name</label>
+                            <input
+                                type="text"
+                                value={patientName}
+                                disabled
+                                style={styles.inputDisabled}
+                            />
+                        </div>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.inputLabel}>RHU Personnel (Printed Name)</label>
+                            <input
+                                type="text"
+                                placeholder="Print name here"
+                                value={rhuPersonnel}
+                                onChange={e => setRhuPersonnel(e.target.value)}
+                                required
+                                style={styles.input}
+                                onFocus={e => {
+                                    e.target.style.borderColor = '#2563EB';
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)';
+                                    e.target.style.background = '#FFFFFF';
+                                }}
+                                onBlur={e => {
+                                    e.target.style.borderColor = '#E2E8F0';
+                                    e.target.style.boxShadow = 'none';
+                                    e.target.style.background = '#F1F5F9';
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Submit ── */}
+            <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                    ...styles.submitBtn,
+                    ...(isSubmitting ? styles.submitBtnDisabled : {}),
+                }}
+                onMouseEnter={e => {
+                    if (!isSubmitting) {
+                        (e.target as HTMLButtonElement).style.background = '#1D4ED8';
+                        (e.target as HTMLButtonElement).style.transform = 'translateY(-1px)';
+                    }
+                }}
+                onMouseLeave={e => {
+                    if (!isSubmitting) {
+                        (e.target as HTMLButtonElement).style.background = '#2563EB';
+                        (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                    }
+                }}
+            >
+                {isSubmitting ? '⏳ Saving Consent...' : '✅ Confirm & Save Consent'}
             </button>
         </form>
     );

@@ -1,6 +1,6 @@
 import { supabase } from '../shared/supabase';
 
-type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin';
+type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin' | 'midwives';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
     doctor:     '/pages/doctor.html',
@@ -9,6 +9,7 @@ const ROLE_DASHBOARD: Record<Role, string> = {
     pharmacist: '/pages/pharmacist.html',
     labaratory: '/pages/laboratory.html',
     admin:      '/pages/admin.html',
+   midwives:    '/pages/midwife.html', 
 };
 
 // If already logged in, redirect immediately
