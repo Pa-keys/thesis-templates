@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin';
+export type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin' | 'midwives';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
     doctor:      'doctor.html',
@@ -9,6 +9,7 @@ const ROLE_DASHBOARD: Record<Role, string> = {
     pharmacist:  'pharmacist.html',
     labaratory:  'laboratory.html',
     admin:       'admin.html',
+    midwives:       'midwife.html',
 };
 
 // Call this on every dashboard page to guard access
