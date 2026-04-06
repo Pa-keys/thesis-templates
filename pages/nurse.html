@@ -4,7 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediSens | Nurse Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .consented-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #F0FDF4; color: #16A34A;
+            border: 1px solid #BBF7D0;
+            border-radius: 20px; padding: 3px 10px;
+            font-size: 0.7rem; font-weight: 700;
+        }
+
+        .pt-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 10px;
+            transition: box-shadow 0.15s, border-color 0.15s;
+            cursor: pointer;
+        }
+        .pt-card:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.1); border-color: var(--blue); }
+        .pt-card:last-child { margin-bottom: 0; }
+
+        .pt-av {
+            width: 46px; height: 46px; border-radius: 50%;
+            background: #EC4899; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 800; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(236,72,153,0.3);
+        }
+        .pt-av.male { background: var(--blue); box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
+
+        .pt-info { flex: 1; min-width: 0; }
+        .pt-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+        .pt-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .pt-meta span { display: flex; align-items: center; gap: 3px; }
+
+        .pt-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+        .pt-date  { font-size: 0.7rem; color: var(--text-3); font-weight: 500; text-align: right; }
+
+        .view-btn {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 7px;
+            background: var(--blue-light); color: var(--blue);
+            border: 1px solid #BFDBFE;
+            font-family: inherit; font-size: 0.75rem; font-weight: 600;
+            cursor: pointer; transition: background 0.15s;
+        }
+        .view-btn:hover { background: #DBEAFE; }
+
+        .empty-state { text-align: center; padding: 48px 24px; color: var(--text-3); }
+        .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+        .empty-state p { font-size: 0.9rem; }
+    </style>
 </head>
 <body>
 
@@ -18,18 +74,19 @@
             <div class="l-sub">Rural Health Unit</div>
         </div>
     </div>
+
     <div class="nav-group-label">Main Menu</div>
     <a class="nav-item active" href="nurse.html"><span class="nav-icon">🏠</span> Dashboard</a>
-    <a class="nav-item" href="records.html"><span class="nav-icon">📁</span> Records</a>
+    <a class="nav-item" href="records.html"><span class="nav-icon">📁</span> Patient Records</a>
     <a class="nav-item" href="templates.html"><span class="nav-icon">➕</span> New Record</a>
-    <a class="nav-item" href="initial_consultation.html"><span class="nav-icon">📝</span> Initial Consultation</a>
-    
+    <a class="nav-item" href="initial_consultation.html"><span class="nav-icon">📝</span> Consultation</a>
     
     <div class="nav-group-label">System</div>
     <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
+
     <div class="sidebar-bottom">
         <div class="user-card">
-            <div class="user-av av-green" id="sidebarAv">?</div>
+            <div class="user-av av-green" id="sidebarAv">N</div>
             <div class="user-info">
                 <div class="user-name" id="sidebarName">Loading...</div>
                 <div class="user-role">Nurse</div>
@@ -41,7 +98,7 @@
 
 <div class="main">
     <div class="topbar">
-        <div class="topbar-left"><div class="topbar-page">Dashboard</div></div>
+        <div class="topbar-left"><div class="topbar-page">Nurse Dashboard</div></div>
         <div class="topbar-right">
             <div class="online-pill"><div class="pulse-dot"></div>System Online</div>
             <div class="topbar-user-wrap">
@@ -49,31 +106,34 @@
                     <div class="topbar-user-name" id="topbarName">Loading...</div>
                     <div class="topbar-user-role">Nurse</div>
                 </div>
-                <div class="topbar-av av-green" id="topbarAv">?</div>
+                <div class="topbar-av av-green" id="topbarAv">N</div>
             </div>
         </div>
     </div>
 
     <div class="content">
         <div class="welcome-row">
-            <div><h1>Good day! 👋</h1><p>Here's your overview for today.</p></div>
-            <div class="sync-chip"><div class="sync-dot"></div>System Online &bull; Live</div>
+            <div>
+                <h1>Good day! 💉</h1>
+                <p>Patients below have signed their consent and are ready for vitals and consultation.</p>
+            </div>
+            <div class="sync-chip"><div class="sync-dot"></div>Live • Auto-updates</div>
         </div>
 
         <div class="stats-row">
+            <div class="stat-card" style="border: 1.5px solid #BBF7D0;">
+                <div class="stat-icon-wrap" style="background:#F0FDF4;">✅</div>
+                <div class="stat-body">
+                    <div class="stat-label">Consented Patients</div>
+                    <div class="stat-val" id="consentedCount" style="color:#16A34A;">—</div>
+                    <div class="stat-hint up">Ready for vitals</div>
+                </div>
+            </div>
             <div class="stat-card">
                 <div class="stat-icon-wrap si-blue">👥</div>
                 <div class="stat-body">
                     <div class="stat-label">Total Patients</div>
                     <div class="stat-val" id="totalPatients">—</div>
-                    <div class="stat-hint up">↑ All registered</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon-wrap si-blue">♂</div>
-                <div class="stat-body">
-                    <div class="stat-label">Male</div>
-                    <div class="stat-val" id="totalMale">—</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -84,65 +144,31 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon-wrap si-green">💊</div>
+                <div class="stat-icon-wrap si-blue">♂</div>
                 <div class="stat-body">
-                    <div class="stat-label">Vitals Taken</div>
-                    <div class="stat-val" id="vitalsCount">—</div>
+                    <div class="stat-label">Male</div>
+                    <div class="stat-val" id="totalMale">—</div>
                 </div>
-            </div>
-        </div>
-
-        <div class="grid-2-3">
-            <div class="card">
-                <div class="card-hd">
-                    <div>
-                        <div class="card-title">Patient Queue</div>
-                        <div class="card-sub">Waiting for vitals</div>
-                    </div>
-                    <span style="background:var(--blue);color:white;border-radius:20px;padding:3px 11px;font-size:0.75rem;font-weight:700;" id="queueCount">0</span>
-                </div>
-                <div id="patientQueue"><div class="loading-msg">Loading...</div></div>
-                <button class="view-all-link" onclick="window.location.href='templates.html'">View all patients →</button>
-            </div>
-            <div class="card">
-                <div class="card-hd">
-                    <div><div class="card-title">Quick Actions</div></div>
-                </div>
-                <div class="quick-actions">
-                    <a href="templates.html" class="qa-btn"><span class="qa-icon">➕</span>Register</a>
-                    <a href="templates.html" class="qa-btn"><span class="qa-icon">🔍</span>Search</a>
-                    <a href="#" class="qa-btn"><span class="qa-icon">🔄</span>Sync</a>
-                </div>
-                
             </div>
         </div>
 
         <div class="card">
             <div class="card-hd">
                 <div>
-                    <div class="card-title">Patient Records </div>
-                    <div class="card-sub">Click a row to view full profile</div>
+                    <div class="card-title">Consented Patients</div>
+                    <div class="card-sub">These patients have signed their consent and are ready for nurse assessment.</div>
                 </div>
-                <a href="templates.html" class="btn btn-primary btn-sm">➕ New Record</a>
+                <span class="consented-badge" id="patientCount">0 patients</span>
             </div>
+
             <div class="toolbar">
                 <div class="search-bar">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search patients by name...">
+                    <input type="text" id="searchInput" placeholder="Search by name...">
                 </div>
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th><th>Age</th><th>Sex</th><th>Blood Type</th><th>Contact</th><th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr><td colspan="6" class="loading-msg">Loading patients...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+
+            <div id="patientList"><div class="loading-msg">Loading patients...</div></div>
         </div>
     </div>
 </div>

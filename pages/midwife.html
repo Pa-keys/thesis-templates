@@ -9,13 +9,20 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        /* ── New badge ── */
+        /* ── Badges ── */
         .new-badge {
             display: inline-flex; align-items: center; gap: 5px;
             background: #F0FDF4; color: #16A34A;
             border: 1px solid #BBF7D0;
             border-radius: 20px; padding: 3px 11px;
             font-size: 0.72rem; font-weight: 700;
+        }
+        .no-consent-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: #FFFBEB; color: #D97706;
+            border: 1px solid #FDE68A;
+            border-radius: 20px; padding: 3px 10px;
+            font-size: 0.7rem; font-weight: 700;
         }
 
         /* ── Patient card (queue style) ── */
@@ -255,18 +262,19 @@
                     <div class="stat-val" id="totalPatients">—</div>
                 </div>
             </div>
+            <div class="stat-card" style="border: 1.5px solid #FDE68A;">
+                <div class="stat-icon-wrap" style="background:#FFFBEB;">⚠️</div>
+                <div class="stat-body">
+                    <div class="stat-label">Pending Consent</div>
+                    <div class="stat-val" id="pendingConsent" style="color:#D97706;">—</div>
+                    <div class="stat-hint" style="color:#D97706;">Awaiting signature</div>
+                </div>
+            </div>
             <div class="stat-card">
                 <div class="stat-icon-wrap si-pink">♀</div>
                 <div class="stat-body">
                     <div class="stat-label">Female</div>
                     <div class="stat-val" id="totalFemale">—</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon-wrap si-blue">♂</div>
-                <div class="stat-body">
-                    <div class="stat-label">Male</div>
-                    <div class="stat-val" id="totalMale">—</div>
                 </div>
             </div>
         </div>
