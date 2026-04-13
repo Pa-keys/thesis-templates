@@ -3,17 +3,15 @@ import { supabase } from './supabase';
 export type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin' | 'midwives';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
-    doctor:      'doctor.html',
-    nurse:       'nurse.html',
-    BHW:         'bhw.html',
-    pharmacist:  'pharmacist.html',
-    labaratory:  'laboratory.html',
-    admin:       'admin.html',
-    midwives:       'midwife.html',
+    doctor:     'doctor.html',
+    nurse:      'nurse.html',
+    BHW:        'bhw.html',
+    pharmacist: 'pharmacist.html',
+    labaratory: 'laboratory.html',
+    admin:      'admin.html',
+    midwives:   'midwife.html',
 };
 
-// Call this on every dashboard page to guard access
-// Pass the expected role for that page
 export async function requireRole(expectedRole: Role): Promise<{ userId: string; role: Role; fullName: string }> {
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -42,7 +40,6 @@ export async function requireRole(expectedRole: Role): Promise<{ userId: string;
     return { userId: session.user.id, role: profile.role as Role, fullName: profile.full_name };
 }
 
-// Call this on login page to redirect after sign in
 export async function redirectToDashboard(): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;

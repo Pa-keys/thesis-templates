@@ -4,72 +4,221 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediSens | Doctor Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script> 
     <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+        * { box-sizing: border-box; }
+       body { 
+    background-color: #F8FAFC; margin: 0; padding: 0; 
+    font-family: ui-sans-serif, system-ui, sans-serif; 
+    color: #1e293b; height: 100vh; overflow: hidden;
+}
+        .main-wrapper { 
+    margin-left: 240px; 
+    display: flex; flex-direction: column; 
+    height: 100vh; overflow-y: auto;
+    width: calc(100vw - 240px);
+}
+.content { 
+    padding: 12px 24px; 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px;
+    flex: 1;
+}
+        .content { 
+            padding: 12px 16px; 
+            width: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px;
+        }
+        .welcome-row { 
+            display: flex; justify-content: space-between; 
+            align-items: center; flex-wrap: wrap; gap: 6px; 
+        }
+        .welcome-row h1 { font-size: 1.2rem !important; margin: 0 0 1px 0 !important; }
+        .welcome-row p { font-size: 0.75rem !important; margin: 0 !important; }
+        .stats-row { 
+            display: grid; grid-template-columns: repeat(4, 1fr); 
+            gap: 10px; 
+        }
+        .stat-card { 
+            background: white; border-radius: 10px; 
+            border: 1px solid #e2e8f0; padding: 12px; 
+            display: flex; align-items: center; gap: 10px;
+        }
+        .stat-icon-wrap { 
+            width: 34px; height: 34px; border-radius: 9px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .stat-body { flex: 1; min-width: 0; }
+        .stat-val { font-size: 1.4rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .stat-label { font-size: 0.65rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+        .stat-hint { font-size: 0.65rem; color: #94a3b8; margin-top: 1px; }
+        .stat-hint.up { color: #16a34a; }
+        .stat-hint.down { color: #dc2626; }
+        .grid-2-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .card { 
+            background: white; border-radius: 10px; 
+            border: 1px solid #e2e8f0; padding: 12px; 
+        }
+        .card-hd { 
+            display: flex; justify-content: space-between; 
+            align-items: flex-start; margin-bottom: 8px; 
+        }
+        .card-title { font-size: 0.82rem; font-weight: 700; color: #0f172a; }
+        .card-sub { font-size: 0.67rem; color: #94a3b8; margin-top: 1px; }
+        #patientQueue { max-height: 200px; overflow-y: auto; }
+        .queue-item { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 6px 0; border-bottom: 1px solid #f1f5f9; 
+        }
+        .queue-av { 
+            width: 30px; height: 30px; border-radius: 50%; 
+            background: #2563eb; color: white; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
+        }
+        .queue-info { flex: 1; margin-left: 8px; }
+        .queue-name { font-size: 0.78rem; font-weight: 700; color: #0f172a; }
+        .queue-meta { font-size: 0.65rem; color: #94a3b8; }
+        .queue-time { font-size: 0.7rem; font-weight: 700; color: #2563eb; }
+        .view-all-link { 
+            width: 100%; margin-top: 6px; padding: 6px; background: none; 
+            border: none; color: #2563eb; font-size: 0.72rem; 
+            font-weight: 600; cursor: pointer; text-align: center; display: block; 
+        }
+        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .qa-btn { 
+            display: flex; flex-direction: column; align-items: center; gap: 4px; 
+            padding: 10px 8px; background: #f8fafc; border: 1px solid #e2e8f0; 
+            border-radius: 8px; text-decoration: none; color: #334155; 
+            font-size: 0.7rem; font-weight: 600; transition: all 0.15s; cursor: pointer; 
+        }
+        .qa-btn:hover { background: #EBF3FF; border-color: #bfdbfe; color: #2563eb; }
+        .qa-icon { font-size: 1.1rem; }
+        .progress-item { margin-bottom: 7px; }
+        .progress-hd { display: flex; justify-content: space-between; margin-bottom: 3px; }
+        .progress-label { font-size: 0.72rem; font-weight: 600; color: #334155; }
+        .progress-val { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+        .progress-track { height: 5px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; }
+        .pf-blue { background: #2563eb; }
+        .pf-pink { background: #ec4899; }
+        .pf-indigo { background: #6366f1; }
+        .pf-green { background: #16a34a; }
+        .morb-btn { 
+            margin-top: 8px; width: 100%; padding: 6px; 
+            background: #f8fafc; border: 1px solid #e2e8f0; 
+            border-radius: 7px; font-size: 0.72rem; font-weight: 600; 
+            color: #64748b; cursor: pointer; 
+        }
+        .toolbar { margin-bottom: 8px; }
+        .search-bar { 
+            display: flex; align-items: center; gap: 6px; 
+            background: #f8fafc; border: 1px solid #e2e8f0; 
+            border-radius: 7px; padding: 6px 10px; 
+        }
+        .search-bar input { 
+            border: none; background: transparent; outline: none; 
+            font-size: 0.78rem; width: 100%; color: #334155; 
+        }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        th { 
+            text-align: left; padding: 6px 8px; font-size: 0.65rem; 
+            font-weight: 700; color: #94a3b8; text-transform: uppercase; 
+            letter-spacing: 0.04em; border-bottom: 1px solid #f1f5f9; 
+        }
+        td { padding: 8px; border-bottom: 1px solid #f8fafc; color: #334155; }
+        tr:hover td { background: #f8fafc; }
+        .btn { 
+            display: inline-flex; align-items: center; gap: 5px; 
+            padding: 5px 12px; border-radius: 7px; font-size: 0.75rem; 
+            font-weight: 600; cursor: pointer; border: none; text-decoration: none; 
+        }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 0.7rem; }
+        .sync-chip { 
+            display: flex; align-items: center; gap: 5px; font-size: 0.67rem; 
+            font-weight: 600; color: #16a34a; background: #f0fdf4; 
+            border: 1px solid #bbf7d0; border-radius: 20px; padding: 3px 10px; 
+        }
+        .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
+        .loading-msg { text-align: center; color: #94a3b8; font-size: 0.78rem; padding: 12px; }
+        .si-blue { background: #EBF3FF; }
+        .si-green { background: #DCFCE7; }
+        .si-pink { background: #FCE7F3; }
+        .si-indigo { background: #EEF2FF; }
+    </style>
 </head>
 <body>
 
-<!-- ═══════ SIDEBAR ═══════ -->
-<aside class="sidebar">
-    <div class="sidebar-logo">
-        <div class="logo-mark">
-            <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/><path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/></svg>
+<aside class="fixed inset-y-0 left-0 z-50 w-[240px] bg-white border-r border-slate-200 flex flex-col print:hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-slate-200">
+        <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/>
+                <path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/>
+            </svg>
         </div>
-        <div class="logo-text">
-            <div class="l-name">MediSens</div>
-            <div class="l-sub">Rural Health Unit</div>
+        <div>
+            <div class="text-sm font-extrabold text-slate-900 leading-tight">MediSens</div>
+            <div class="text-[0.6rem] font-bold text-slate-400 uppercase">Rural Health Unit</div>
         </div>
     </div>
 
-    <div class="nav-group-label">Main Menu</div>
-    <a class="nav-item active" href="doctor.html"><span class="nav-icon">🏠</span> Dashboard</a>
-    <a class="nav-item" href="records.html"><span class="nav-icon">📁</span> Records</a>
-    <a class="nav-item" href="follow_up_visitation.html"><span class="nav-icon">🩺</span> Follow-up Visits</a>
-    <a class="nav-item" href="lab_request.html"><span class="nav-icon">🔬</span> Lab Requests</a>
-    <a class="nav-item" href="e_prescription.html"><span class="nav-icon">💊</span> E-Prescriptions</a>
-    <a class="nav-item" href="#"><span class="nav-icon">📊</span> Analytics</a>
+    <div class="px-4 pt-4 pb-1 text-[0.6rem] font-bold uppercase tracking-widest text-slate-400">Main Menu</div>
+    <nav class="flex-1 flex flex-col gap-0.5 px-2 overflow-y-auto">
+        <a href="doctor.html" class="flex items-center gap-2.5 py-2 text-xs font-semibold bg-[#EBF3FF] text-blue-600 rounded-r-lg relative -ml-2 pl-5 pr-3">
+            <div class="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 rounded-r-md"></div>
+            <span>🏠</span> Dashboard
+        </a>
+        <a href="records.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>📁</span> Records</a>
+        <a href="templates.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>➕</span> New Record</a>
+        <a href="consultation.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>🩺</span> Consultation</a>
+        <div class="mt-3 mb-1 px-3 text-[0.6rem] font-bold uppercase tracking-widest text-slate-400">System</div>
+        <a href="settings.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>⚙️</span> Settings</a>
+    </nav>
 
-    <div class="nav-group-label">System</div>
-    <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
-
-    <div class="sidebar-bottom">
-        <div class="user-card">
-            <div class="user-av av-blue" id="sidebarAv">D</div>
-            <div class="user-info">
-                <div class="user-name" id="sidebarName">Loading...</div>
-                <div class="user-role">General Practitioner</div>
+    <div id="logoutBtn" class="p-3 border-t border-slate-200 bg-white mt-auto shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div id="sidebarAv" class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">D</div>
+                <div class="flex-1 min-w-0">
+                    <p id="sidebarName" class="text-xs font-bold text-slate-900 truncate">Loading...</p>
+                    <p class="text-[0.6rem] text-slate-500">General Practitioner</p>
+                </div>
             </div>
-            <button class="logout-icon-btn" id="logoutBtn" title="Sign out">⇥</button>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
         </div>
     </div>
 </aside>
 
-<!-- ═══════ MAIN ═══════ -->
-<div class="main">
-
-    <!-- Topbar -->
-    <div class="topbar">
-        <div class="topbar-left">
-            <div class="topbar-page">Dashboard</div>
-        </div>
-        <div class="topbar-right">
-            <div class="online-pill">
-                <div class="pulse-dot"></div>
-                System Online
+<div class="main-wrapper">
+    <header class="h-[52px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm">
+        <div class="font-bold text-base text-slate-800">Dashboard</div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                <span class="text-[0.7rem] font-medium text-green-700">System Online</span>
             </div>
-            <div class="topbar-user-wrap">
-                <div class="topbar-user-text">
-                    <div class="topbar-user-name" id="topbarName">Loading...</div>
-                    <div class="topbar-user-role">General Practitioner</div>
-                </div>
-                <div class="topbar-av av-blue" id="topbarAv">D</div>
+            <div class="text-right">
+                <div id="topbarName" class="text-xs font-bold text-slate-900 leading-tight">Loading...</div>
+                <div class="text-[0.65rem] text-slate-500">General Practitioner</div>
             </div>
+            <div id="topbarAv" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-md cursor-pointer">D</div>
         </div>
     </div>
 
     <!-- Content -->
     <div class="content">
-
-        <!-- Welcome -->
         <div class="welcome-row">
             <div>
                 <h1>Good day! 👋</h1>
@@ -77,7 +226,7 @@
             </div>
             <div class="sync-chip">
                 <div class="sync-dot"></div>
-                System Online &bull; Last sync 2m ago
+                System Online • Live
             </div>
         </div>
 
@@ -88,7 +237,7 @@
                 <div class="stat-body">
                     <div class="stat-label">Total Patients</div>
                     <div class="stat-val" id="totalPatients">—</div>
-                    <div class="stat-hint up">↑ +12% this month</div>
+                    <div class="stat-hint up">↑ All registered</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -111,7 +260,7 @@
                 <div class="stat-icon-wrap si-indigo">⚡</div>
                 <div class="stat-body">
                     <div class="stat-label">Avg Wait Time</div>
-                    <div class="stat-val">14<span style="font-size:1rem;font-weight:600">min</span></div>
+                    <div class="stat-val">14<span style="font-size:0.9rem;font-weight:600">min</span></div>
                     <div class="stat-hint up">↓ 2min from last week</div>
                 </div>
             </div>
@@ -126,23 +275,22 @@
                         <div class="card-title">Patient Queue</div>
                         <div class="card-sub">Waiting today</div>
                     </div>
-                    <span style="background:var(--blue);color:white;border-radius:20px;padding:3px 11px;font-size:0.75rem;font-weight:700;" id="queueCount">0</span>
+                    <span style="background:#2563eb;color:white;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;" id="queueCount">0</span>
                 </div>
                 <div id="patientQueue"><div class="loading-msg">Loading...</div></div>
                 <button class="view-all-link" onclick="window.location.href='templates.html'">View all patients →</button>
             </div>
 
-            <!-- Visit trends chart + morbidity -->
-            <div style="display:flex;flex-direction:column;gap:16px;">
-                <div class="card">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div class="card" style="flex:1;">
                     <div class="card-hd">
                         <div>
                             <div class="card-title">Visit Trends</div>
                             <div class="card-sub">Last 7 days</div>
                         </div>
-                        <span style="color:var(--green);font-size:1.1rem;">↗</span>
+                        <span style="color:#16a34a;font-size:1rem;">↗</span>
                     </div>
-                    <canvas id="visitChart" height="120"></canvas>
+                    <canvas id="visitChart" height="110"></canvas>
                 </div>
             </div>
         </div>
@@ -168,7 +316,7 @@
                     <div class="card-sub">Top conditions this month</div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-hd"><span class="progress-label">🤒 Fever &amp; Cold</span><span class="progress-val">38%</span></div>
+                    <div class="progress-hd"><span class="progress-label">🤒 Fever & Cold</span><span class="progress-val">38%</span></div>
                     <div class="progress-track"><div class="progress-fill pf-blue" style="width:38%"></div></div>
                 </div>
                 <div class="progress-item">
@@ -187,8 +335,7 @@
             </div>
         </div>
 
-        <!-- Full table -->
-        <div class="card" style="margin-top:0;">
+        <div class="card">
             <div class="card-hd">
                 <div>
                     <div class="card-title">All Patient Records</div>
@@ -220,9 +367,8 @@
                 </table>
             </div>
         </div>
-
-    </div><!-- /content -->
-</div><!-- /main -->
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script type="module" src="../scripts/doctor.ts"></script>

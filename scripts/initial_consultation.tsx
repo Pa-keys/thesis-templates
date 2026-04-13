@@ -12,16 +12,6 @@ export interface InitialConsultationData {
   height: string; o2Sat: string; muac: string; nutritionalStatus: string;
   bmi: string; visualAcuityLeft: string; visualAcuityRight: string;
   bloodType: string; generalSurvey: string;
-  familyHistory: string; smoking: string; smokingSticksPerDay: string;
-  smokingYears: string; drinking: string; drinkingFrequency: string;
-  drinkingYears: string; immunizationHistory: string;
-  menarche: string; onsetSexualIntercourse: string; menopause: string;
-  menopauseAge: string; lmp: string; intervalCycle: string;
-  periodDuration: string; padsPerDay: string; birthControlMethod: string;
-  gravidity: string; parity: string; typeOfDelivery: string;
-  fullTerm: string; premature: string; abortion: string;
-  livingChildren: string; preEclampsia: string;
-  medicationAndTreatment: string;
 }
 
 const EMPTY_FORM: InitialConsultationData = {
@@ -29,13 +19,6 @@ const EMPTY_FORM: InitialConsultationData = {
   chiefComplaints: '', diagnosis: '', historyOfPresentIllness: '',
   bp: '', hr: '', rr: '', temp: '', weight: '', height: '', o2Sat: '', muac: '',
   nutritionalStatus: '', bmi: '', visualAcuityLeft: '', visualAcuityRight: '', bloodType: '', generalSurvey: '',
-  familyHistory: '', smoking: '', smokingSticksPerDay: '', smokingYears: '',
-  drinking: '', drinkingFrequency: '', drinkingYears: '', immunizationHistory: '',
-  menarche: '', onsetSexualIntercourse: '', menopause: '', menopauseAge: '',
-  lmp: '', intervalCycle: '', periodDuration: '', padsPerDay: '', birthControlMethod: '',
-  gravidity: '', parity: '', typeOfDelivery: '', fullTerm: '', premature: '',
-  abortion: '', livingChildren: '', preEclampsia: '',
-  medicationAndTreatment: ''
 };
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -114,57 +97,24 @@ function InitialConsultation() {
       }]);
       if (e1) throw new Error('initial_consultation: ' + e1.message);
 
-      // 2. consultation
-      const { error: e2 } = await supabase.from('consultation').insert([{
-        patient_id:              patientId,
-        family_history:          formData.familyHistory          || null,
-        smoking_status:          formData.smoking                || null,
-        smoking_sticks_per_day:  toNumberOrNull(formData.smokingSticksPerDay),
-        smoking_years:           toNumberOrNull(formData.smokingYears),
-        drinking_status:         formData.drinking               || null,
-        drinking_frequency:      formData.drinkingFrequency      || null,
-        drinking_years:          toNumberOrNull(formData.drinkingYears),
-        immunization_history:    formData.immunizationHistory    || null,
-        menarche_age:            toNumberOrNull(formData.menarche),
-        sexual_onset_age:        toNumberOrNull(formData.onsetSexualIntercourse),
-        is_menopause:            formData.menopause              || null,
-        menopause_age:           toNumberOrNull(formData.menopauseAge),
-        lmp:                     formData.lmp                    || null,
-        interval_cycle:          formData.intervalCycle          || null,
-        period_duration:         formData.periodDuration         || null,
-        pads_per_day:            toNumberOrNull(formData.padsPerDay),
-        birth_control_method:    formData.birthControlMethod     || null,
-        gravidity:               toNumberOrNull(formData.gravidity),
-        parity:                  toNumberOrNull(formData.parity),
-        delivery_type:           formData.typeOfDelivery         || null,
-        full_term_count:         toNumberOrNull(formData.fullTerm),
-        premature_count:         toNumberOrNull(formData.premature),
-        abortion_count:          toNumberOrNull(formData.abortion),
-        living_children_count:   toNumberOrNull(formData.livingChildren),
-        pre_eclampsia:           formData.preEclampsia           || null,
-        medication_treatment:    formData.medicationAndTreatment || null,
-        past_med_surge_history:  formData.historyOfPresentIllness || null,
+      // 2. vital_sign
+      const { error: e2 } = await supabase.from('vital_sign').insert([{
+        patient_id:          patientId,
+        bp:                  formData.bp                 || null,
+        heart_rate:          toNumberOrNull(formData.hr),
+        respiratory_rate:    toNumberOrNull(formData.rr),
+        temperature:         toNumberOrNull(formData.temp),
+        o2_saturation:       toNumberOrNull(formData.o2Sat),
+        weight:              toNumberOrNull(formData.weight),
+        height:              toNumberOrNull(formData.height),
+        muac:                toNumberOrNull(formData.muac),
+        nutritional_status:  formData.nutritionalStatus  || null,
+        bmi:                 toNumberOrNull(formData.bmi),
+        visual_acuity_left:  formData.visualAcuityLeft   || null,
+        visual_acuity_right: formData.visualAcuityRight  || null,
+        general_survey:      formData.generalSurvey      || null,
       }]);
-      if (e2) throw new Error('consultation: ' + e2.message);
-
-      // 3. vital_sign
-      const { error: e3 } = await supabase.from('vital_sign').insert([{
-        patient_id:        patientId,
-        bp:                formData.bp                 || null,
-        heart_rate:        toNumberOrNull(formData.hr),
-        respiratory_rate:  toNumberOrNull(formData.rr),
-        temperature:       toNumberOrNull(formData.temp),
-        o2_saturation:     toNumberOrNull(formData.o2Sat),
-        weight:            toNumberOrNull(formData.weight),
-        height:            toNumberOrNull(formData.height),
-        muac:              toNumberOrNull(formData.muac),
-        nutritional_status: formData.nutritionalStatus || null,
-        bmi:               toNumberOrNull(formData.bmi),
-        visual_acuity_left:  formData.visualAcuityLeft  || null,
-        visual_acuity_right: formData.visualAcuityRight || null,
-        general_survey:    formData.generalSurvey       || null,
-      }]);
-      if (e3) throw new Error('vital_sign: ' + e3.message);
+      if (e2) throw new Error('vital_sign: ' + e2.message);
 
       showToast('Consultation record saved successfully!', true);
       setFormData(EMPTY_FORM);
@@ -371,133 +321,6 @@ function InitialConsultation() {
                       </label>
                     ))}
                   </div>
-                </div>
-              </div>
-            </fieldset>
-
-            {/* SECTION: Histories */}
-            <fieldset className={sectionStyle} style={{ border: 'none' }}>
-              <legend className={legendStyle}>Histories</legend>
-              <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="field">
-                    <label className={labelStyle}>Family History</label>
-                    <textarea name="familyHistory" value={formData.familyHistory} onChange={handleChange} rows={3} className={inputStyle} style={{ resize: 'vertical' }}></textarea>
-                  </div>
-                  <div className="field">
-                    <label className={labelStyle}>Immunization History</label>
-                    <textarea name="immunizationHistory" value={formData.immunizationHistory} onChange={handleChange} rows={3} className={inputStyle} style={{ resize: 'vertical' }}></textarea>
-                  </div>
-                </div>
-                <div style={{ background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label className={labelStyle} style={{ marginBottom: 8 }}>Smoking History</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {['Yes', 'No'].map(v => (
-                        <label key={v} className={`radio-opt${formData.smoking === v ? ' sel' : ''}`} style={{ fontSize: '0.82rem' }}>
-                          <input type="radio" name="smoking" value={v} onChange={handleRadioChange} checked={formData.smoking === v} style={{ display: 'none' }} />{v}
-                        </label>
-                      ))}
-                      {formData.smoking === 'Yes' && (
-                        <>
-                          <input type="number" name="smokingSticksPerDay" value={formData.smokingSticksPerDay} onChange={handleChange} className={inputStyle} placeholder="Sticks/day" style={{ width: 100 }} />
-                          <input type="number" name="smokingYears" value={formData.smokingYears} onChange={handleChange} className={inputStyle} placeholder="Years" style={{ width: 80 }} />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelStyle} style={{ marginBottom: 8 }}>Drinking History</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {['Yes', 'No'].map(v => (
-                        <label key={v} className={`radio-opt${formData.drinking === v ? ' sel' : ''}`} style={{ fontSize: '0.82rem' }}>
-                          <input type="radio" name="drinking" value={v} onChange={handleRadioChange} checked={formData.drinking === v} style={{ display: 'none' }} />{v}
-                        </label>
-                      ))}
-                      {formData.drinking === 'Yes' && (
-                        <>
-                          <input type="text" name="drinkingFrequency" value={formData.drinkingFrequency} onChange={handleChange} className={inputStyle} placeholder="Frequency" style={{ width: 110 }} />
-                          <input type="number" name="drinkingYears" value={formData.drinkingYears} onChange={handleChange} className={inputStyle} placeholder="Years" style={{ width: 80 }} />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-
-            {/* SECTION: OBGyne & Pregnancy */}
-            <fieldset className={sectionStyle} style={{ border: 'none' }}>
-              <legend className={legendStyle}>OBGyne & Pregnancy History</legend>
-              <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                {/* OBGyne */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', margin: 0 }}>OBGyne</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div className="field"><label className={labelStyle}>Menarche (y/o)</label><input type="number" name="menarche" value={formData.menarche} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}>Onset Sexual Intercourse (y/o)</label><input type="number" name="onsetSexualIntercourse" value={formData.onsetSexualIntercourse} onChange={handleChange} className={inputStyle} /></div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <label className={labelStyle} style={{ margin: 0, whiteSpace: 'nowrap' }}>Menopause:</label>
-                    {['Yes', 'No'].map(v => (
-                      <label key={v} className={`radio-opt${formData.menopause === v ? ' sel' : ''}`} style={{ fontSize: '0.82rem' }}>
-                        <input type="radio" name="menopause" value={v} onChange={handleRadioChange} checked={formData.menopause === v} style={{ display: 'none' }} />{v}
-                      </label>
-                    ))}
-                    {formData.menopause === 'Yes' && (
-                      <input type="number" name="menopauseAge" value={formData.menopauseAge} onChange={handleChange} className={inputStyle} placeholder="Age" style={{ width: 80 }} />
-                    )}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div className="field"><label className={labelStyle}>LMP</label><input type="date" name="lmp" value={formData.lmp} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}>Interval Cycle (Days)</label><input type="text" name="intervalCycle" value={formData.intervalCycle} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}>Period Duration (Days)</label><input type="text" name="periodDuration" value={formData.periodDuration} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}># of Pads/Day</label><input type="number" name="padsPerDay" value={formData.padsPerDay} onChange={handleChange} className={inputStyle} /></div>
-                  </div>
-                  <div className="field"><label className={labelStyle}>Birth Control Method</label><input type="text" name="birthControlMethod" value={formData.birthControlMethod} onChange={handleChange} className={inputStyle} /></div>
-                </div>
-
-                {/* Pregnancy */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-2)', margin: 0 }}>Pregnancy History</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div className="field"><label className={labelStyle}>Gravidity</label><input type="number" name="gravidity" value={formData.gravidity} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}>Parity</label><input type="number" name="parity" value={formData.parity} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field" style={{ gridColumn: 'span 2' }}>
-                      <label className={labelStyle}>Type of Delivery</label>
-                      <select name="typeOfDelivery" value={formData.typeOfDelivery} onChange={handleChange} className={inputStyle}>
-                        <option value="">Select type...</option>
-                        <option value="Normal">Normal</option>
-                        <option value="CS">CS</option>
-                        <option value="Both">Both Normal and CS</option>
-                      </select>
-                    </div>
-                    <div className="field"><label className={labelStyle}># Full Term</label><input type="number" name="fullTerm" value={formData.fullTerm} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}># Premature</label><input type="number" name="premature" value={formData.premature} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}># Abortion</label><input type="number" name="abortion" value={formData.abortion} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field"><label className={labelStyle}># Living Children</label><input type="number" name="livingChildren" value={formData.livingChildren} onChange={handleChange} className={inputStyle} /></div>
-                    <div className="field" style={{ gridColumn: 'span 2' }}>
-                      <label className={labelStyle} style={{ marginBottom: 8 }}>Pre-eclampsia</label>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        {['Yes', 'No'].map(v => (
-                          <label key={v} className={`radio-opt${formData.preEclampsia === v ? ' sel' : ''}`} style={{ fontSize: '0.82rem' }}>
-                            <input type="radio" name="preEclampsia" value={v} onChange={handleRadioChange} checked={formData.preEclampsia === v} style={{ display: 'none' }} />{v}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-
-            {/* SECTION: Clinical Assessment */}
-            <fieldset className={sectionStyle} style={{ border: 'none' }}>
-              <legend className={legendStyle}>Clinical Assessment</legend>
-              <div style={{ padding: '20px 24px' }}>
-                <div className="field">
-                  <label className={labelStyle}>Medication and Treatment</label>
-                  <textarea name="medicationAndTreatment" value={formData.medicationAndTreatment} onChange={handleChange} rows={5} className={inputStyle} placeholder="Prescribed medications, treatment plans, follow-up instructions..." style={{ resize: 'vertical' }}></textarea>
                 </div>
               </div>
             </fieldset>

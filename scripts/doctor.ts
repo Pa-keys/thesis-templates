@@ -11,6 +11,18 @@ interface Patient {
     contactNumber: string;
 }
 
+interface ConsultationQueueItem {
+    patient_id: string;
+    consultation_date: string;
+    consultation_time: string | null;
+    patients: {
+        firstName: string;
+        lastName: string;
+        sex: string;
+        bloodType: string;
+    };
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 const profile = await requireRole('doctor');
 const initials = profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -58,30 +70,82 @@ async function loadPatients(): Promise<void> {
     if (error) { console.error(error); return; }
     allPatients = (data as Patient[]) || [];
 
-    // Stats
     document.getElementById('totalPatients')!.textContent = String(allPatients.length);
     document.getElementById('visitsToday')!.textContent   = String(Math.min(allPatients.length, 24));
     document.getElementById('pendingReports')!.textContent = '7';
 
-    // Queue (first 5)
-    const recent = allPatients.slice(0, 5);
-    document.getElementById('queueCount')!.textContent = String(recent.length);
-    const times = ['09:30 AM', '10:15 AM', '11:00 AM', '11:30 AM', '02:00 PM'];
-    const late   = [false, true, false, false, false];
-    document.getElementById('patientQueue')!.innerHTML = recent.length === 0
-        ? '<div class="loading-msg">No patients in queue.</div>'
-        : recent.map((p, i) => `
-            <div class="q-item" onclick="window.location.href='details.html?id=${p.id}'">
-                <div class="q-av">${(p.firstName?.[0] || '?').toUpperCase()}</div>
-                <div class="q-info">
-                    <div class="q-name">${p.firstName} ${p.lastName}</div>
-                    <div class="q-sub">${p.sex || '—'} · ${p.bloodType || '—'}</div>
-                </div>
-                <span class="q-time${late[i] ? ' late' : ''}">${times[i]}</span>
-            </div>
-        `).join('');
-
     renderTable(allPatients);
+    await loadConsultationQueue();
+}
+
+// ─── Load Patient Queue from initial_consultation ─────────────────────────────
+async function loadConsultationQueue(): Promise<void> {
+    const { data, error } = await supabase
+        .from('initial_consultation')
+        .select(`
+            patient_id,
+            consultation_date,
+            consultation_time,
+            patients (
+                firstName,
+                lastName,
+                sex,
+                bloodType
+            )
+        `)
+        .order('consultation_date', { ascending: false })
+        .order('consultation_time', { ascending: false })
+        .limit(5);
+
+    if (error) {
+        console.error('Failed to load consultation queue:', error);
+        document.getElementById('patientQueue')!.innerHTML =
+            '<div class="loading-msg">Failed to load queue.</div>';
+        return;
+    }
+
+    const records = (data as unknown as ConsultationQueueItem[]) || [];
+    document.getElementById('queueCount')!.textContent = String(records.length);
+
+    if (records.length === 0) {
+        document.getElementById('patientQueue')!.innerHTML =
+            '<div class="loading-msg">No recent consultations.</div>';
+        return;
+    }
+
+    document.getElementById('patientQueue')!.innerHTML = records.map(r => {
+        const p = r.patients;
+        const firstName = p?.firstName || '?';
+        const lastName  = p?.lastName  || '';
+        const sex       = p?.sex       || '—';
+        const blood     = p?.bloodType || '—';
+        const avatar    = firstName[0].toUpperCase();
+
+        let timeLabel = '—';
+        if (r.consultation_time) {
+            const [h, m] = r.consultation_time.split(':');
+            const hour = parseInt(h);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            timeLabel = `${hour12}:${m} ${ampm}`;
+        } else if (r.consultation_date) {
+            timeLabel = new Date(r.consultation_date).toLocaleDateString([], {
+                month: 'short', day: 'numeric'
+            });
+        }
+
+        // Navigate to consultation.html with the patient's ID in the URL
+        return `
+            <div class="q-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
+                <div class="q-av">${avatar}</div>
+                <div class="q-info">
+                    <div class="q-name">${firstName} ${lastName}</div>
+                    <div class="q-sub">${sex} · ${blood}</div>
+                </div>
+                <span class="q-time">${timeLabel}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderTable(patients: Patient[]): void {
