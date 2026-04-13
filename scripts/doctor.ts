@@ -23,6 +23,19 @@ interface ConsultationQueueItem {
     };
 }
 
+interface FollowUpItem {
+    consultation_id: string;
+    patient_id: string;
+    follow_up_date: string;
+    follow_up_time: string | null;
+    management_treatment: string | null;
+    patients: {
+        firstName: string;
+        lastName: string;
+        sex: string;
+    };
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 const profile = await requireRole('doctor');
 const initials = profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -76,6 +89,7 @@ async function loadPatients(): Promise<void> {
 
     renderTable(allPatients);
     await loadConsultationQueue();
+    await loadFollowUps();
 }
 
 // ─── Load Patient Queue from initial_consultation ─────────────────────────────
@@ -134,15 +148,107 @@ async function loadConsultationQueue(): Promise<void> {
             });
         }
 
-        // Navigate to consultation.html with the patient's ID in the URL
         return `
-            <div class="q-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
-                <div class="q-av">${avatar}</div>
-                <div class="q-info">
-                    <div class="q-name">${firstName} ${lastName}</div>
-                    <div class="q-sub">${sex} · ${blood}</div>
+            <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
+                <div class="queue-av">${avatar}</div>
+                <div class="queue-info">
+                    <div class="queue-name">${firstName} ${lastName}</div>
+                    <div class="queue-meta">${sex} · ${blood}</div>
                 </div>
-                <span class="q-time">${timeLabel}</span>
+                <span class="queue-time">${timeLabel}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// ─── Load Follow-Ups from consultation ───────────────────────────────────────
+async function loadFollowUps(): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
+    const { data, error } = await supabase
+        .from('consultation')
+        .select(`
+            consultation_id,
+            patient_id,
+            follow_up_date,
+            follow_up_time,
+            management_treatment,
+            patients (
+                firstName,
+                lastName,
+                sex
+            )
+        `)
+        .not('follow_up_date', 'is', null)
+        .gte('follow_up_date', today)
+        .order('follow_up_date', { ascending: true })
+        .order('follow_up_time', { ascending: true })
+        .limit(5);
+
+    if (error) {
+        console.error('Failed to load follow-ups:', error);
+        document.getElementById('followUpList')!.innerHTML =
+            '<div class="loading-msg">Failed to load follow-ups.</div>';
+        return;
+    }
+
+    const records = (data as unknown as FollowUpItem[]) || [];
+
+    // Count how many are specifically today for the stat card
+    const todayCount = records.filter(r => r.follow_up_date === today).length;
+    document.getElementById('followUpToday')!.textContent = String(todayCount);
+    document.getElementById('followUpCount')!.textContent = String(records.length);
+
+    if (todayCount > 0) {
+        document.getElementById('followUpHint')!.textContent = `${todayCount} due today`;
+        document.getElementById('followUpHint')!.className = 'stat-hint down';
+    }
+
+    if (records.length === 0) {
+        document.getElementById('followUpList')!.innerHTML =
+            '<div class="loading-msg">No upcoming follow-ups.</div>';
+        return;
+    }
+
+    document.getElementById('followUpList')!.innerHTML = records.map(r => {
+        const p = r.patients;
+        const firstName = p?.firstName || '?';
+        const lastName  = p?.lastName  || '';
+        const sex       = p?.sex       || '—';
+        const avatar    = firstName[0].toUpperCase();
+
+        const isToday = r.follow_up_date === today;
+        const followDate = new Date(r.follow_up_date + 'T00:00:00'); // avoid timezone shift
+        const dateLabel = isToday
+            ? 'Today'
+            : followDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+        let timeLabel = '';
+        if (r.follow_up_time) {
+            const [h, m] = r.follow_up_time.split(':');
+            const hour = parseInt(h);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            timeLabel = ` · ${hour % 12 || 12}:${m} ${ampm}`;
+        }
+
+        const badgeStyle = isToday
+            ? 'background:#fef3c7;color:#d97706;border:1px solid #fde68a;'
+            : 'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;';
+
+        const treatment = r.management_treatment
+            ? r.management_treatment.length > 22
+                ? r.management_treatment.slice(0, 22) + '…'
+                : r.management_treatment
+            : null;
+
+        return `
+            <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
+                <div class="queue-av" style="background:#7c3aed;">${avatar}</div>
+                <div class="queue-info">
+                    <div class="queue-name">${firstName} ${lastName}</div>
+                    <div class="queue-meta">${sex}${treatment ? ' · ' + treatment : ''}</div>
+                </div>
+                <span style="font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;${badgeStyle}">${dateLabel}${timeLabel}</span>
             </div>
         `;
     }).join('');

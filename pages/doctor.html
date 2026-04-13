@@ -62,6 +62,7 @@
         .stat-hint.down { color: #dc2626; }
         .grid-2-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .card { 
             background: white; border-radius: 10px; 
             border: 1px solid #e2e8f0; padding: 12px; 
@@ -73,6 +74,7 @@
         .card-title { font-size: 0.82rem; font-weight: 700; color: #0f172a; }
         .card-sub { font-size: 0.67rem; color: #94a3b8; margin-top: 1px; }
         #patientQueue { max-height: 200px; overflow-y: auto; }
+        #followUpList { max-height: 200px; overflow-y: auto; }
         .queue-item { 
             display: flex; align-items: center; justify-content: space-between; 
             padding: 6px 0; border-bottom: 1px solid #f1f5f9; 
@@ -154,6 +156,7 @@
         .si-green { background: #DCFCE7; }
         .si-pink { background: #FCE7F3; }
         .si-indigo { background: #EEF2FF; }
+        .si-purple { background: #F3EEFF; }
     </style>
 </head>
 <body>
@@ -215,7 +218,7 @@
             </div>
             <div id="topbarAv" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-md cursor-pointer">D</div>
         </div>
-    </div>
+    </header>
 
     <!-- Content -->
     <div class="content">
@@ -256,12 +259,13 @@
                     <div class="stat-hint down">Needs review</div>
                 </div>
             </div>
+            <!-- NEW: Follow-Up stat -->
             <div class="stat-card">
-                <div class="stat-icon-wrap si-indigo">⚡</div>
+                <div class="stat-icon-wrap si-purple">🔁</div>
                 <div class="stat-body">
-                    <div class="stat-label">Avg Wait Time</div>
-                    <div class="stat-val">14<span style="font-size:0.9rem;font-weight:600">min</span></div>
-                    <div class="stat-hint up">↓ 2min from last week</div>
+                    <div class="stat-label">Follow-Ups Today</div>
+                    <div class="stat-val" id="followUpToday">—</div>
+                    <div class="stat-hint" id="followUpHint">Scheduled returns</div>
                 </div>
             </div>
         </div>
@@ -295,8 +299,8 @@
             </div>
         </div>
 
-        <!-- Bottom row -->
-        <div class="grid-2">
+        <!-- Bottom row: 3 columns -->
+        <div class="grid-3">
             <!-- Quick Actions -->
             <div class="card">
                 <div class="card-hd">
@@ -332,6 +336,19 @@
                     <div class="progress-track"><div class="progress-fill pf-green" style="width:12%"></div></div>
                 </div>
                 <button class="morb-btn">🩺 Full Morbidity Analytics →</button>
+            </div>
+
+            <!-- NEW: Follow-Up Patients -->
+            <div class="card">
+                <div class="card-hd">
+                    <div>
+                        <div class="card-title">📅 Upcoming Follow-Ups</div>
+                        <div class="card-sub">Scheduled return visits</div>
+                    </div>
+                    <span style="background:#7c3aed;color:white;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;" id="followUpCount">0</span>
+                </div>
+                <div id="followUpList"><div class="loading-msg">Loading...</div></div>
+                <button class="view-all-link" onclick="window.location.href='records.html'">View all follow-ups →</button>
             </div>
         </div>
 

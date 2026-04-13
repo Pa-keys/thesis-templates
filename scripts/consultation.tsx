@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../shared/supabase';
 import { requireRole, logout } from '../shared/auth';
 import { Sidebar } from './sidebar';
@@ -16,6 +17,14 @@ interface PatientData {
     bloodType: string;
     address?: string;
     contactNumber?: string;
+}
+
+interface Medication {
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    quantity: string;
 }
 
 function ConsultationPage() {
@@ -75,17 +84,30 @@ function ConsultationPage() {
         visualAcuityLeft: '',
         visualAcuityRight: '',
 
-        // ── SOAP ───────────────────────────────────────────────────────────
-        assessment: '',
-        plan: '',
-        rxDetails: '',
+        // ── Lab Tests ──────────────────────────────────────────────────────
         labTests: {
-            cbc: false, fbs: false, urinalysis: false, lipidProfile: false,
-            fecalysis: false, hba1c: false, bloodTyping: false, creatinine: false,
-            sgpt: false, uricAcid: false, chestXray: false, ecg: false, others: false
+            cbc: false, cbcPlatelet: false, hgbHct: false, chestXray: false,
+            ultrasound: false, urinalysis: false, fecalysis: false, sputum: false,
+            rbs: false, fbs: false, uricAcid: false, cholesterol: false,
+            hba1c: false, bloodTyping: false, creatinine: false,
+            sgpt: false, lipidProfile: false, ecg: false, others: false,
         },
-        labTestsOther: ''
+        labTestsOther: '',
+        labChiefComplaint: '',
+        labRequestedBy: '',
+
+        // ── Prescription ───────────────────────────────────────────────────
+        rxLicNo: '',
+        rxPtrNo: '',
+        rxSignatureUrl: '',
     });
+
+    // Medications list for prescription
+    const [medications, setMedications] = useState<Medication[]>([
+        { name: '', dosage: '', frequency: '', duration: '', quantity: '' }
+    ]);
+
+    const sigCanvas = useRef<SignatureCanvas | null>(null);
 
     const [activeTab, setActiveTab] = useState(1);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -103,10 +125,6 @@ function ConsultationPage() {
         ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
         : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
 
-    const [isRxModalOpen, setIsRxModalOpen] = useState(false);
-    const [isMedCertModalOpen, setIsMedCertModalOpen] = useState(false);
-    const [isLabOrderModalOpen, setIsLabOrderModalOpen] = useState(false);
-
     const [vitalsId, setVitalsId] = useState<number | null>(null);
     const [vitalsLoading, setVitalsLoading] = useState(false);
 
@@ -123,7 +141,11 @@ function ConsultationPage() {
                 .toUpperCase()
                 .slice(0, 2);
             setDoctorInitials(initials);
-            setFormData(prev => ({ ...prev, attendingProvider: profile.fullName }));
+            setFormData(prev => ({
+                ...prev,
+                attendingProvider: profile.fullName,
+                labRequestedBy: profile.fullName,
+            }));
 
             const patientId = new URLSearchParams(window.location.search).get('id');
             if (!patientId) { setPatientLoading(false); return; }
@@ -176,7 +198,7 @@ function ConsultationPage() {
             });
     }, [patient?.id]);
 
-    // ─── CONSULTATION FETCH (load existing draft if any) ─────────────────────
+    // ─── CONSULTATION FETCH ───────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
 
@@ -224,26 +246,7 @@ function ConsultationPage() {
                     attendingProvider:      data.attending_provider ?? prev.attendingProvider,
                     chiefComplaints:        data.chief_complaints ?? '',
                     diagnosis:              data.diagnosis ?? '',
-                    hpi:                    data.hpi ?? '',
-                    assessment:             data.assessment ?? '',
-                    plan:                   data.plan ?? '',
-                    rxDetails:              data.rx_details ?? '',
-                    labTestsOther:          data.lab_others_text ?? '',
-                    labTests: {
-                        cbc:          data.lab_cbc ?? false,
-                        fbs:          data.lab_fbs ?? false,
-                        urinalysis:   data.lab_urinalysis ?? false,
-                        lipidProfile: data.lab_lipid_profile ?? false,
-                        fecalysis:    data.lab_fecalysis ?? false,
-                        hba1c:        data.lab_hba1c ?? false,
-                        bloodTyping:  data.lab_blood_typing ?? false,
-                        creatinine:   data.lab_creatinine ?? false,
-                        sgpt:         data.lab_sgpt ?? false,
-                        uricAcid:     data.lab_uric_acid ?? false,
-                        chestXray:    data.lab_chest_xray ?? false,
-                        ecg:          data.lab_ecg ?? false,
-                        others:       data.lab_others ?? false,
-                    },
+                    hpi:                    data.hpi ?? ''
                 }));
             });
     }, [patient?.id]);
@@ -256,7 +259,6 @@ function ConsultationPage() {
 
     // ─── HELPERS ─────────────────────────────────────────────────────────────
 
-    /** Builds the full consultation payload mapped to DB column names */
     const buildConsultationPayload = () => ({
         patient_id:              patient?.id,
         family_history:          formData.familyHistory || null,
@@ -291,24 +293,7 @@ function ConsultationPage() {
         attending_provider:      formData.attendingProvider || null,
         chief_complaints:        formData.chiefComplaints || null,
         diagnosis:               formData.diagnosis || null,
-        hpi:                     formData.hpi || null,
-        assessment:              formData.assessment || null,
-        plan:                    formData.plan || null,
-        rx_details:              formData.rxDetails || null,
-        lab_cbc:                 formData.labTests.cbc,
-        lab_fbs:                 formData.labTests.fbs,
-        lab_urinalysis:          formData.labTests.urinalysis,
-        lab_lipid_profile:       formData.labTests.lipidProfile,
-        lab_fecalysis:           formData.labTests.fecalysis,
-        lab_hba1c:               formData.labTests.hba1c,
-        lab_blood_typing:        formData.labTests.bloodTyping,
-        lab_creatinine:          formData.labTests.creatinine,
-        lab_sgpt:                formData.labTests.sgpt,
-        lab_uric_acid:           formData.labTests.uricAcid,
-        lab_chest_xray:          formData.labTests.chestXray,
-        lab_ecg:                 formData.labTests.ecg,
-        lab_others:              formData.labTests.others,
-        lab_others_text:         formData.labTestsOther || null,
+        hpi:                     formData.hpi || null
     });
 
     // ─── HANDLERS ────────────────────────────────────────────────────────────
@@ -330,89 +315,139 @@ function ConsultationPage() {
         }));
     };
 
-    const handleSaveAndPrintLabOrder = async () => {
+    const handleMedChange = (index: number, field: keyof Medication, value: string) => {
+        const newMeds = [...medications];
+        newMeds[index][field] = value;
+        setMedications(newMeds);
+    };
+
+    const handleAddMed = () => {
+        setMedications(prev => [...prev, { name: '', dosage: '', frequency: '', duration: '', quantity: '' }]);
+    };
+
+    const handleRemoveMed = (index: number) => {
+        if (medications.length === 1) return;
+        setMedications(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Save Lab Request
+    const handleSaveLabRequest = async () => {
+        if (!patient?.id) return;
         setLoading(true);
-        const payload = buildConsultationPayload();
+        
+        const consultPayload = buildConsultationPayload();
+        // HOLD THE ID LOCALLY
+        let currentConsultId = consultationId; 
 
         try {
             if (isOnline) {
-                if (consultationId) {
-                    const { error } = await supabase
-                        .from('consultation')
-                        .update(payload)
-                        .eq('consultation_id', consultationId);
+                // Save consultation first
+                if (currentConsultId) {
+                    const { error } = await supabase.from('consultation').update(consultPayload).eq('consultation_id', currentConsultId);
                     if (error) throw error;
                 } else {
-                    const { data, error } = await supabase
-                        .from('consultation')
-                        .insert([payload])
-                        .select('consultation_id')
-                        .single();
+                    const { data, error } = await supabase.from('consultation').insert([consultPayload]).select('consultation_id').single();
                     if (error) throw error;
-                    if (data) setConsultationId(data.consultation_id);
+                    if (data) {
+                        currentConsultId = data.consultation_id; // Capture new ID
+                        setConsultationId(data.consultation_id); // Update state for later
+                    }
                 }
-                alert("Lab Request sent to Laboratory successfully!");
+
+                // BUILD LAB PAYLOAD WITH THE ID
+                const labPayload = {
+                    patient_id: patient.id,
+                    consultation_id: currentConsultId, // LINKED!
+                    request_date: new Date().toISOString().split('T')[0],
+                    chief_complaint: formData.labChiefComplaint || null,
+                    is_cbc: formData.labTests.cbc,
+                    is_cbc_platelet: formData.labTests.cbcPlatelet,
+                    is_hgb_hct: formData.labTests.hgbHct,
+                    is_xray: formData.labTests.chestXray,
+                    is_ultrasound: formData.labTests.ultrasound,
+                    is_urinalysis: formData.labTests.urinalysis,
+                    is_fecalysis: formData.labTests.fecalysis,
+                    is_sputum: formData.labTests.sputum,
+                    is_rbs: formData.labTests.rbs,
+                    is_fbs: formData.labTests.fbs,
+                    is_uric_acid: formData.labTests.uricAcid,
+                    is_cholesterol: formData.labTests.cholesterol,
+                    others: formData.labTestsOther || null,
+                    requested_by: formData.labRequestedBy || null,
+                    status: 'Pending',
+                };
+
+                // Save lab request
+                const { error: labError } = await supabase.from('lab_request').insert([labPayload]);
+                if (labError) throw labError;
+                
+                alert('Lab request sent to laboratory successfully!');
             } else {
-                await saveToIndexedDB('MediSensDB', 'offline_patients', {
-                    id: Date.now(),
-                    type: 'consultation',
-                    data: payload
-                });
-                alert("You are offline. Lab Request saved locally and will sync when connection returns!");
+                alert('Offline mode requires connecting to the server to generate a consultation ID first.');
             }
-            window.print();
-            setIsLabOrderModalOpen(false);
         } catch (error: any) {
-            console.error("Error:", error);
-            alert("Failed to send request: " + error.message);
+            console.error('Error:', error);
+            alert('Failed to save lab request: ' + error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSendToPharmacy = async () => {
-        if (!formData.assessment || !formData.plan) {
-            alert("Please fill out the Assessment and Plan before sending.");
+    // Save Prescription
+    const handleSavePrescription = async () => {
+        if (!patient?.id) return;
+
+        // REQUIRE CONSULTATION TO EXIST FIRST
+        if (!consultationId) {
+             alert('Please save the Clinical Assessment / Consultation first before issuing a prescription.');
+             return;
+        }
+
+        if (sigCanvas.current?.isEmpty()) {
+            alert('Doctor signature is required before saving.');
             return;
         }
+
+        // 1. FILTER OUT ANY BLANK ROWS
+        const validMedications = medications.filter(m => m.name.trim() !== '');
+
+        // 2. CHECK IF WE HAVE AT LEAST ONE VALID MEDICATION LEFT
+        if (validMedications.length === 0) {
+            alert('Please add at least one medication before saving.');
+            return;
+        }
+        
         setLoading(true);
-        const payload = buildConsultationPayload();
+        const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
+        
+        const rxPayload = {
+            patient_id: patient.id,
+            consultation_id: consultationId, // LINKED!
+            prescription_date: new Date().toISOString().split('T')[0],
+            // 3. STRINGIFY ONLY THE VALID MEDICATIONS
+            rx_content: JSON.stringify(validMedications), 
+            license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null,
+            ptr_no: formData.rxPtrNo || null,
+            signature_url: sigUrl,
+            status: 'Pending',
+        };
 
         try {
             if (isOnline) {
-                if (consultationId) {
-                    const { error } = await supabase
-                        .from('consultation')
-                        .update(payload)
-                        .eq('consultation_id', consultationId);
-                    if (error) throw error;
-                } else {
-                    const { data, error } = await supabase
-                        .from('consultation')
-                        .insert([payload])
-                        .select('consultation_id')
-                        .single();
-                    if (error) throw error;
-                    if (data) setConsultationId(data.consultation_id);
-                }
-                alert("Consultation saved and sent to pharmacy!");
+                const { error } = await supabase.from('prescription').insert([rxPayload]);
+                if (error) throw error;
+                alert('Prescription saved and sent to pharmacy!');
+                sigCanvas.current?.clear();
             } else {
-                await saveToIndexedDB('MediSensDB', 'offline_patients', {
-                    id: Date.now(),
-                    type: 'consultation',
-                    data: payload
-                });
-                alert("You are offline. Consultation saved locally and will sync when connection returns!");
+                alert('Offline mode requires connecting to the server to generate a consultation ID first.');
             }
         } catch (error: any) {
-            console.error(error);
-            alert("Failed to save: " + error.message);
+            console.error('Error:', error);
+            alert('Failed to save prescription: ' + error.message);
         } finally {
             setLoading(false);
         }
     };
-
-    const isSoapFilled = formData.assessment.trim() !== '' && formData.plan.trim() !== '';
 
     const patientFullName = patient
         ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}`
@@ -437,16 +472,16 @@ function ConsultationPage() {
     );
 
     const renderCheckbox = (key: keyof typeof formData.labTests, label: string) => (
-        <label className="flex items-center gap-3 cursor-pointer group min-h-[44px]">
-            <div className="relative flex items-center justify-center w-6 h-6 md:w-5 md:h-5 border-2 border-slate-400 print:border-black rounded bg-white shrink-0">
+        <label key={key} className="flex items-center gap-3 cursor-pointer group min-h-[40px]">
+            <div className="relative flex items-center justify-center w-5 h-5 border-2 border-slate-300 rounded bg-white shrink-0 transition-colors group-hover:border-blue-400">
                 <input type="checkbox" checked={formData.labTests[key]} onChange={() => handleLabTestChange(key)} className="absolute opacity-0 w-0 h-0" />
                 {formData.labTests[key] && (
-                    <svg className="w-4 h-4 text-blue-600 print:text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                    <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                 )}
             </div>
-            <span className="font-medium text-slate-700 print:text-black text-sm md:text-base">{label}</span>
+            <span className="text-sm font-medium text-slate-700">{label}</span>
         </label>
     );
 
@@ -491,10 +526,7 @@ function ConsultationPage() {
         );
     };
 
-    // ─── TABS (unchanged UI, only handlers updated above) ────────────────────
-    // ... paste your existing renderTab1 through renderTab7 here unchanged ...
-    // The only functional difference is handleSendToPharmacy and
-    // handleSaveAndPrintLabOrder now use buildConsultationPayload()
+    // ─── TAB RENDERS ─────────────────────────────────────────────────────────
 
     const renderTab1 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
@@ -748,32 +780,194 @@ function ConsultationPage() {
                         <button onClick={handleSaveVitals} disabled={loading || !patient?.id} className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
                             {loading ? 'Saving...' : vitalsId ? '💾 Update Vitals' : '💾 Save Vitals'}
                         </button>
-                        <button onClick={() => setActiveTab(7)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: SOAP &amp; Actions →</button>
+                        <button onClick={() => setActiveTab(7)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: Lab Request →</button>
                     </div>
                 </div>
             </div>
         );
     };
 
+    // ─── TAB 7: LABORATORY REQUEST ────────────────────────────────────────────
     const renderTab7 = () => (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">VII. SOAP Note &amp; Actions</h3>
-            <div className="mb-6"><label className={labelCls}>Assessment / Impression</label><textarea name="assessment" className="w-full bg-white border border-slate-200 rounded-lg p-4 h-32 md:h-40 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-none" placeholder="Enter diagnosis or clinical impression..." value={formData.assessment} onChange={handleChange} /></div>
-            <div className="mb-4"><label className={labelCls}>Plan / Remarks</label><textarea name="plan" className="w-full bg-white border border-slate-200 rounded-lg p-4 h-32 md:h-40 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-none" placeholder="Enter treatment plan, medications, or notes..." value={formData.plan} onChange={handleChange} /></div>
-            <div className="flex justify-end mb-8">
-                <button onClick={() => setIsMedCertModalOpen(true)} disabled={!isSoapFilled} className={`w-full sm:w-auto flex justify-center items-center gap-2 font-semibold py-2.5 px-6 rounded-lg transition-all text-sm border active:scale-95 ${isSoapFilled ? 'bg-[#EBF3FF] text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm' : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'}`}>
-                    📄 Generate Medical Certificate
-                </button>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
+            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VII. Laboratory Request</h3>
+
+            {/* Chief complaint */}
+            <div>
+                <label className={labelCls}>Chief Complaint</label>
+                <input type="text" name="labChiefComplaint" value={formData.labChiefComplaint} onChange={handleChange} className={inputCls} placeholder="Enter chief complaint for lab request..." />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-8">
-                <button onClick={() => setIsLabOrderModalOpen(true)} className="w-full bg-white border border-slate-200 rounded-xl p-5 font-semibold text-slate-700 hover:border-blue-500 hover:bg-[#EBF3FF] hover:text-blue-700 text-left shadow-sm flex items-center gap-4 transition-all group active:scale-95"><span className="text-2xl group-hover:scale-110 transition-transform">📋</span> Lab Orders</button>
-                <button onClick={() => setIsRxModalOpen(true)} className="w-full bg-white border border-slate-200 rounded-xl p-5 font-semibold text-slate-700 hover:border-blue-500 hover:bg-[#EBF3FF] hover:text-blue-700 text-left shadow-sm flex items-center gap-4 transition-all group active:scale-95"><span className="text-2xl group-hover:scale-110 transition-transform">💊</span> E-Prescription</button>
-                <button className="w-full bg-white border border-slate-200 rounded-xl p-5 font-semibold text-slate-700 hover:border-blue-500 hover:bg-[#EBF3FF] hover:text-blue-700 text-left shadow-sm flex items-center gap-4 transition-all group active:scale-95"><span className="text-2xl group-hover:scale-110 transition-transform">📊</span> Past Lab Results</button>
+
+            {/* Tests grid */}
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-5">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Routine Tests</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
+                    {renderCheckbox('cbc', 'Complete Blood Count (CBC)')}
+                    {renderCheckbox('urinalysis', 'Urinalysis')}
+                    {renderCheckbox('cbcPlatelet', 'CBC with Platelet Count')}
+                    {renderCheckbox('fecalysis', 'Fecalysis')}
+                    {renderCheckbox('hgbHct', 'Hemoglobin and Hematocrit')}
+                    {renderCheckbox('sputum', 'Sputum')}
+                    {renderCheckbox('chestXray', 'Chest X-Ray (PA View)')}
+                    {renderCheckbox('ultrasound', 'Ultrasound')}
+                    {renderCheckbox('bloodTyping', 'Blood Typing')}
+                    {renderCheckbox('ecg', 'ECG')}
+                </div>
+
+                <div className="border-t border-slate-200 pt-5">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Fasting Tests <span className="text-slate-300 font-normal normal-case">(8–10 hrs)</span></p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
+                        {renderCheckbox('rbs', 'Random Blood Sugar (RBS)')}
+                        {renderCheckbox('fbs', 'Fasting Blood Sugar (FBS)')}
+                        {renderCheckbox('uricAcid', 'Uric Acid')}
+                        {renderCheckbox('cholesterol', 'Cholesterol')}
+                        {renderCheckbox('lipidProfile', 'Lipid Profile')}
+                        {renderCheckbox('hba1c', 'HbA1c')}
+                        {renderCheckbox('creatinine', 'Creatinine')}
+                        {renderCheckbox('sgpt', 'SGPT')}
+                    </div>
+                </div>
+
+                {/* Others */}
+                <div className="border-t border-slate-200 pt-5 flex flex-col sm:flex-row sm:items-center gap-3">
+                    {renderCheckbox('others', 'Others:')}
+                    <input
+                        type="text"
+                        name="labTestsOther"
+                        value={formData.labTestsOther}
+                        onChange={handleChange}
+                        disabled={!formData.labTests.others}
+                        className={`flex-1 bg-white border-b-2 ${formData.labTests.others ? 'border-slate-300 focus:border-blue-500' : 'border-slate-100'} outline-none px-2 py-2 text-sm font-medium text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed`}
+                        placeholder={formData.labTests.others ? 'Specify test here...' : ''}
+                    />
+                </div>
             </div>
-            <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-100">
-                <button onClick={() => setActiveTab(6)} className="w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
-                <button onClick={handleSendToPharmacy} disabled={loading} className={`w-full sm:w-auto text-white font-bold text-sm py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 ${primaryBtnBg}`}>
-                    {loading ? 'Processing...' : 'Complete & Send to Pharmacy'}
+
+            {/* Requested by */}
+            <div>
+                <label className={labelCls}>Requested By</label>
+                <input type="text" name="labRequestedBy" value={formData.labRequestedBy} onChange={handleChange} className={inputCls} />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
+                <button onClick={() => setActiveTab(6)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
+                <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
+                    <button
+                        onClick={handleSaveLabRequest}
+                        disabled={loading || !patient?.id}
+                        className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}
+                    >
+                        {loading ? 'Sending...' : '📋 Send to Laboratory'}
+                    </button>
+                    <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: E-Prescription →</button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // ─── TAB 8: E-PRESCRIPTION ────────────────────────────────────────────────
+    const renderTab8 = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
+            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VIII. E-Prescription</h3>
+
+            {/* Patient summary strip */}
+            {patient && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    <span><span className="text-slate-500">Patient:</span> <span className="font-semibold text-slate-800">{patientFullName}</span></span>
+                    <span><span className="text-slate-500">Age:</span> <span className="font-semibold text-slate-800">{patient.age ?? '—'}</span></span>
+                    <span><span className="text-slate-500">Sex:</span> <span className="font-semibold text-slate-800">{patient.sex || '—'}</span></span>
+                    <span><span className="text-slate-500">Address:</span> <span className="font-semibold text-slate-800">{patient.address || '—'}</span></span>
+                </div>
+            )}
+
+            {/* Rx symbol */}
+            <div className="flex items-center gap-3">
+                <span className="text-5xl font-serif leading-none text-slate-800 select-none">℞</span>
+                <span className="text-sm text-slate-400 font-medium">Add medications below</span>
+            </div>
+
+            {/* Medications list */}
+            <div className="space-y-3">
+                {medications.map((med, i) => (
+                    <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Medication {i + 1}</span>
+                            {medications.length > 1 && (
+                                <button onClick={() => handleRemoveMed(i)} className="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors">Remove</button>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            <div className="sm:col-span-2 md:col-span-2">
+                                <label className={labelCls}>Medication Name</label>
+                                <input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} placeholder="e.g. Amoxicillin 500mg" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Dosage</label>
+                                <input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 500mg" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Frequency (Sig)</label>
+                                <input type="text" value={med.frequency} onChange={e => handleMedChange(i, 'frequency', e.target.value)} className={inputCls} placeholder="e.g. 1x a day" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Duration</label>
+                                <input type="text" value={med.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} className={inputCls} placeholder="e.g. 7 days" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Quantity</label>
+                                <input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <button
+                onClick={handleAddMed}
+                className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-lg transition-all active:scale-95"
+            >
+                + Add Another Medication
+            </button>
+
+            {/* Signature + credentials */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div>
+                    <label className={labelCls}>Doctor's Signature</label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl overflow-hidden bg-white relative">
+                        <div className="absolute top-2 left-3 text-xs text-slate-300 pointer-events-none select-none">Sign here</div>
+                        <SignatureCanvas
+                            ref={sigCanvas}
+                            penColor="#1e293b"
+                            canvasProps={{ className: 'w-full', height: 130 }}
+                        />
+                    </div>
+                    <button
+                        onClick={() => sigCanvas.current?.clear()}
+                        className="mt-2 text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors"
+                    >
+                        Clear signature
+                    </button>
+                </div>
+                <div className="space-y-4">
+                    <div>
+                        <label className={labelCls}>License No.</label>
+                        <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="PRC license number" />
+                    </div>
+                    <div>
+                        <label className={labelCls}>PTR No.</label>
+                        <input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="PTR number" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
+                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
+                <button
+                    onClick={handleSavePrescription}
+                    disabled={loading || !patient?.id}
+                    className={`order-1 sm:order-2 w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 duration-200 ${primaryBtnBg}`}
+                >
+                    {loading ? 'Saving...' : '💊 Authorize & Send to Pharmacy'}
                 </button>
             </div>
         </div>
@@ -786,7 +980,8 @@ function ConsultationPage() {
         { id: 4, label: "4. Follow-up" },
         { id: 5, label: "5. Clinical Notes" },
         { id: 6, label: "6. Physical Exam" },
-        { id: 7, label: "7. SOAP & Actions" },
+        { id: 7, label: "7. Lab Request" },
+        { id: 8, label: "8. E-Prescription" },
     ];
 
     return (
@@ -845,171 +1040,11 @@ function ConsultationPage() {
                             {activeTab === 5 && renderTab5()}
                             {activeTab === 6 && renderTab6()}
                             {activeTab === 7 && renderTab7()}
+                            {activeTab === 8 && renderTab8()}
                         </div>
                     </div>
                 </main>
             </div>
-
-            {/* Modals unchanged from original */}
-            {isMedCertModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99] flex items-center justify-center md:p-4 print:absolute print:inset-0 print:bg-white print:block print:p-0 print:m-0">
-                    <div className="bg-white md:rounded-2xl shadow-2xl w-full h-full md:w-[800px] md:h-auto md:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 print:w-full print:max-w-full print:h-auto print:max-h-none print:shadow-none print:rounded-none print:overflow-visible print:border-none print:m-0 print:p-0">
-                        <div className="flex justify-between items-center p-4 md:p-5 border-b border-slate-200 bg-white shrink-0 print:hidden shadow-sm z-10">
-                            <h3 className="font-bold text-slate-800 text-lg">Medical Certificate Preview</h3>
-                            <button onClick={() => setIsMedCertModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-red-500 text-2xl font-bold transition-colors">&times;</button>
-                        </div>
-                        <div className="p-6 md:p-12 flex-1 overflow-y-auto bg-white text-black flex flex-col print:p-0 print:overflow-visible print:min-h-[95vh]">
-                            <div className="flex justify-between items-center mb-6 shrink-0">
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">DOH LOGO</div>
-                                <div className="text-center flex-1 px-2 md:px-4 leading-snug">
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Republic of the Philippines</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Province of Batangas</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Municipality of Malvar</div>
-                                    <div className="font-bold text-sm md:text-xl mt-2">OFFICE OF THE MUNICIPAL HEALTH OFFICER</div>
-                                </div>
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">MALVAR LOGO</div>
-                            </div>
-                            <hr className="border-t-[3px] border-black mb-8 shrink-0" />
-                            <div className="text-center mb-6 shrink-0"><h1 className="text-xl md:text-3xl font-bold uppercase tracking-widest underline decoration-2 underline-offset-4">Medical Certificate</h1></div>
-                            <div className="text-right mb-8 text-sm md:text-lg shrink-0">Date: <span className="font-semibold border-b border-black pb-0.5 px-4">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-                            <div className="mb-10 text-sm md:text-[1.15rem] leading-[2rem] space-y-2 shrink-0">
-                                <div className="flex flex-wrap gap-x-8 gap-y-2">
-                                    <div className="flex-1 min-w-[200px] md:min-w-[300px]"><span className="font-bold mr-2">Name:</span><span className="font-bold uppercase border-b border-black px-4">{patientFullName}</span></div>
-                                    <div><span className="font-bold mr-2">Age:</span><span className="font-bold border-b border-black px-4">{patient?.age ?? '—'}</span></div>
-                                    <div><span className="font-bold mr-2">Sex:</span><span className="font-bold border-b border-black px-4">{patient?.sex || '—'}</span></div>
-                                </div>
-                                <div><span className="font-bold mr-2">Address:</span><span className="font-bold border-b border-black px-4">{patient?.address || '—'}</span></div>
-                            </div>
-                            <div className="flex-1 flex flex-col pl-2 md:pl-4 text-sm md:text-base">
-                                <div><span className="font-bold text-base md:text-[1.15rem]">Impression:</span><div className="mt-2 md:mt-4 ml-4 md:ml-8 font-semibold whitespace-pre-wrap leading-relaxed">{formData.assessment}</div></div>
-                                <div className="mt-6 md:mt-8"><span className="font-bold text-base md:text-[1.15rem]">Remarks:</span><div className="mt-2 md:mt-4 ml-4 md:ml-8 font-semibold whitespace-pre-wrap leading-relaxed">{formData.plan}</div></div>
-                            </div>
-                            <div className="mt-12 md:mt-auto pt-16 flex justify-end shrink-0">
-                                <div className="text-center w-52 md:w-80">
-                                    <div className="border-b-[2px] border-black mb-1 uppercase font-bold text-base md:text-xl truncate">{doctorName}, MD</div>
-                                    <div className="text-[0.65rem] md:text-sm font-semibold">Municipal Health Officer / Attending Physician</div>
-                                    <div className="text-[0.65rem] md:text-sm mt-1">License No: <span className="font-semibold">12345</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-4 md:p-5 border-t border-slate-200 bg-white shrink-0 flex flex-col sm:flex-row justify-end gap-3 print:hidden z-10">
-                            <button onClick={() => setIsMedCertModalOpen(false)} className="w-full sm:w-auto px-5 py-3 rounded-lg font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 text-sm order-2 sm:order-1 active:scale-95 transition-transform">Cancel</button>
-                            <button onClick={() => window.print()} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md text-sm order-1 sm:order-2 active:scale-95 transition-transform">Print Certificate</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isRxModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99] flex items-center justify-center md:p-4 print:absolute print:inset-0 print:bg-white print:block print:p-0 print:m-0">
-                    <div className="bg-white md:rounded-2xl shadow-2xl w-full h-full md:w-[800px] md:h-auto md:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 print:w-full print:max-w-full print:h-auto print:max-h-none print:shadow-none print:rounded-none print:overflow-visible print:border-none print:m-0 print:p-0">
-                        <div className="flex justify-between items-center p-4 md:p-5 border-b border-slate-200 bg-white shrink-0 print:hidden shadow-sm z-10">
-                            <h3 className="font-bold text-slate-800 text-lg">E-Prescription Preview</h3>
-                            <button onClick={() => setIsRxModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-red-500 text-2xl font-bold transition-colors">&times;</button>
-                        </div>
-                        <div className="p-6 md:p-12 flex-1 overflow-y-auto bg-white text-black flex flex-col print:p-0 print:overflow-visible print:min-h-[95vh]">
-                            <div className="flex justify-between items-center mb-6 shrink-0">
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">DOH LOGO</div>
-                                <div className="text-center flex-1 px-2 md:px-4 leading-snug">
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Republic of the Philippines</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Province of Batangas</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Municipality of Malvar</div>
-                                    <div className="font-bold text-sm md:text-xl mt-2">OFFICE OF THE MUNICIPAL HEALTH OFFICER</div>
-                                </div>
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">MALVAR LOGO</div>
-                            </div>
-                            <hr className="border-t-[3px] border-black mb-8 shrink-0" />
-                            <div className="text-center mb-6 shrink-0"><h1 className="text-xl md:text-3xl font-bold uppercase tracking-widest underline decoration-2 underline-offset-4">Medical Prescription</h1></div>
-                            <div className="text-right mb-8 text-sm md:text-lg shrink-0">Date: <span className="font-semibold border-b border-black pb-0.5 px-4">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-                            <div className="mb-6 md:mb-10 text-sm md:text-[1.15rem] leading-[2rem] space-y-2 shrink-0">
-                                <div className="flex flex-wrap gap-x-8 gap-y-2">
-                                    <div className="flex-1 min-w-[200px] md:min-w-[300px]"><span className="font-bold mr-2">Name:</span><span className="font-bold uppercase border-b border-black px-4">{patientFullName}</span></div>
-                                    <div><span className="font-bold mr-2">Age:</span><span className="font-bold border-b border-black px-4">{patient?.age ?? '—'}</span></div>
-                                </div>
-                            </div>
-                            <div className="flex-1 flex flex-col pl-2 md:pl-4">
-                                <div className="text-5xl md:text-7xl font-bold text-slate-900 mb-4 md:mb-8 tracking-tighter shrink-0">Rx</div>
-                                <textarea name="rxDetails" className="flex-1 w-full bg-white border border-slate-200 rounded-xl p-4 print:hidden text-base md:text-lg text-slate-800 resize-none ml-0 md:ml-8 min-h-[150px] focus:border-blue-500 focus:ring-1 outline-none" placeholder="Enter prescribed medicines..." value={formData.rxDetails} onChange={handleChange} />
-                                <div className="hidden print:block whitespace-pre-wrap text-[1.15rem] font-bold leading-relaxed ml-8">{formData.rxDetails}</div>
-                            </div>
-                            <div className="mt-12 md:mt-auto pt-16 flex justify-end shrink-0">
-                                <div className="text-center w-52 md:w-80">
-                                    <div className="border-b-[2px] border-black mb-1 uppercase font-bold text-base md:text-xl truncate">{doctorName}, MD</div>
-                                    <div className="text-[0.65rem] md:text-sm font-semibold">Municipal Health Officer / Attending Physician</div>
-                                    <div className="text-[0.65rem] md:text-sm mt-1">License No: <span className="font-semibold">12345</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-4 md:p-5 border-t border-slate-200 bg-white shrink-0 flex flex-col sm:flex-row justify-end gap-3 print:hidden z-10">
-                            <button onClick={() => setIsRxModalOpen(false)} className="w-full sm:w-auto px-5 py-3 rounded-lg font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 text-sm order-2 sm:order-1 active:scale-95 transition-transform">Cancel</button>
-                            <button onClick={() => window.print()} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md text-sm order-1 sm:order-2 active:scale-95 transition-transform">Print Prescription</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isLabOrderModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99] flex items-center justify-center md:p-4 print:absolute print:inset-0 print:bg-white print:block print:p-0 print:m-0">
-                    <div className="bg-white md:rounded-2xl shadow-2xl w-full h-full md:w-[800px] md:h-auto md:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 print:w-full print:max-w-full print:h-auto print:max-h-none print:shadow-none print:rounded-none print:overflow-visible print:border-none print:m-0 print:p-0">
-                        <div className="flex justify-between items-center p-4 md:p-5 border-b border-slate-200 bg-white shrink-0 print:hidden shadow-sm z-10">
-                            <h3 className="font-bold text-slate-800 text-lg">Laboratory Order Preview</h3>
-                            <button onClick={() => setIsLabOrderModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-red-500 text-2xl font-bold transition-colors">&times;</button>
-                        </div>
-                        <div className="p-6 md:p-12 flex-1 overflow-y-auto bg-white text-black flex flex-col print:p-0 print:overflow-visible print:min-h-[95vh]">
-                            <div className="flex justify-between items-center mb-6 shrink-0">
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">DOH LOGO</div>
-                                <div className="text-center flex-1 px-2 md:px-4 leading-snug">
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Republic of the Philippines</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Province of Batangas</div>
-                                    <div className="text-[0.9rem] md:text-[1.1rem]">Municipality of Malvar</div>
-                                    <div className="font-bold text-sm md:text-xl mt-2">OFFICE OF THE MUNICIPAL HEALTH OFFICER</div>
-                                </div>
-                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-2 border-black flex items-center justify-center text-center text-[0.5rem] md:text-[0.6rem] font-bold p-2 shrink-0">MALVAR LOGO</div>
-                            </div>
-                            <hr className="border-t-[3px] border-black mb-8 shrink-0" />
-                            <div className="text-center mb-6 shrink-0"><h1 className="text-xl md:text-3xl font-bold uppercase tracking-widest underline decoration-2 underline-offset-4">Laboratory Order</h1></div>
-                            <div className="flex-1 flex flex-col px-0 md:px-4">
-                                <p className="font-bold text-sm md:text-[1.15rem] mb-6 tracking-wide">Please perform the following laboratory test/s:</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 sm:gap-y-3 gap-x-12 text-sm md:text-[1.15rem]">
-                                    <div className="space-y-1 sm:space-y-3">
-                                        {renderCheckbox('cbc', 'CBC')}
-                                        {renderCheckbox('urinalysis', 'Urinalysis')}
-                                        {renderCheckbox('fecalysis', 'Fecalysis')}
-                                        {renderCheckbox('bloodTyping', 'Blood Typing')}
-                                        {renderCheckbox('fbs', 'Fasting Blood Sugar')}
-                                        {renderCheckbox('lipidProfile', 'Lipid Profile')}
-                                    </div>
-                                    <div className="space-y-1 sm:space-y-3">
-                                        {renderCheckbox('hba1c', 'HBA1c')}
-                                        {renderCheckbox('creatinine', 'Creatinine')}
-                                        {renderCheckbox('sgpt', 'SGPT')}
-                                        {renderCheckbox('uricAcid', 'Uric Acid')}
-                                        {renderCheckbox('chestXray', 'Chest X-ray')}
-                                        {renderCheckbox('ecg', 'ECG')}
-                                    </div>
-                                    <div className="col-span-1 sm:col-span-2 mt-4 pt-4 border-t border-slate-200 print:border-transparent flex flex-col sm:flex-row sm:items-center gap-3">
-                                        {renderCheckbox('others', 'Others:')}
-                                        <input type="text" name="labTestsOther" value={formData.labTestsOther} onChange={handleChange} disabled={!formData.labTests.others} className="w-full sm:flex-1 bg-transparent border-b-2 border-slate-300 print:border-black focus:outline-none focus:border-blue-600 px-2 py-2 text-slate-900 print:text-black font-semibold disabled:opacity-30 disabled:print:opacity-0 min-h-[44px]" placeholder={formData.labTests.others ? "Specify test here..." : ""} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="mt-12 md:mt-auto pt-16 flex justify-end shrink-0">
-                                <div className="text-center w-52 md:w-80">
-                                    <div className="border-b-[2px] border-black mb-1 uppercase font-bold text-base md:text-xl truncate">{doctorName}, MD</div>
-                                    <div className="text-[0.65rem] md:text-sm font-semibold">Municipal Health Officer / Attending Physician</div>
-                                    <div className="text-[0.65rem] md:text-sm mt-1">License No: <span className="font-semibold">12345</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-4 md:p-5 border-t border-slate-200 bg-white shrink-0 flex flex-col sm:flex-row justify-end gap-3 print:hidden z-10">
-                            <button onClick={() => setIsLabOrderModalOpen(false)} className="w-full sm:w-auto px-5 py-3 rounded-lg font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 text-sm order-2 sm:order-1 active:scale-95 transition-transform">Cancel</button>
-                            <button onClick={handleSaveAndPrintLabOrder} disabled={loading} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md text-sm disabled:opacity-50 order-1 sm:order-2 active:scale-95 transition-transform">
-                                {loading ? 'Sending...' : 'Print & Send Order'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
