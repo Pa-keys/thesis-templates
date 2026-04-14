@@ -107,6 +107,9 @@ function ConsultationPage() {
         { name: '', dosage: '', frequency: '', duration: '', quantity: '' }
     ]);
 
+    // ── NEW: track whether consultation has been saved ──────────────────────
+    const [consultationSaved, setConsultationSaved] = useState(false);
+
     const sigCanvas = useRef<SignatureCanvas | null>(null);
 
     const [activeTab, setActiveTab] = useState(1);
@@ -212,6 +215,7 @@ function ConsultationPage() {
             .then(({ data }) => {
                 if (!data) return;
                 setConsultationId(data.consultation_id);
+                setConsultationSaved(true); // already has a saved record
                 setFormData(prev => ({
                     ...prev,
                     familyHistory:          data.family_history ?? '',
@@ -330,6 +334,47 @@ function ConsultationPage() {
         setMedications(prev => prev.filter((_, i) => i !== index));
     };
 
+    // ── NEW: Save Consultation ────────────────────────────────────────────────
+    const handleSaveConsultation = async () => {
+        if (!patient?.id) return;
+        setLoading(true);
+        const payload = buildConsultationPayload();
+
+        try {
+            if (isOnline) {
+                if (consultationId) {
+                    const { error } = await supabase
+                        .from('consultation')
+                        .update(payload)
+                        .eq('consultation_id', consultationId);
+                    if (error) throw error;
+                } else {
+                    const { data, error } = await supabase
+                        .from('consultation')
+                        .insert([payload])
+                        .select('consultation_id')
+                        .single();
+                    if (error) throw error;
+                    if (data) setConsultationId(data.consultation_id);
+                }
+                setConsultationSaved(true);
+                alert('Consultation saved successfully!');
+            } else {
+                await saveToIndexedDB('MediSensDB', 'offline_patients', {
+                    id: Date.now(),
+                    type: 'consultation',
+                    data: payload,
+                });
+                setConsultationSaved(true);
+                alert('Offline: Consultation saved locally and will sync when connection returns!');
+            }
+        } catch (err: any) {
+            alert('Failed to save consultation: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Save Lab Request
     const handleSaveLabRequest = async () => {
         if (!patient?.id) return;
@@ -351,6 +396,7 @@ function ConsultationPage() {
                     if (data) {
                         currentConsultId = data.consultation_id; // Capture new ID
                         setConsultationId(data.consultation_id); // Update state for later
+                        setConsultationSaved(true);
                     }
                 }
 
@@ -657,15 +703,46 @@ function ConsultationPage() {
         </div>
     );
 
+    // ── Tab 5 now has a Save Consultation button ──────────────────────────────
     const renderTab5 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Doctor's Clinical Notes</h3>
             <div><label className={labelCls}>Chief Complaints</label><textarea name="chiefComplaints" value={formData.chiefComplaints} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} placeholder="Describe patient's primary symptoms..." /></div>
             <div><label className={labelCls}>Diagnosis</label><textarea name="diagnosis" value={formData.diagnosis} onChange={handleChange} className={`${textareaCls} min-h-[100px]`} /></div>
             <div><label className={labelCls}>History of Present Illnesses <span className="text-slate-400 font-normal normal-case">(Optional)</span></label><textarea name="hpi" value={formData.hpi} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} /></div>
-            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
+
+            {/* Save Consultation banner hint */}
+            {!consultationSaved && (
+                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <span className="text-lg leading-none">💡</span>
+                    <span>Save the consultation here before proceeding to Lab Request or E-Prescription — both require a saved consultation record.</span>
+                </div>
+            )}
+            {consultationSaved && (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
+                    <span>✅</span>
+                    <span>Consultation record saved — you can now issue lab requests and prescriptions.</span>
+                </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
-                <button onClick={() => setActiveTab(6)} className={`order-1 sm:order-2 w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: Physical Exam →</button>
+                <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
+                    <button
+                        onClick={handleSaveConsultation}
+                        disabled={loading || !patient?.id}
+                        className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm
+                            ${consultationSaved
+                                ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
+                                : isOnline
+                                    ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50'
+                                    : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                            }`}
+                    >
+                        {loading ? 'Saving...' : consultationSaved ? '✓ Consultation Saved' : '💾 Save Consultation'}
+                    </button>
+                    <button onClick={() => setActiveTab(6)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: Physical Exam →</button>
+                </div>
             </div>
         </div>
     );

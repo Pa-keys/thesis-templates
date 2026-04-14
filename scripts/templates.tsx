@@ -45,6 +45,100 @@ const EDUCATION_LEVELS = [
 ] as const;
 const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student', 'Retired'] as const;
 
+// ─── Malvar Barangays ─────────────────────────────────────────────────────────
+const MALVAR_BARANGAYS = [
+    'Bagong Pook, Malvar, Batangas',
+    'Bilucao, Malvar, Batangas',
+    'Bulihan, Malvar, Batangas',
+    'Luta del Norte, Malvar, Batangas',
+    'Luta del Sur, Malvar, Batangas',
+    'Poblacion, Malvar, Batangas',
+    'San Andres, Malvar, Batangas',
+    'San Fernando, Malvar, Batangas',
+    'San Gregorio, Malvar, Batangas',
+    'San Isidro, Malvar, Batangas',
+    'San Juan, Malvar, Batangas',
+    'San Pedro I, Malvar, Batangas',
+    'San Pedro II, Malvar, Batangas',
+    'San Pioquinto, Malvar, Batangas',
+    'Santiago, Malvar, Batangas',
+] as const;
+
+const OUTSIDE_MALVAR = '__outside__';
+
+// ─── Address Field Component ──────────────────────────────────────────────────
+function AddressField({ value, onChange }: {
+    value: string;
+    onChange: (val: string) => void;
+}) {
+    // Determine if current value is one of the barangays or a custom entry
+    const isKnownBarangay = MALVAR_BARANGAYS.includes(value as typeof MALVAR_BARANGAYS[number]);
+    const isCustom = value !== '' && !isKnownBarangay;
+
+    const [selectVal, setSelectVal] = useState<string>(
+        isCustom ? OUTSIDE_MALVAR : (value || '')
+    );
+
+    const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setSelectVal(val);
+        if (val === OUTSIDE_MALVAR) {
+            onChange(''); // clear so user types their address
+        } else {
+            onChange(val);
+        }
+    };
+
+    const handleCustomInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange(e.target.value);
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <select
+                value={selectVal}
+                onChange={handleSelect}
+                required={selectVal !== OUTSIDE_MALVAR}
+                style={{
+                    padding: '8px 12px',
+                    border: '1.5px solid #E2E8F0',
+                    borderRadius: '8px',
+                    fontFamily: 'inherit',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    background: 'white',
+                    width: '100%',
+                }}
+            >
+                <option value="" disabled>Select barangay...</option>
+                {MALVAR_BARANGAYS.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                ))}
+                <option value={OUTSIDE_MALVAR}>📍 Outside Malvar / Type manually</option>
+            </select>
+
+            {selectVal === OUTSIDE_MALVAR && (
+                <input
+                    type="text"
+                    value={value}
+                    onChange={handleCustomInput}
+                    placeholder="Enter full address..."
+                    required
+                    style={{
+                        padding: '8px 12px',
+                        border: '1.5px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontFamily: 'inherit',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        width: '100%',
+                    }}
+                />
+            )}
+        </div>
+    );
+}
+
 // ─── Role Label Helper ────────────────────────────────────────────────────────
 function getRoleLabel(role: string): string {
     const map: Record<string, string> = {
@@ -246,7 +340,6 @@ function Templates() {
 
                         <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
 
-                        {/* Dynamic User Info */}
                         <div className="text-right hidden sm:block ml-2">
                             <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
                             <div className="text-[0.7rem] text-slate-500">{getRoleLabel(userRole)}</div>
@@ -318,10 +411,16 @@ function Templates() {
                                                 <label>Birthday</label>
                                                 <input type="date" id="birthday" value={form.birthday} onChange={handleChange} required />
                                             </div>
+
+                                            {/* ── Address with barangay dropdown ── */}
                                             <div className="field col-span-2">
                                                 <label>Address (Brgy, Malvar)</label>
-                                                <input type="text" id="address" value={form.address} onChange={handleChange} placeholder="Barangay, Malvar, Batangas" required />
+                                                <AddressField
+                                                    value={form.address}
+                                                    onChange={(val) => setForm(f => ({ ...f, address: val }))}
+                                                />
                                             </div>
+
                                             <div className="field col-span-2">
                                                 <label>Contact #</label>
                                                 <input type="tel" id="contactNumber" value={form.contactNumber} onChange={handleChange} placeholder="09XXXXXXXXX" pattern="[0-9]*" />
