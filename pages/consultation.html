@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Doctor Consultation</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <style>
+        /* This ensures no hidden styles from dashboard.css cap the width */
+        html, body, #root {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root" class="w-full min-h-screen"></div>
+    <script type="module" src="/scripts/consultation.tsx"></script></body>
+</html>

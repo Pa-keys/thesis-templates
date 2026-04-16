@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --navy: #0b1f3a; --navy-mid: #112b50; --teal: #0fbfad;
+            --cream: #f5f0e8; --cream-dim: #ede7da; --text: #1a2e45;
+            --muted: #6b8299; --error: #e05252; --white: #ffffff;
+        }
+        html, body { height: 100%; font-family: 'DM Sans', sans-serif; background-color: var(--navy); color: var(--text); overflow: hidden; }
+        .bg { position: fixed; inset: 0; z-index: 0; background: var(--navy); overflow: hidden; }
+        .bg::before { content: ''; position: absolute; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(15,191,173,0.18) 0%, transparent 70%); top: -200px; right: -150px; animation: pulse 8s ease-in-out infinite; }
+        .bg::after { content: ''; position: absolute; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(15,191,173,0.08) 0%, transparent 70%); bottom: -100px; left: -100px; animation: pulse 10s ease-in-out infinite reverse; }
+        .grid-overlay { position: absolute; inset: 0; background-image: linear-gradient(rgba(15,191,173,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(15,191,173,0.04) 1px, transparent 1px); background-size: 50px 50px; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }
+        .page { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: 1fr 480px; }
+        .left { display: flex; flex-direction: column; justify-content: center; padding: 60px 80px; animation: fadeInLeft 0.8s ease both; }
+        @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 60px; }
+        .brand-icon { width: 48px; height: 48px; background: var(--teal); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        .brand-icon svg { width: 26px; height: 26px; fill: var(--navy); }
+        .brand-name { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--white); letter-spacing: -0.5px; }
+        .hero-text h1 { font-family: 'DM Serif Display', serif; font-size: clamp(2.4rem, 4vw, 3.6rem); color: var(--white); line-height: 1.15; letter-spacing: -1px; margin-bottom: 20px; }
+        .hero-text h1 em { font-style: italic; color: var(--teal); }
+        .hero-text p { font-size: 1.05rem; color: rgba(255,255,255,0.5); line-height: 1.7; max-width: 420px; }
+        .stats { display: flex; gap: 40px; margin-top: 60px; }
+        .stat-num { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--teal); }
+        .stat-label { font-size: 0.78rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+        .right { display: flex; align-items: center; justify-content: center; padding: 40px 50px; animation: fadeInRight 0.8s 0.2s ease both; }
+        @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        .card { background: var(--cream); border-radius: 24px; padding: 48px 44px; width: 100%; max-width: 400px; box-shadow: 0 40px 80px rgba(0,0,0,0.4); }
+        .card-header { margin-bottom: 36px; }
+        .card-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.9rem; color: var(--navy); letter-spacing: -0.5px; }
+        .card-header p { font-size: 0.88rem; color: var(--muted); margin-top: 6px; }
+        .field { margin-bottom: 18px; }
+        .field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+        .field input { width: 100%; padding: 13px 16px; background: var(--white); border: 1.5px solid var(--cream-dim); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--navy); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .field input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(15,191,173,0.15); }
+        .field input::placeholder { color: #b0bec5; }
+        .login-btn { width: 100%; padding: 14px; background: var(--navy); color: var(--teal); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; margin-top: 6px; transition: background 0.2s, transform 0.15s, box-shadow 0.2s; }
+        .login-btn:hover { background: var(--navy-mid); box-shadow: 0 6px 20px rgba(11,31,58,0.3); transform: translateY(-1px); }
+        .login-btn:active { transform: translateY(0); }
+        .login-btn.loading { pointer-events: none; opacity: 0.7; }
+        .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(15,191,173,0.3); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg { background: rgba(224,82,82,0.1); border: 1px solid rgba(224,82,82,0.3); color: var(--error); font-size: 0.83rem; padding: 10px 14px; border-radius: 8px; margin-top: 14px; display: none; }
+        @media (max-width: 900px) { body { overflow: auto; } .page { grid-template-columns: 1fr; } .left { display: none; } .right { min-height: 100vh; background: var(--navy); } }
+    </style>
+</head>
+<body>
+
+<div class="bg"><div class="grid-overlay"></div></div>
+
+<div class="page">
+    <div class="left">
+        <div class="brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1zM4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/></svg>
+            </div>
+            <span class="brand-name">MediSens</span>
+        </div>
+        <div class="hero-text">
+            <h1>Patient care,<br><em>intelligently</em><br>managed.</h1>
+            <p>A secure clinical records system built for healthcare professionals who move fast and need data they can trust.</p>
+        </div>
+        <div class="stats">
+            <div class="stat-item"><div class="stat-num">6</div><div class="stat-label">User Roles</div></div>
+            <div class="stat-item"><div class="stat-num">∞</div><div class="stat-label">Patient Records</div></div>
+            <div class="stat-item"><div class="stat-num">256</div><div class="stat-label">Bit Encrypted</div></div>
+        </div>
+    </div>
+
+    <div class="right">
+        <div class="card">
+            <div class="card-header">
+                <h2>Welcome back.</h2>
+                <p>Sign in to access your dashboard.</p>
+            </div>
+            <div class="field">
+                <label>Email Address</label>
+                <input type="email" id="emailInput" placeholder="you@medisens.com" autocomplete="email">
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+                <span id="btnText">Sign In</span>
+                <div class="spinner" id="spinner"></div>
+            </button>
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="../scripts/login.ts"></script>
+</body>
+</html>

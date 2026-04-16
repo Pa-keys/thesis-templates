@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSens | Initial Consultation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <style>
+    :root {
+        --sidebar-width: 260px;
+    }
+
+    body { 
+        font-family: 'Plus Jakarta Sans', sans-serif; 
+        background-color: #f8fafc;
+        margin: 0;
+        display: flex; /* Sidebar and Main side-by-side */
+    }
+
+    /* ── Layout Structure ── */
+    #root { width: 100%; display: flex; }
+
+    .main-content {
+        flex: 1;
+        padding: 24px;
+        max-width: 1200px; /* Prevents form from becoming too wide on large laptops */
+        margin: 0 auto;
+    }
+
+    /* ── Responsive Form Grid ── */
+    .form-section {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* ── Re-use dashboard radio styles ── */
+    .radio-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .radio-opt {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 9px 16px; border: 1.5px solid var(--border);
+        border-radius: 8px; cursor: pointer;
+        font-size: 0.85rem; font-weight: 500; color: var(--text-2);
+        background: #fff; transition: all 0.15s; user-select: none;
+    }
+
+    .radio-opt:hover { border-color: var(--blue); }
+
+    .radio-opt.sel,
+    .radio-opt:has(input:checked) {
+        border-color: var(--blue); background: var(--blue-light);
+        color: var(--blue); font-weight: 600;
+    }
+
+    /* ── Inputs ── */
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    input[type="text"], input[type="number"], input[type="date"],
+    input[type="time"], textarea, select {
+        padding: 10px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px var(--blue-light);
+    }
+
+    /* ── Laptop specific adjustment ── */
+    @media (min-width: 1024px) {
+        .form-grid.three-cols {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+</style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="../scripts/initial_consultation.tsx"></script>
+</body>
+</html>
