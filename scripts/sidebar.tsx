@@ -17,6 +17,7 @@ interface SidebarProps {
     isMobileMenuOpen: boolean;
     setIsMobileMenuOpen: (isOpen: boolean) => void;
     isOnline: boolean;
+    allowedTabs?: string[]; // Array of tab names to display
 }
 
 export function Sidebar({ 

@@ -4,190 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediSens | Nurse Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/dashboard.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script> 
+    
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-
-        .consented-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: #F0FDF4; color: #16A34A;
-            border: 1px solid #BBF7D0;
-            border-radius: 20px; padding: 3px 10px;
-            font-size: 0.7rem; font-weight: 700;
+        * { box-sizing: border-box; }
+        body { 
+            background-color: #F8FAFC; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; 
+            color: #1e293b; 
         }
-
-        .pt-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 18px;
-            display: flex; align-items: center; gap: 14px;
-            margin-bottom: 10px;
-            transition: box-shadow 0.15s, border-color 0.15s;
-            cursor: pointer;
-        }
-        .pt-card:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.1); border-color: var(--blue); }
-        .pt-card:last-child { margin-bottom: 0; }
-
-        .pt-av {
-            width: 46px; height: 46px; border-radius: 50%;
-            background: #EC4899; color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1rem; font-weight: 800; flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(236,72,153,0.3);
-        }
-        .pt-av.male { background: var(--blue); box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
-
-        .pt-info { flex: 1; min-width: 0; }
-        .pt-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
-        .pt-meta { font-size: 0.75rem; color: var(--text-3); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .pt-meta span { display: flex; align-items: center; gap: 3px; }
-
-        .pt-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
-        .pt-date  { font-size: 0.7rem; color: var(--text-3); font-weight: 500; text-align: right; }
-
-        .view-btn {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; border-radius: 7px;
-            background: var(--blue-light); color: var(--blue);
-            border: 1px solid #BFDBFE;
-            font-family: inherit; font-size: 0.75rem; font-weight: 600;
-            cursor: pointer; transition: background 0.15s;
-        }
-        .view-btn:hover { background: #DBEAFE; }
-
-        .empty-state { text-align: center; padding: 48px 24px; color: var(--text-3); }
-        .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-        .empty-state p { font-size: 0.9rem; }
     </style>
 </head>
 <body>
-
-<aside class="sidebar">
-    <div class="sidebar-logo">
-        <div class="logo-mark">
-            <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/><path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/></svg>
-        </div>
-        <div class="logo-text">
-            <div class="l-name">MediSens</div>
-            <div class="l-sub">Rural Health Unit</div>
+    <div id="root">
+        <div style="display: flex; height: 100vh; align-items: center; justify-content: center;">
+            <div style="text-align: center;">
+                <div style="font-size: 1.2rem; font-weight: 700; color: #1e3a8a; margin-bottom: 8px;">Loading Nurse Dashboard...</div>
+            </div>
         </div>
     </div>
-
-    <div class="nav-group-label">Main Menu</div>
-    <a class="nav-item active" href="nurse.html"><span class="nav-icon">🏠</span> Dashboard</a>
-    <a class="nav-item" href="records.html"><span class="nav-icon">📁</span> Patient Records</a>
-    <a class="nav-item" href="templates.html"><span class="nav-icon">➕</span> New Record</a>
-    <a class="nav-item" href="initial_consultation.html"><span class="nav-icon">📝</span> Consultation</a>
     
-    <div class="nav-group-label">System</div>
-    <a class="nav-item" href="#"><span class="nav-icon">⚙️</span> Settings</a>
-
-    <div class="sidebar-bottom">
-        <div class="user-card">
-            <div class="user-av av-green" id="sidebarAv">N</div>
-            <div class="user-info">
-                <div class="user-name" id="sidebarName">Loading...</div>
-                <div class="user-role">Nurse</div>
-            </div>
-            <button class="logout-icon-btn" id="logoutBtn" title="Sign out">⇥</button>
-        </div>
-    </div>
-</aside>
-
-<div id="logoutBtn" class="p-3 border-t border-slate-200 bg-white mt-auto shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-                <div id="sidebarAv" class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">N</div>
-                <div class="flex-1 min-w-0">
-                    <p id="sidebarName" class="text-xs font-bold text-slate-900 truncate">Loading...</p>
-                    <p class="text-[0.6rem] text-slate-500">Registered Nurse</p>
-                </div>
-            </div>
-            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-            </svg>
-        </div>
-    </div>
-
-<div class="main">
-    <div class="topbar">
-        <div class="topbar-left"><div class="topbar-page">Nurse Dashboard</div></div>
-        <div class="topbar-right">
-            <div class="online-pill"><div class="pulse-dot"></div>System Online</div>
-            <div class="topbar-user-wrap">
-                <div class="topbar-user-text">
-                    <div class="topbar-user-name" id="topbarName">Loading...</div>
-                    <div class="topbar-user-role">Nurse</div>
-                </div>
-                <div class="topbar-av av-green" id="topbarAv">N</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="content">
-        <div class="welcome-row">
-            <div>
-                <h1>Good day! 💉</h1>
-                <p>Patients below have signed their consent and are ready for vitals and consultation.</p>
-            </div>
-            <div class="sync-chip"><div class="sync-dot"></div>Live • Auto-updates</div>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-card" style="border: 1.5px solid #BBF7D0;">
-                <div class="stat-icon-wrap" style="background:#F0FDF4;">✅</div>
-                <div class="stat-body">
-                    <div class="stat-label">Consented Patients</div>
-                    <div class="stat-val" id="consentedCount" style="color:#16A34A;">—</div>
-                    <div class="stat-hint up">Ready for vitals</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon-wrap si-blue">👥</div>
-                <div class="stat-body">
-                    <div class="stat-label">Total Patients</div>
-                    <div class="stat-val" id="totalPatients">—</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon-wrap si-pink">♀</div>
-                <div class="stat-body">
-                    <div class="stat-label">Female</div>
-                    <div class="stat-val" id="totalFemale">—</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon-wrap si-blue">♂</div>
-                <div class="stat-body">
-                    <div class="stat-label">Male</div>
-                    <div class="stat-val" id="totalMale">—</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-hd">
-                <div>
-                    <div class="card-title">Consented Patients</div>
-                    <div class="card-sub">These patients have signed their consent and are ready for nurse assessment.</div>
-                </div>
-                <span class="consented-badge" id="patientCount">0 patients</span>
-            </div>
-
-            <div class="toolbar">
-                <div class="search-bar">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Search by name...">
-                </div>
-            </div>
-
-            <div id="patientList"><div class="loading-msg">Loading patients...</div></div>
-        </div>
-    </div>
-</div>
-
-<script type="module" src="../scripts/nurse.ts"></script>
+    <script type="module" src="../scripts/nurse.tsx"></script>
 </body>
 </html>
