@@ -5,11 +5,11 @@ import ReactDOM from 'react-dom/client';
 import { Sidebar } from './sidebar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-// FIX: Removed 'export' from this interface to fix Vite Fast Refresh
 interface InitialConsultationData {
     dateOfConsultation: string; consultationTime: string;
     referredBy: string; modeOfTransaction: string; modeOfTransfer: string;
-    chiefComplaints: string; diagnosis: string; historyOfPresentIllness: string;
+    chiefComplaints: string; diagnosis: string; diagnosisOther: string;
+    historyOfPresentIllness: string;
     bp: string; hr: string; rr: string; temp: string; weight: string;
     height: string; o2Sat: string; muac: string; nutritionalStatus: string;
     bmi: string; visualAcuityLeft: string; visualAcuityRight: string;
@@ -18,10 +18,29 @@ interface InitialConsultationData {
 
 const EMPTY_FORM: InitialConsultationData = {
     dateOfConsultation: '', consultationTime: '', referredBy: '', modeOfTransaction: '', modeOfTransfer: '',
-    chiefComplaints: '', diagnosis: '', historyOfPresentIllness: '',
+    chiefComplaints: '', diagnosis: '', diagnosisOther: '', historyOfPresentIllness: '',
     bp: '', hr: '', rr: '', temp: '', weight: '', height: '', o2Sat: '', muac: '',
     nutritionalStatus: '', bmi: '', visualAcuityLeft: '', visualAcuityRight: '', bloodType: '', generalSurvey: '',
 };
+
+const DIAGNOSIS_OPTIONS = [
+    'Common Cold',
+    'Pneumonia',
+    'High Blood Pressure',
+    'Diabetes',
+    'Asthma',
+    'Dengue',
+    'Fever',
+    'Diarrhea',
+    'UTI',
+    'Tuberculosis',
+    'High Cholesterol',
+    'Heart Disease',
+    'Stroke',
+    'Acid Reflux',
+    'Arthritis',
+    'Others',
+];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 const toNumberOrNull = (val: string) => {
@@ -59,13 +78,11 @@ function InitialConsultation() {
         window.addEventListener('offline', handleOffline);
 
         (async () => {
-            // Auth
             const profile = await requireRole('nurse');
             const initials = profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
             setUserName(profile.fullName);
             setUserInitials(initials);
 
-            // Load patient name for the header
             if (!patientId) { setPatientName('Unknown Patient'); return; }
             const { data } = await supabase
                 .from('patients')
@@ -98,6 +115,14 @@ function InitialConsultation() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // ─── Resolve final diagnosis value before saving ───────────────────────────
+    const getResolvedDiagnosis = () => {
+        if (formData.diagnosis === 'Others') {
+            return formData.diagnosisOther.trim() || 'Others';
+        }
+        return formData.diagnosis;
+    };
+
     // ─── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,7 +139,7 @@ function InitialConsultation() {
                 referred_by: formData.referredBy || null,
                 mode_of_transfer: formData.modeOfTransfer || null,
                 chief_complaint: formData.chiefComplaints || null,
-                diagnosis: formData.diagnosis || null,
+                diagnosis: getResolvedDiagnosis() || null,
             }]);
             if (e1) throw new Error('initial_consultation: ' + e1.message);
 
@@ -139,8 +164,7 @@ function InitialConsultation() {
 
             showToast('Consultation record saved successfully!', true);
             setFormData(EMPTY_FORM);
-            
-            // Optional: redirect back to nurse dashboard after a short delay
+
             setTimeout(() => {
                 window.location.href = '/pages/nurse.html';
             }, 1500);
@@ -161,7 +185,7 @@ function InitialConsultation() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
-            
+
             {/* ── Toast ── */}
             {toast && (
                 <div className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
@@ -189,15 +213,13 @@ function InitialConsultation() {
 
             {/* ── Main Content ── */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
-                
+
                 {/* Topbar */}
                 <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-3 md:gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                         </button>
-                        
-                        {/* Back Button built into Topbar */}
                         <button onClick={() => window.location.href = '/pages/nurse.html'} className="hidden sm:flex items-center gap-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors border border-transparent hover:border-slate-200">
                             <span>←</span> Back to Dashboard
                         </button>
@@ -226,7 +248,7 @@ function InitialConsultation() {
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
                     <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-5xl">
-                        
+
                         {/* Patient Header */}
                         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
@@ -243,7 +265,7 @@ function InitialConsultation() {
                             </div>
                         </div>
 
-                        {/* Mobile Back Button (Only visible on small screens) */}
+                        {/* Mobile Back Button */}
                         <button onClick={() => window.location.href = '/pages/nurse.html'} className="sm:hidden mb-4 w-full flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 active:bg-slate-100 transition-colors">
                             ← Back to Dashboard
                         </button>
@@ -308,10 +330,38 @@ function InitialConsultation() {
                                         <label className={labelClasses}>Chief Complaints</label>
                                         <textarea name="chiefComplaints" value={formData.chiefComplaints} onChange={handleChange} rows={3} className={`${inputClasses} resize-y min-h-[80px]`} placeholder="Describe the patient's primary symptoms..."></textarea>
                                     </div>
+
+                                    {/* ── Diagnosis Dropdown ── */}
                                     <div>
                                         <label className={labelClasses}>Diagnosis</label>
-                                        <textarea name="diagnosis" value={formData.diagnosis} onChange={handleChange} rows={2} className={`${inputClasses} resize-y min-h-[60px]`} placeholder="Initial assessment or diagnosis..."></textarea>
+                                        <select
+                                            name="diagnosis"
+                                            value={formData.diagnosis}
+                                            onChange={handleChange}
+                                            className={inputClasses}
+                                        >
+                                            <option value="">— Select a diagnosis —</option>
+                                            {DIAGNOSIS_OPTIONS.map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+
+                                        {/* Show text input only when "Others" is selected */}
+                                        {formData.diagnosis === 'Others' && (
+                                            <div className="mt-3">
+                                                <input
+                                                    type="text"
+                                                    name="diagnosisOther"
+                                                    value={formData.diagnosisOther}
+                                                    onChange={handleChange}
+                                                    className={inputClasses}
+                                                    placeholder="Please specify diagnosis..."
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        )}
                                     </div>
+
                                     <div>
                                         <label className={labelClasses}>History of Present Illnesses</label>
                                         <textarea name="historyOfPresentIllness" value={formData.historyOfPresentIllness} onChange={handleChange} rows={3} className={`${inputClasses} resize-y min-h-[80px]`} placeholder="Relevant medical history leading up to today..."></textarea>

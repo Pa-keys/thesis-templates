@@ -47,31 +47,77 @@ document.getElementById('sidebarAv')!.textContent   = initials;
 document.getElementById('topbarAv')!.textContent    = initials;
 document.getElementById('logoutBtn')!.addEventListener('click', logout);
 
-// ─── Visit Trend Chart ────────────────────────────────────────────────────────
-const ctx = (document.getElementById('visitChart') as HTMLCanvasElement).getContext('2d')!;
-new (window as any).Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-        datasets: [{
-            data: [14, 18, 16, 22, 28, 20, 7],
-            borderColor: '#0066FF',
-            backgroundColor: 'rgba(0,102,255,0.08)',
-            borderWidth: 2.5,
-            pointRadius: 4,
-            pointBackgroundColor: '#0066FF',
-            fill: true,
-            tension: 0.4,
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94A3B8' } },
-            y: { grid: { color: '#F1F5F9' }, ticks: { font: { size: 11 }, color: '#94A3B8' }, beginAtZero: true }
-        }
+// ─── Visit Trend Chart (dynamic from initial_consultation) ────────────────────
+async function loadVisitTrendChart(): Promise<void> {
+    // Build last 7 days array (oldest → newest)
+    const days: { date: string; label: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0]; // e.g. "2026-04-14"
+        const label = d.toLocaleDateString('en-PH', { weekday: 'short' }); // e.g. "Mon"
+        days.push({ date: dateStr, label });
     }
-});
+
+    const from = days[0].date;
+    const to   = days[days.length - 1].date;
+
+    const { data, error } = await supabase
+        .from('initial_consultation')
+        .select('consultation_date')
+        .gte('consultation_date', from)
+        .lte('consultation_date', to);
+
+    if (error) {
+        console.error('Failed to load visit trend data:', error);
+        return;
+    }
+
+    // Count visits per day
+    const countMap: Record<string, number> = {};
+    days.forEach(d => { countMap[d.date] = 0; });
+    (data || []).forEach(row => {
+        const dateKey = row.consultation_date?.split('T')[0];
+        if (dateKey && countMap[dateKey] !== undefined) {
+            countMap[dateKey]++;
+        }
+    });
+
+    const labels  = days.map(d => d.label);
+    const counts  = days.map(d => countMap[d.date]);
+
+    const ctx = (document.getElementById('visitChart') as HTMLCanvasElement).getContext('2d')!;
+    new (window as any).Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data: counts,
+                borderColor: '#0066FF',
+                backgroundColor: 'rgba(0,102,255,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#0066FF',
+                fill: true,
+                tension: 0.4,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 }, color: '#94A3B8' }
+                },
+                y: {
+                    grid: { color: '#F1F5F9' },
+                    ticks: { font: { size: 11 }, color: '#94A3B8', stepSize: 1, precision: 0 },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
 
 // ─── Load Patients ────────────────────────────────────────────────────────────
 let allPatients: Patient[] = [];
@@ -96,7 +142,6 @@ async function loadPatients(): Promise<void> {
 
 // ─── Load Patient Queue from initial_consultation ─────────────────────────────
 async function loadConsultationQueue(): Promise<void> {
-    // ✅ Correct column name in `consultation` table is `initial_consultation_id`
     const { data: existingConsults, error: consultError } = await supabase
         .from('consultation')
         .select('initial_consultation_id')
@@ -106,12 +151,10 @@ async function loadConsultationQueue(): Promise<void> {
         console.error('Failed to fetch existing consultations:', consultError);
     }
 
-    // Filter out nulls and extract the IDs
     const consultedIds: number[] = (existingConsults || [])
         .map(c => c.initial_consultation_id)
         .filter(Boolean);
 
-    // ✅ Correct column name in `initial_consultation` table is `initialconsultation_id`
     const query = supabase
         .from('initial_consultation')
         .select(`
@@ -130,7 +173,6 @@ async function loadConsultationQueue(): Promise<void> {
         .order('consultation_time', { ascending: false })
         .limit(5);
 
-    // ✅ Exclude initial_consultations that already have a saved consultation record
     if (consultedIds.length > 0) {
         query.not('initialconsultation_id', 'in', `(${consultedIds.join(',')})`);
     }
@@ -320,5 +362,140 @@ document.getElementById('searchInput')!.addEventListener('input', (e) => {
     ));
 });
 
+// ─── Morbidity Rate Chart (dynamic from initial_consultation diagnosis) ────────
+async function loadMorbidityChart(): Promise<void> {
+    const KNOWN_ILLNESSES = [
+        'Common Cold',
+        'Pneumonia',
+        'High Blood Pressure',
+        'Diabetes',
+        'Asthma',
+        'Dengue',
+        'Fever',
+        'Diarrhea',
+        'UTI',
+        'Tuberculosis',
+        'High Cholesterol',
+        'Heart Disease',
+        'Stroke',
+        'Acid Reflux',
+        'Arthritis',
+    ];
+
+    const { data, error } = await supabase
+        .from('initial_consultation')
+        .select('diagnosis')
+        .not('diagnosis', 'is', null);
+
+    if (error) {
+        console.error('Failed to load morbidity data:', error);
+        return;
+    }
+
+    // Count each diagnosis — match known illnesses case-insensitively, rest → Others
+    const countMap: Record<string, number> = {};
+    KNOWN_ILLNESSES.forEach(ill => { countMap[ill] = 0; });
+    countMap['Others'] = 0;
+
+    (data || []).forEach(row => {
+        const raw = (row.diagnosis || '').trim();
+        const match = KNOWN_ILLNESSES.find(
+            ill => ill.toLowerCase() === raw.toLowerCase()
+        );
+        if (match) {
+            countMap[match]++;
+        } else if (raw) {
+            countMap['Others']++;
+        }
+    });
+
+    // Only show illnesses that have at least 1 case, sorted descending
+    const allLabels = [...KNOWN_ILLNESSES, 'Others'];
+    const filtered = allLabels
+        .map(label => ({ label, count: countMap[label] }))
+        .filter(item => item.count > 0)
+        .sort((a, b) => b.count - a.count);
+
+    if (filtered.length === 0) {
+        const canvas = document.getElementById('morbidityChart') as HTMLCanvasElement | null;
+        if (canvas) {
+            const parent = canvas.parentElement;
+            if (parent) parent.innerHTML = '<div style="text-align:center;color:#94A3B8;font-size:0.85rem;padding:2rem 0;">No diagnosis data yet.</div>';
+        }
+        return;
+    }
+
+    const labels = filtered.map(i => i.label);
+    const counts = filtered.map(i => i.count);
+    const total  = counts.reduce((a, b) => a + b, 0);
+
+    // Color palette — cycles if more items than colors
+    const COLORS = [
+        '#0066FF', '#7C3AED', '#059669', '#DC2626', '#D97706',
+        '#0891B2', '#DB2777', '#65A30D', '#EA580C', '#4F46E5',
+        '#0D9488', '#B45309', '#9333EA', '#16A34A', '#E11D48',
+        '#6366F1',
+    ];
+    const bgColors = labels.map((_, i) => COLORS[i % COLORS.length] + '33'); // 20% opacity
+    const bdColors = labels.map((_, i) => COLORS[i % COLORS.length]);
+
+    const ctx = (document.getElementById('morbidityChart') as HTMLCanvasElement).getContext('2d')!;
+    new (window as any).Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data: counts,
+                backgroundColor: bgColors,
+                borderColor: bdColors,
+                borderWidth: 2,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y',   // horizontal bar — easier to read disease names
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx: any) => {
+                            const val = ctx.parsed.x;
+                            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                            return ` ${val} case${val !== 1 ? 's' : ''} (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#F1F5F9' },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#94A3B8',
+                        stepSize: 1,
+                        precision: 0,
+                    },
+                    beginAtZero: true,
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 }, color: '#374151' },
+                }
+            }
+        }
+    });
+
+    // Update morbidity stat badges if they exist in the DOM
+    const topDisease = filtered[0];
+    const topEl = document.getElementById('topDisease');
+    const topCountEl = document.getElementById('topDiseaseCount');
+    const totalCasesEl = document.getElementById('totalMorbidityCases');
+    if (topEl) topEl.textContent = topDisease.label;
+    if (topCountEl) topCountEl.textContent = String(topDisease.count);
+    if (totalCasesEl) totalCasesEl.textContent = String(total);
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
+loadVisitTrendChart();
+loadMorbidityChart();
 loadPatients();
