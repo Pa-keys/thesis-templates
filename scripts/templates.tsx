@@ -293,8 +293,40 @@ function Templates() {
 
             <Sidebar 
                 activePage="new-record"
+<<<<<<< HEAD
                 doctorName={userName} 
                 doctorInitials={userInitials}
+=======
+                userName={userName} 
+                userInitials={userInitials}
+                userRole={getRoleLabel(userRole)}
+                navItems={
+                    userRole === 'doctor' ? [
+                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                        { id: 'records', label: 'Patient Records', icon: '📁' },
+                        { id: 'consultation', label: 'Consultation', icon: '📋' }
+                    ] : userRole === 'nurse' ? [
+                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                        { id: 'new-record', label: 'New Record', icon: '➕' },
+                        { id: 'consultation', label: 'Consultation', icon: '📋' }
+                    ] : userRole === 'BHW' ? [
+                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                        { id: 'new-record', label: 'New Record', icon: '➕' }
+                    ] : [
+                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                        { id: 'new-record', label: 'New Record', icon: '➕' }
+                    ]
+                }
+                onNavigate={(pageId) => {
+                    if (pageId === 'dashboard') handleBackNavigation();
+                    if (pageId === 'records') window.location.href = '/pages/records.html';
+                    if (pageId === 'new-record') window.location.href = '/pages/templates.html';
+                    if (pageId === 'consultation') {
+                        if (userRole === 'doctor') window.location.href = '/pages/consultation.html';
+                        else window.location.href = '/pages/initial_consultation.html';
+                    }
+                }}
+>>>>>>> origin/ivan
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}
