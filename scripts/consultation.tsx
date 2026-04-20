@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../shared/supabase';
-<<<<<<< HEAD
 import { requireRole } from '../shared/auth';
-=======
-import { requireRole, logout } from '../shared/auth';
->>>>>>> origin/ivan
 import { Sidebar } from './sidebar';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
 import { OfflineBanner } from './OfflineBanner';
@@ -31,7 +27,6 @@ interface Medication {
     quantity: string;
 }
 
-<<<<<<< HEAD
 interface ConsultationRecord {
     consultation_id: number;
     chief_complaints?: string;
@@ -53,16 +48,12 @@ interface InitialConsultationRecord {
     diagnosis?: string;
 }
 
-=======
-// ─── BUG FIX #4: Define missing helper ───────────────────────────────────────
->>>>>>> origin/ivan
 const toNumberOrNull = (val: string | undefined | null): number | null => {
     if (val === undefined || val === null || val.trim() === '') return null;
     const n = parseFloat(val);
     return isNaN(n) ? null : n;
 };
 
-<<<<<<< HEAD
 function HistoryPanel({ patientId, patientName, onClose }: {
     patientId: string;
     patientName: string;
@@ -267,13 +258,6 @@ function HistoryPanel({ patientId, patientName, onClose }: {
 
 function ConsultationPage() {
     const [formData, setFormData] = useState({
-=======
-function ConsultationPage() {
-
-    const [formData, setFormData] = useState({
-
-        // ── Histories ──────────────────────────────────────────────────────
->>>>>>> origin/ivan
         familyHistory: '',
         immunizationHistory: '',
         smoking: '',
@@ -283,10 +267,6 @@ function ConsultationPage() {
         drinkingFrequency: '',
         drinkingYears: '',
 
-<<<<<<< HEAD
-=======
-        // ── OBGyne ─────────────────────────────────────────────────────────
->>>>>>> origin/ivan
         menarche: '',
         onsetSexualIntercourse: '',
         menopause: '',
@@ -297,10 +277,6 @@ function ConsultationPage() {
         padsPerDay: '',
         birthControlMethod: '',
 
-<<<<<<< HEAD
-=======
-        // ── Pregnancy History ──────────────────────────────────────────────
->>>>>>> origin/ivan
         gravidity: '',
         parity: '',
         typeOfDelivery: '',
@@ -310,7 +286,6 @@ function ConsultationPage() {
         livingChildren: '',
         preEclampsia: '',
 
-<<<<<<< HEAD
         medicationAndTreatment: '',
 
         followUpDate: new Date().toISOString().split('T')[0],
@@ -328,37 +303,10 @@ function ConsultationPage() {
         followUpLabResults: '',
         attendingProvider: '',
 
-=======
-        // ── Clinical Assessment ────────────────────────────────────────────
-        medicationAndTreatment: '',
-
-        // ── Follow-up ──────────────────────────────────────────────────────
-        // BUG FIX #5: Align key names with handleSaveFollowUp / consultation fetch
-        fuDate: new Date().toISOString().split('T')[0],
-        fuTime: '',
-        fuModeOfTx: 'Walk-in',
-        fuModeOfTransfer: 'Ambulatory',
-        fuChiefComplaint: '',
-        fuDiagnosis: '',
-        fuHpi: '',
-        fuBp: '', fuHr: '', fuRr: '', fuTemp: '', fuO2: '',
-        fuWeight: '', fuHeight: '', fuMuac: '',
-        fuNutritionalStatus: '', fuBmi: '',
-        fuVaL: '', fuVaR: '', fuBloodType: '', fuGenSurvey: '',
-        fuMedicationTreatment: '',
-        fuLabResults: '',         // BUG FIX #1: was accidentally set as 'followUpLabResults' in useEffect
-        attendingProvider: '',
-
-        // ── Clinical Notes ─────────────────────────────────────────────────
->>>>>>> origin/ivan
         chiefComplaints: '',
         diagnosis: '',
         hpi: '',
 
-<<<<<<< HEAD
-=======
-        // ── Physical Exam ──────────────────────────────────────────────────
->>>>>>> origin/ivan
         bp: '', hr: '', rr: '', temp: '', weight: '', height: '',
         o2Saturation: '',
         muac: '',
@@ -367,10 +315,6 @@ function ConsultationPage() {
         visualAcuityLeft: '',
         visualAcuityRight: '',
 
-<<<<<<< HEAD
-=======
-        // ── Lab Tests ──────────────────────────────────────────────────────
->>>>>>> origin/ivan
         labTests: {
             cbc: false, cbcPlatelet: false, hgbHct: false, chestXray: false,
             ultrasound: false, urinalysis: false, fecalysis: false, sputum: false,
@@ -382,7 +326,6 @@ function ConsultationPage() {
         labChiefComplaint: '',
         labRequestedBy: '',
 
-<<<<<<< HEAD
         rxLicNo: '',
         rxPtrNo: '',
     });
@@ -390,18 +333,6 @@ function ConsultationPage() {
     const followUpBmiInfo = useMemo(() => {
         const w = parseFloat(formData.followUpWeight || '0');
         const h = parseFloat(formData.followUpHeight || '0');
-=======
-        // ── Prescription ───────────────────────────────────────────────────
-        rxLicNo: '',
-        rxPtrNo: '',
-        rxSignatureUrl: '',
-    });
-
-    // ─── FOLLOW-UP BMI AUTO-CALCULATION ──────────────────────────────────────
-    const fuBmiInfo = useMemo(() => {
-        const w = parseFloat(formData.fuWeight || '0');
-        const h = parseFloat(formData.fuHeight || '0');
->>>>>>> origin/ivan
         if (w > 0 && h > 0) {
             const bmiValue = parseFloat((w / ((h / 100) * (h / 100))).toFixed(1));
             let status = 'Normal';
@@ -412,14 +343,8 @@ function ConsultationPage() {
             return { value: bmiValue.toString(), status, color };
         }
         return null;
-<<<<<<< HEAD
     }, [formData.followUpWeight, formData.followUpHeight]);
 
-=======
-    }, [formData.fuWeight, formData.fuHeight]);
-
-    // BUG FIX #6: Separate vitals BMI from follow-up BMI
->>>>>>> origin/ivan
     const vitalsBmiInfo = useMemo(() => {
         const w = parseFloat(formData.weight || '0');
         const h = parseFloat(formData.height || '0');
@@ -434,19 +359,12 @@ function ConsultationPage() {
         return null;
     }, [formData.weight, formData.height]);
 
-<<<<<<< HEAD
-=======
-    // Medications list for prescription
->>>>>>> origin/ivan
     const [medications, setMedications] = useState<Medication[]>([
         { name: '', dosage: '', frequency: '', duration: '', quantity: '' }
     ]);
 
     const [consultationSaved, setConsultationSaved] = useState(false);
-<<<<<<< HEAD
     const [followUpDone, setFollowUpDone] = useState(false);
-=======
->>>>>>> origin/ivan
 
     const sigCanvas = useRef<SignatureCanvas | null>(null);
     const followUpSigCanvas = useRef<SignatureCanvas | null>(null);
@@ -460,10 +378,7 @@ function ConsultationPage() {
 
     const [doctorName, setDoctorName] = useState('Loading...');
     const [doctorInitials, setDoctorInitials] = useState('D');
-<<<<<<< HEAD
     const [showHistory, setShowHistory] = useState(false);
-=======
->>>>>>> origin/ivan
 
     const { isOnline, isSyncing } = useNetworkSync();
 
@@ -474,14 +389,10 @@ function ConsultationPage() {
     const [vitalsId, setVitalsId] = useState<number | null>(null);
     const [vitalsLoading, setVitalsLoading] = useState(false);
 
-<<<<<<< HEAD
     const urlParams = new URLSearchParams(window.location.search);
     const patientIdFromUrl = urlParams.get('id');
     const icidFromUrl = urlParams.get('icid');
 
-=======
-    // ─── INIT ────────────────────────────────────────────────────────────────
->>>>>>> origin/ivan
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
 
@@ -500,21 +411,12 @@ function ConsultationPage() {
                 labRequestedBy: profile.fullName,
             }));
 
-<<<<<<< HEAD
             if (!patientIdFromUrl) { setPatientLoading(false); return; }
-=======
-            const patientId = new URLSearchParams(window.location.search).get('id');
-            if (!patientId) { setPatientLoading(false); return; }
->>>>>>> origin/ivan
 
             const { data, error } = await supabase
                 .from('patients')
                 .select('id, firstName, lastName, middleName, age, sex, bloodType, address, contactNumber')
-<<<<<<< HEAD
                 .eq('id', patientIdFromUrl)
-=======
-                .eq('id', patientId)
->>>>>>> origin/ivan
                 .single();
 
             if (error) console.error('Failed to fetch patient:', error);
@@ -524,10 +426,6 @@ function ConsultationPage() {
         });
     }, []);
 
-<<<<<<< HEAD
-=======
-    // ─── VITALS FETCH ────────────────────────────────────────────────────────
->>>>>>> origin/ivan
     useEffect(() => {
         if (!patient?.id) return;
         setVitalsLoading(true);
@@ -562,16 +460,8 @@ function ConsultationPage() {
             });
     }, [patient?.id]);
 
-<<<<<<< HEAD
     useEffect(() => {
         if (!patient?.id) return;
-=======
-    // ─── AUTO-FETCH COMPLETED LAB RESULTS ────────────────────────────────────
-    // BUG FIX #1: Changed 'followUpLabResults' → 'fuLabResults' to match formData key
-    useEffect(() => {
-        if (!patient?.id) return;
-
->>>>>>> origin/ivan
         supabase
             .from('lab_request')
             .select('results, status')
@@ -581,7 +471,6 @@ function ConsultationPage() {
             .limit(1)
             .single()
             .then(({ data }) => {
-<<<<<<< HEAD
                 if (data?.results) setFormData(prev => ({ ...prev, followUpLabResults: data.results }));
             });
     }, [patient?.id]);
@@ -703,73 +592,6 @@ function ConsultationPage() {
 
         buildFollowUpQuery();
     }, [patient?.id, consultationId]);
-=======
-                if (data && data.results) {
-                    setFormData(prev => ({
-                        ...prev,
-                        fuLabResults: data.results   // Fixed: was 'followUpLabResults'
-                    }));
-                }
-            });
-    }, [patient?.id]);
-
-    // ─── CONSULTATION FETCH ───────────────────────────────────────────────────
-    // BUG FIX #5: Fixed key mismatches (followUpDate→fuDate, followUpTime→fuTime, managementTreatment→fuMedicationTreatment)
-    useEffect(() => {
-        if (!patient?.id) return;
-
-        supabase
-            .from('consultation')
-            .select('*')
-            .eq('patient_id', patient.id)
-            .order('consultation_id', { ascending: false })
-            .limit(1)
-            .single()
-            .then(({ data }) => {
-                if (!data) return;
-                setConsultationId(data.consultation_id);
-                setConsultationSaved(true);
-                setFormData(prev => ({
-                    ...prev,
-                    familyHistory:          data.family_history ?? '',
-                    immunizationHistory:    data.immunization_history ?? '',
-                    smoking:                data.smoking_status ?? '',
-                    smokingSticksPerDay:    data.smoking_sticks_per_day?.toString() ?? '',
-                    smokingYears:           data.smoking_years?.toString() ?? '',
-                    drinking:               data.drinking_status ?? '',
-                    drinkingFrequency:      data.drinking_frequency ?? '',
-                    drinkingYears:          data.drinking_years?.toString() ?? '',
-                    menarche:               data.menarche_age?.toString() ?? '',
-                    onsetSexualIntercourse: data.sexual_onset_age?.toString() ?? '',
-                    menopause:              data.is_menopause ?? '',
-                    menopauseAge:           data.menopause_age?.toString() ?? '',
-                    lmp:                    data.lmp ?? '',
-                    intervalCycle:          data.interval_cycle ?? '',
-                    periodDuration:         data.period_duration ?? '',
-                    padsPerDay:             data.pads_per_day?.toString() ?? '',
-                    birthControlMethod:     data.birth_control_method ?? '',
-                    gravidity:              data.gravidity?.toString() ?? '',
-                    parity:                 data.parity?.toString() ?? '',
-                    typeOfDelivery:         data.delivery_type ?? '',
-                    fullTerm:               data.full_term_count?.toString() ?? '',
-                    premature:              data.premature_count?.toString() ?? '',
-                    abortion:               data.abortion_count?.toString() ?? '',
-                    livingChildren:         data.living_children_count?.toString() ?? '',
-                    preEclampsia:           data.pre_eclampsia ?? '',
-                    medicationAndTreatment: data.medication_treatment ?? '',
-                    fuDate:                 data.follow_up_date ?? new Date().toISOString().split('T')[0],   // Fixed: was followUpDate
-                    fuTime:                 data.follow_up_time ?? '',                                        // Fixed: was followUpTime
-                    fuMedicationTreatment:  data.management_treatment ?? '',                                  // Fixed: was managementTreatment
-                    attendingProvider:      data.attending_provider ?? prev.attendingProvider,
-                    chiefComplaints:        data.chief_complaints ?? '',
-                    diagnosis:              data.diagnosis ?? '',
-                    hpi:                    data.hpi ?? ''
-                }));
-            });
-    }, [patient?.id]);
-
-    // Removed duplicate lab results useEffect (was already handled above)
->>>>>>> origin/ivan
 
     useEffect(() => {
         const handleResize = () => { if (window.innerWidth >= 768) setIsMobileMenuOpen(false); };
@@ -777,7 +599,6 @@ function ConsultationPage() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-<<<<<<< HEAD
     const buildConsultationPayload = () => ({
         patient_id: patient?.id,
         ...(icidFromUrl ? { initial_consultation_id: parseInt(icidFromUrl) } : {}),
@@ -848,48 +669,6 @@ function ConsultationPage() {
             signature_url: sigUrl || null,
         };
     };
-=======
-    // ─── HELPERS ─────────────────────────────────────────────────────────────
-
-    const buildConsultationPayload = () => ({
-        patient_id:              patient?.id,
-        family_history:          formData.familyHistory || null,
-        immunization_history:    formData.immunizationHistory || null,
-        smoking_status:          formData.smoking || null,
-        smoking_sticks_per_day:  formData.smokingSticksPerDay ? parseInt(formData.smokingSticksPerDay) : null,
-        smoking_years:           formData.smokingYears ? parseInt(formData.smokingYears) : null,
-        drinking_status:         formData.drinking || null,
-        drinking_frequency:      formData.drinkingFrequency || null,
-        drinking_years:          formData.drinkingYears ? parseInt(formData.drinkingYears) : null,
-        menarche_age:            formData.menarche ? parseInt(formData.menarche) : null,
-        sexual_onset_age:        formData.onsetSexualIntercourse ? parseInt(formData.onsetSexualIntercourse) : null,
-        is_menopause:            formData.menopause || null,
-        menopause_age:           formData.menopauseAge ? parseInt(formData.menopauseAge) : null,
-        lmp:                     formData.lmp || null,
-        interval_cycle:          formData.intervalCycle || null,
-        period_duration:         formData.periodDuration || null,
-        pads_per_day:            formData.padsPerDay ? parseInt(formData.padsPerDay) : null,
-        birth_control_method:    formData.birthControlMethod || null,
-        gravidity:               formData.gravidity ? parseInt(formData.gravidity) : null,
-        parity:                  formData.parity ? parseInt(formData.parity) : null,
-        delivery_type:           formData.typeOfDelivery || null,
-        full_term_count:         formData.fullTerm ? parseInt(formData.fullTerm) : null,
-        premature_count:         formData.premature ? parseInt(formData.premature) : null,
-        abortion_count:          formData.abortion ? parseInt(formData.abortion) : null,
-        living_children_count:   formData.livingChildren ? parseInt(formData.livingChildren) : null,
-        pre_eclampsia:           formData.preEclampsia || null,
-        medication_treatment:    formData.medicationAndTreatment || null,
-        follow_up_date:          formData.fuDate || null,
-        follow_up_time:          formData.fuTime || null,
-        management_treatment:    formData.fuMedicationTreatment || null,
-        attending_provider:      formData.attendingProvider || null,
-        chief_complaints:        formData.chiefComplaints || null,
-        diagnosis:               formData.diagnosis || null,
-        hpi:                     formData.hpi || null
-    });
-
-    // ─── HANDLERS ────────────────────────────────────────────────────────────
->>>>>>> origin/ivan
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -923,7 +702,6 @@ function ConsultationPage() {
         setMedications(prev => prev.filter((_, i) => i !== index));
     };
 
-<<<<<<< HEAD
     const ensureConsultationExists = async (): Promise<number | null> => {
         if (consultationId) return consultationId;
         if (!patient?.id) return null;
@@ -965,25 +743,10 @@ function ConsultationPage() {
                         .update(consultationPayload)
                         .eq('consultation_id', resolvedConsultationId);
 
-=======
-    const handleSaveConsultation = async () => {
-        if (!patient?.id) return;
-        setLoading(true);
-        const payload = buildConsultationPayload();
-
-        try {
-            if (isOnline) {
-                if (consultationId) {
-                    const { error } = await supabase
-                        .from('consultation')
-                        .update(payload)
-                        .eq('consultation_id', consultationId);
->>>>>>> origin/ivan
                     if (error) throw error;
                 } else {
                     const { data, error } = await supabase
                         .from('consultation')
-<<<<<<< HEAD
                         .insert([consultationPayload])
                         .select('consultation_id')
                         .single();
@@ -1019,28 +782,15 @@ function ConsultationPage() {
                     if (error) throw error;
                 }
 
-=======
-                        .insert([payload])
-                        .select('consultation_id')
-                        .single();
-                    if (error) throw error;
-                    if (data) setConsultationId(data.consultation_id);
-                }
->>>>>>> origin/ivan
                 setConsultationSaved(true);
                 alert('Consultation saved successfully!');
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', {
                     id: Date.now(),
                     type: 'consultation',
-<<<<<<< HEAD
                     data: consultationPayload,
                 });
 
-=======
-                    data: payload,
-                });
->>>>>>> origin/ivan
                 setConsultationSaved(true);
                 alert('Offline: Consultation saved locally and will sync when connection returns!');
             }
@@ -1051,7 +801,6 @@ function ConsultationPage() {
         }
     };
 
-<<<<<<< HEAD
     const handleMarkFollowUpDone = async () => {
         if (!patient?.id) return;
         setLoading(true);
@@ -1124,56 +873,6 @@ function ConsultationPage() {
         } catch (err: any) {
             console.error('Full error:', err);
             alert('Failed to mark follow-up as done: ' + err.message);
-=======
-    const handleSaveFollowUp = async () => {
-        if (!patient?.id) return;
-        setLoading(true);
-        try {
-            const sigUrl = followUpSigCanvas.current?.isEmpty()
-                ? ''
-                : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
-
-            const payload = {
-                patient_id:              patient.id,
-                visit_date:              formData.fuDate || null,
-                visit_time:              formData.fuTime || null,
-                mode_of_transaction:     formData.fuModeOfTx || null,
-                mode_of_transfer:        formData.fuModeOfTransfer || null,
-                chief_complaint:         formData.fuChiefComplaint || null,
-                diagnosis:               formData.fuDiagnosis || null,
-                history_of_present_illness: formData.fuHpi || null,
-                bp:                      formData.fuBp || null,
-                heart_rate:              toNumberOrNull(formData.fuHr),
-                respiratory_rate:        toNumberOrNull(formData.fuRr),
-                temperature:             toNumberOrNull(formData.fuTemp),
-                o2_saturation:           toNumberOrNull(formData.fuO2),
-                weight:                  toNumberOrNull(formData.fuWeight),
-                height:                  toNumberOrNull(formData.fuHeight),
-                muac:                    toNumberOrNull(formData.fuMuac),
-                nutritional_status:      fuBmiInfo?.status || formData.fuNutritionalStatus || null,
-                bmi:                     fuBmiInfo ? parseFloat(fuBmiInfo.value) : toNumberOrNull(formData.fuBmi),
-                visual_acuity_left:      formData.fuVaL || null,
-                visual_acuity_right:     formData.fuVaR || null,
-                blood_type:              formData.fuBloodType || patient?.bloodType || null,
-                general_survey:          formData.fuGenSurvey || null,
-                medication_treatment:    formData.fuMedicationTreatment || null,
-                lab_results:             formData.fuLabResults || null,
-                signature_url:           sigUrl || null,
-            };
-
-            if (isOnline) {
-                const { error } = await supabase.from('follow_up').insert([payload]);
-                if (error) throw error;
-                alert('Follow-up record saved successfully!');
-            } else {
-                await saveToIndexedDB('MediSensDB', 'offline_patients', {
-                    id: Date.now(), type: 'follow_up', data: payload
-                });
-                alert('Offline Mode: Follow-up record saved locally!');
-            }
-        } catch (err: any) {
-            alert('Error saving follow-up: ' + err.message);
->>>>>>> origin/ivan
         } finally {
             setLoading(false);
         }
@@ -1183,7 +882,6 @@ function ConsultationPage() {
         if (!patient?.id) return;
         setLoading(true);
 
-<<<<<<< HEAD
         try {
             if (isOnline) {
                 const resolvedConsultationId = await ensureConsultationExists();
@@ -1209,54 +907,10 @@ function ConsultationPage() {
                     others: formData.labTestsOther || null,
                     requested_by: formData.labRequestedBy || null,
                     status: 'Pending',
-=======
-        const consultPayload = buildConsultationPayload();
-        let currentConsultId = consultationId;
-
-        try {
-            if (isOnline) {
-                if (currentConsultId) {
-                    const { error } = await supabase.from('consultation').update(consultPayload).eq('consultation_id', currentConsultId);
-                    if (error) throw error;
-                } else {
-                    const { data, error } = await supabase.from('consultation').insert([consultPayload]).select('consultation_id').single();
-                    if (error) throw error;
-                    if (data) {
-                        currentConsultId = data.consultation_id;
-                        setConsultationId(data.consultation_id);
-                        setConsultationSaved(true);
-                    }
-                }
-
-                const labPayload = {
-                    patient_id:       patient.id,
-                    consultation_id:  currentConsultId,
-                    request_date:     new Date().toISOString().split('T')[0],
-                    chief_complaint:  formData.labChiefComplaint || null,
-                    is_cbc:           formData.labTests.cbc,
-                    is_cbc_platelet:  formData.labTests.cbcPlatelet,
-                    is_hgb_hct:       formData.labTests.hgbHct,
-                    is_xray:          formData.labTests.chestXray,
-                    is_ultrasound:    formData.labTests.ultrasound,
-                    is_urinalysis:    formData.labTests.urinalysis,
-                    is_fecalysis:     formData.labTests.fecalysis,
-                    is_sputum:        formData.labTests.sputum,
-                    is_rbs:           formData.labTests.rbs,
-                    is_fbs:           formData.labTests.fbs,
-                    is_uric_acid:     formData.labTests.uricAcid,
-                    is_cholesterol:   formData.labTests.cholesterol,
-                    others:           formData.labTestsOther || null,
-                    requested_by:     formData.labRequestedBy || null,
-                    status:           'Pending',
->>>>>>> origin/ivan
                 };
 
                 const { error: labError } = await supabase.from('lab_request').insert([labPayload]);
                 if (labError) throw labError;
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/ivan
                 alert('Lab request sent to laboratory successfully!');
             } else {
                 alert('Offline mode requires connecting to the server to generate a consultation ID first.');
@@ -1272,31 +926,18 @@ function ConsultationPage() {
     const handleSavePrescription = async () => {
         if (!patient?.id) return;
 
-<<<<<<< HEAD
-=======
-        if (!consultationId) {
-            alert('Please save the Clinical Assessment / Consultation first before issuing a prescription.');
-            return;
-        }
-
->>>>>>> origin/ivan
         if (sigCanvas.current?.isEmpty()) {
             alert('Doctor signature is required before saving.');
             return;
         }
 
         const validMedications = medications.filter(m => m.name.trim() !== '');
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/ivan
         if (validMedications.length === 0) {
             alert('Please add at least one medication before saving.');
             return;
         }
 
         setLoading(true);
-<<<<<<< HEAD
 
         try {
             if (isOnline) {
@@ -1315,23 +956,6 @@ function ConsultationPage() {
                     status: 'Pending',
                 };
 
-=======
-        const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
-
-        const rxPayload = {
-            patient_id:        patient.id,
-            consultation_id:   consultationId,
-            prescription_date: new Date().toISOString().split('T')[0],
-            rx_content:        JSON.stringify(validMedications),
-            license_no:        formData.rxLicNo ? Number(formData.rxLicNo) : null,
-            ptr_no:            formData.rxPtrNo || null,
-            signature_url:     sigUrl,
-            status:            'Pending',
-        };
-
-        try {
-            if (isOnline) {
->>>>>>> origin/ivan
                 const { error } = await supabase.from('prescription').insert([rxPayload]);
                 if (error) throw error;
                 alert('Prescription saved and sent to pharmacy!');
@@ -1419,7 +1043,6 @@ function ConsultationPage() {
                         {patient.address && <span className="text-xs text-slate-500 truncate max-w-xs">📍 {patient.address}</span>}
                     </div>
                 </div>
-<<<<<<< HEAD
                 <div className="flex items-center gap-2 shrink-0">
                     <button
                         onClick={() => setShowHistory(true)}
@@ -1429,18 +1052,10 @@ function ConsultationPage() {
                     </button>
                     <button onClick={() => window.location.href = 'doctor.html'} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
                 </div>
-=======
-                <button onClick={() => window.location.href = 'doctor.html'} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
->>>>>>> origin/ivan
             </div>
         );
     };
 
-<<<<<<< HEAD
-=======
-    // ─── TAB RENDERS ─────────────────────────────────────────────────────────
-
->>>>>>> origin/ivan
     const renderTab1 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">I. Histories</h3>
@@ -1554,7 +1169,6 @@ function ConsultationPage() {
         </div>
     );
 
-<<<<<<< HEAD
     const renderTab4 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1679,120 +1293,12 @@ function ConsultationPage() {
                         <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
                     </div>
                     <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
-=======
-    // BUG FIX #2 & #3: Replaced broken renderTab4 — removed undefined sectionCls/headerCls,
-    // added the actual full follow-up form (visit info, vitals, chief complaint, HPI, diagnosis)
-    // before the Treatment & Authentication section.
-    const renderTab4 = () => (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">IV. Follow-up Visit</h3>
-
-            {/* ── Visit Info ─────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                    <label className={labelCls}>Visit Date</label>
-                    <input type="date" name="fuDate" value={formData.fuDate} onChange={handleChange} className={inputCls} />
-                </div>
-                <div>
-                    <label className={labelCls}>Visit Time</label>
-                    <input type="time" name="fuTime" value={formData.fuTime} onChange={handleChange} className={inputCls} />
-                </div>
-                <div>
-                    <label className={labelCls}>Mode of Transaction</label>
-                    <select name="fuModeOfTx" value={formData.fuModeOfTx} onChange={handleChange} className={inputCls}>
-                        <option value="Walk-in">Walk-in</option>
-                        <option value="Teleconsult">Teleconsult</option>
-                        <option value="Referral">Referral</option>
-                    </select>
-                </div>
-                <div>
-                    <label className={labelCls}>Mode of Transfer</label>
-                    <select name="fuModeOfTransfer" value={formData.fuModeOfTransfer} onChange={handleChange} className={inputCls}>
-                        <option value="Ambulatory">Ambulatory</option>
-                        <option value="Wheelchair">Wheelchair</option>
-                        <option value="Stretcher">Stretcher</option>
-                    </select>
-                </div>
-                <div>
-                    <label className={labelCls}>Blood Type</label>
-                    <input type="text" name="fuBloodType" value={formData.fuBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} />
-                </div>
-                <div>
-                    <label className={labelCls}>General Survey</label>
-                    <input type="text" name="fuGenSurvey" value={formData.fuGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious..." />
-                </div>
-            </div>
-
-            {/* ── Chief Complaint & HPI ──────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className={labelCls}>Chief Complaint</label>
-                    <textarea name="fuChiefComplaint" value={formData.fuChiefComplaint} onChange={handleChange} rows={3} className={textareaCls} placeholder="Primary reason for visit..." />
-                </div>
-                <div>
-                    <label className={labelCls}>Diagnosis</label>
-                    <textarea name="fuDiagnosis" value={formData.fuDiagnosis} onChange={handleChange} rows={3} className={textareaCls} />
-                </div>
-                <div className="md:col-span-2">
-                    <label className={labelCls}>History of Present Illness <span className="text-slate-400 font-normal normal-case">(Optional)</span></label>
-                    <textarea name="fuHpi" value={formData.fuHpi} onChange={handleChange} rows={3} className={textareaCls} />
-                </div>
-            </div>
-
-            {/* ── Vitals ─────────────────────────────────────────────────── */}
-            <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div><label className={labelCls}>BP (mmHg)</label><input type="text" name="fuBp" value={formData.fuBp} onChange={handleChange} className={inputCls} placeholder="120/80" /></div>
-                    <div><label className={labelCls}>Heart Rate (bpm)</label><input type="text" name="fuHr" value={formData.fuHr} onChange={handleChange} className={inputCls} placeholder="72" /></div>
-                    <div><label className={labelCls}>Respiratory Rate (cpm)</label><input type="text" name="fuRr" value={formData.fuRr} onChange={handleChange} className={inputCls} placeholder="16" /></div>
-                    <div><label className={labelCls}>Temperature (°C)</label><input type="text" name="fuTemp" value={formData.fuTemp} onChange={handleChange} className={inputCls} placeholder="36.5" /></div>
-                    <div><label className={labelCls}>O₂ Saturation (%)</label><input type="text" name="fuO2" value={formData.fuO2} onChange={handleChange} className={inputCls} placeholder="98" /></div>
-                    <div><label className={labelCls}>MUAC (cm)</label><input type="text" name="fuMuac" value={formData.fuMuac} onChange={handleChange} className={inputCls} placeholder="28.5" /></div>
-                    <div><label className={labelCls}>Weight (kg)</label><input type="text" name="fuWeight" value={formData.fuWeight} onChange={handleChange} className={inputCls} placeholder="65" /></div>
-                    <div><label className={labelCls}>Height (cm)</label><input type="text" name="fuHeight" value={formData.fuHeight} onChange={handleChange} className={inputCls} placeholder="165" /></div>
-                    <div>
-                        <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto)</span></label>
-                        <input type="text" readOnly value={fuBmiInfo ? fuBmiInfo.value : ''} className={`${inputCls} bg-slate-50 text-slate-500 cursor-default`} placeholder="—" />
-                        {fuBmiInfo && <p className={`text-xs mt-1.5 font-semibold ${fuBmiInfo.color}`}>{fuBmiInfo.status}</p>}
-                    </div>
-                    <div><label className={labelCls}>Visual Acuity — Left</label><input type="text" name="fuVaL" value={formData.fuVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
-                    <div><label className={labelCls}>Visual Acuity — Right</label><input type="text" name="fuVaR" value={formData.fuVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
-                </div>
-            </div>
-
-            {/* ── Treatment & Auth ───────────────────────────────────────── */}
-            <div className="border-t border-slate-100 pt-6">
-                <h4 className="text-sm font-bold text-slate-700 mb-4">Treatment &amp; Authentication</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label className={labelCls}>Medication <span className="text-slate-300 italic">(Doctor Only)</span></label>
-                        <textarea rows={5} name="fuMedicationTreatment" value={formData.fuMedicationTreatment} onChange={handleChange} className={textareaCls} />
-                    </div>
-                    <div>
-                        <label className={labelCls}>Lab Results <span className="text-slate-300 italic">(Doctor Only)</span></label>
-                        <textarea rows={5} name="fuLabResults" value={formData.fuLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
-                        {formData.fuLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
-                    </div>
-                </div>
-
-                <div className="flex justify-end">
-                    <div className="w-full md:w-80">
-                        <label className={labelCls}>Provider Signature</label>
-                        <div className="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl h-36 mb-2 relative overflow-hidden cursor-crosshair">
-                            <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-sm pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
-                            <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
-                        </div>
-                        <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
-                    </div>
->>>>>>> origin/ivan
                 </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
                 <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
-<<<<<<< HEAD
                     {consultationId && !followUpDone && (
                         <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
                             ✓ Mark Follow-up Done
@@ -1806,12 +1312,6 @@ function ConsultationPage() {
                     <button onClick={() => setActiveTab(5)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>
                         Next: Clinical Notes →
                     </button>
-=======
-                    <button onClick={handleSaveFollowUp} disabled={loading || !patient?.id} className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-                        {loading ? 'Saving...' : '💾 Save Follow-up Record'}
-                    </button>
-                    <button onClick={() => setActiveTab(5)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: Clinical Notes →</button>
->>>>>>> origin/ivan
                 </div>
             </div>
         </div>
@@ -1827,21 +1327,13 @@ function ConsultationPage() {
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
                     <span className="text-lg leading-none">💡</span>
-<<<<<<< HEAD
                     <span>Save the consultation here before proceeding to Lab Request or E-Prescription.</span>
-=======
-                    <span>Save the consultation here before proceeding to Lab Request or E-Prescription — both require a saved consultation record.</span>
->>>>>>> origin/ivan
                 </div>
             )}
             {consultationSaved && (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
                     <span>✅</span>
-<<<<<<< HEAD
                     <span>Consultation record saved.</span>
-=======
-                    <span>Consultation record saved — you can now issue lab requests and prescriptions.</span>
->>>>>>> origin/ivan
                 </div>
             )}
 
@@ -1871,7 +1363,6 @@ function ConsultationPage() {
         const handleSaveVitals = async () => {
             if (!patient?.id) return;
             setLoading(true);
-<<<<<<< HEAD
             const computedBmiValue = vitalsBmiInfo ? parseFloat(vitalsBmiInfo.value) : (formData.bmi ? parseFloat(formData.bmi) : null);
 
             const payload = {
@@ -1886,27 +1377,6 @@ function ConsultationPage() {
                 muac: formData.muac ? parseFloat(formData.muac) : null,
                 nutritional_status: vitalsBmiInfo?.status || formData.nutritionalStatus || null,
                 bmi: computedBmiValue,
-=======
-            const w = parseFloat(formData.weight);
-            const h = parseFloat(formData.height);
-            const computedBmiValue = (w > 0 && h > 0)
-                ? parseFloat((w / ((h / 100) * (h / 100))).toFixed(1))
-                : (formData.bmi ? parseFloat(formData.bmi) : null);
-
-            const payload = {
-                patient_id:         patient.id,
-                bp:                 formData.bp || null,
-                heart_rate:         formData.hr ? parseInt(formData.hr) : null,
-                respiratory_rate:   formData.rr ? parseInt(formData.rr) : null,
-                temperature:        formData.temp ? parseFloat(formData.temp) : null,
-                weight:             formData.weight ? parseFloat(formData.weight) : null,
-                height:             formData.height ? parseInt(formData.height) : null,
-                o2_saturation:      formData.o2Saturation ? parseInt(formData.o2Saturation) : null,
-                muac:               formData.muac ? parseFloat(formData.muac) : null,
-                // BUG FIX #6: Use vitalsBmiInfo (derived from vitals weight/height), not fuBmiInfo
-                nutritional_status: vitalsBmiInfo?.status || formData.nutritionalStatus || null,
-                bmi:                computedBmiValue,
->>>>>>> origin/ivan
                 visual_acuity_left: formData.visualAcuityLeft || null,
                 visual_acuity_right: formData.visualAcuityRight || null,
             };
@@ -1935,16 +1405,7 @@ function ConsultationPage() {
 
         const computedBmi = vitalsBmiInfo?.value ?? '';
         const bmiLabel = vitalsBmiInfo?.status ?? '';
-<<<<<<< HEAD
         const bmiColor = computedBmi ? (parseFloat(computedBmi) < 18.5 ? 'text-amber-500' : parseFloat(computedBmi) < 25 ? 'text-green-600' : parseFloat(computedBmi) < 30 ? 'text-orange-500' : 'text-red-500') : '';
-=======
-        const bmiColor = computedBmi
-            ? parseFloat(computedBmi) < 18.5 ? 'text-amber-500'
-            : parseFloat(computedBmi) < 25 ? 'text-green-600'
-            : parseFloat(computedBmi) < 30 ? 'text-orange-500'
-            : 'text-red-500'
-            : '';
->>>>>>> origin/ivan
 
         return (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
@@ -2063,15 +1524,7 @@ function ConsultationPage() {
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(6)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
                 <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
-<<<<<<< HEAD
                     <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-=======
-                    <button
-                        onClick={handleSaveLabRequest}
-                        disabled={loading || !patient?.id}
-                        className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}
-                    >
->>>>>>> origin/ivan
                         {loading ? 'Sending...' : '📋 Send to Laboratory'}
                     </button>
                     <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: E-Prescription →</button>
@@ -2109,29 +1562,10 @@ function ConsultationPage() {
                                 <label className={labelCls}>Medication Name</label>
                                 <input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} placeholder="e.g. Amoxicillin 500mg" />
                             </div>
-<<<<<<< HEAD
                             <div><label className={labelCls}>Dosage</label><input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 500mg" /></div>
                             <div><label className={labelCls}>Frequency (Sig)</label><input type="text" value={med.frequency} onChange={e => handleMedChange(i, 'frequency', e.target.value)} className={inputCls} placeholder="e.g. 1x a day" /></div>
                             <div><label className={labelCls}>Duration</label><input type="text" value={med.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} className={inputCls} placeholder="e.g. 7 days" /></div>
                             <div><label className={labelCls}>Quantity</label><input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" /></div>
-=======
-                            <div>
-                                <label className={labelCls}>Dosage</label>
-                                <input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 500mg" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Frequency (Sig)</label>
-                                <input type="text" value={med.frequency} onChange={e => handleMedChange(i, 'frequency', e.target.value)} className={inputCls} placeholder="e.g. 1x a day" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Duration</label>
-                                <input type="text" value={med.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} className={inputCls} placeholder="e.g. 7 days" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Quantity</label>
-                                <input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" />
-                            </div>
->>>>>>> origin/ivan
                         </div>
                     </div>
                 ))}
@@ -2149,32 +1583,13 @@ function ConsultationPage() {
                     <button onClick={() => sigCanvas.current?.clear()} className="mt-2 text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">Clear signature</button>
                 </div>
                 <div className="space-y-4">
-<<<<<<< HEAD
                     <div><label className={labelCls}>License No.</label><input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="PRC license number" /></div>
                     <div><label className={labelCls}>PTR No.</label><input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="PTR number" /></div>
-=======
-                    <div>
-                        <label className={labelCls}>License No.</label>
-                        <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="PRC license number" />
-                    </div>
-                    <div>
-                        <label className={labelCls}>PTR No.</label>
-                        <input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="PTR number" />
-                    </div>
->>>>>>> origin/ivan
                 </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
-<<<<<<< HEAD
                 <button onClick={handleSavePrescription} disabled={loading || !patient?.id} className={`order-1 sm:order-2 w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 duration-200 ${primaryBtnBg}`}>
-=======
-                <button
-                    onClick={handleSavePrescription}
-                    disabled={loading || !patient?.id}
-                    className={`order-1 sm:order-2 w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 duration-200 ${primaryBtnBg}`}
-                >
->>>>>>> origin/ivan
                     {loading ? 'Saving...' : '💊 Authorize & Send to Pharmacy'}
                 </button>
             </div>
@@ -2192,7 +1607,6 @@ function ConsultationPage() {
         { id: 8, label: "8. E-Prescription" },
     ];
 
-<<<<<<< HEAD
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
         { id: 'consultation', label: 'Consultation', icon: '🩺' },
@@ -2207,43 +1621,19 @@ function ConsultationPage() {
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden">
             {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity" onClick={() => setIsMobileMenuOpen(false)} />}
-=======
-    return (
-        // BUG FIX #7 & #8: Added md:ml-64 to main so it doesn't overlap sidebar,
-        // moved OfflineBanner inside main and above the content wrapper.
-        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden">
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity" onClick={() => setIsMobileMenuOpen(false)} />
-            )}
->>>>>>> origin/ivan
 
             <Sidebar
                 activePage="consultation"
                 userName={doctorName}
                 userInitials={doctorInitials}
-<<<<<<< HEAD
                 userRole="Doctor"
                 navItems={navItems}
                 onNavigate={handleNavigate}
-=======
-                userRole="General Practitioner"
-                navItems={[
-                    { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                    { id: 'records', label: 'Patient Records', icon: '📁' },
-                    { id: 'consultation', label: 'Consultation', icon: '📋' }
-                ]}
-                onNavigate={(pageId) => {
-                    if (pageId === 'dashboard') window.location.href = '/pages/doctor.html';
-                    if (pageId === 'records') window.location.href = '/pages/records.html';
-                    if (pageId === 'consultation') window.location.href = '/pages/consultation.html';
-                }}
->>>>>>> origin/ivan
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}
             />
 
-<<<<<<< HEAD
             <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px] print:pl-0">
                 <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 print:hidden shadow-sm md:shadow-none">
                     <div className="flex items-center gap-3">
@@ -2307,40 +1697,6 @@ function ConsultationPage() {
                     onClose={() => setShowHistory(false)}
                 />
             )}
-=======
-            {/* BUG FIX #7: Added md:ml-64 for sidebar offset */}
-            <main className="w-full flex-1 md:ml-64 p-4 md:p-8 print:p-0 flex flex-col items-center">
-                {/* BUG FIX #8: OfflineBanner now inside main, full-width before content */}
-                <div className="w-full max-w-5xl">
-                    <OfflineBanner isOnline={isOnline} />
-                </div>
-
-                <div className="w-full max-w-5xl">
-                    {renderPatientCard()}
-                    <div className="flex gap-1 mb-8 border-b border-slate-200 print:hidden overflow-x-auto whitespace-nowrap w-full scrollbar-hide">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'}`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 print:hidden">
-                        {activeTab === 1 && renderTab1()}
-                        {activeTab === 2 && renderTab2()}
-                        {activeTab === 3 && renderTab3()}
-                        {activeTab === 4 && renderTab4()}
-                        {activeTab === 5 && renderTab5()}
-                        {activeTab === 6 && renderTab6()}
-                        {activeTab === 7 && renderTab7()}
-                        {activeTab === 8 && renderTab8()}
-                    </div>
-                </div>
-            </main>
->>>>>>> origin/ivan
         </div>
     );
 }
@@ -2349,8 +1705,4 @@ const container = document.getElementById('root');
 if (container) {
     const root = createRoot(container);
     root.render(<ConsultationPage />);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/ivan

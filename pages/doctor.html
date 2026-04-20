@@ -8,29 +8,6 @@
     <link rel="stylesheet" href="../css/dashboard.css">
     <style>
         * { box-sizing: border-box; }
-<<<<<<< HEAD
-       body { 
-    background-color: #F8FAFC; margin: 0; padding: 0; 
-    font-family: ui-sans-serif, system-ui, sans-serif; 
-    color: #1e293b; height: 100vh; overflow: hidden;
-}
-        .main-wrapper { 
-    margin-left: 240px; 
-    display: flex; flex-direction: column; 
-    height: 100vh; overflow-y: auto;
-    width: calc(100vw - 240px);
-}
-.content { 
-    padding: 12px 24px; 
-    width: 100%; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px;
-    flex: 1;
-}
-        .content { 
-            padding: 12px 16px; 
-=======
         body { 
             background-color: #F8FAFC; margin: 0; padding: 0; 
             font-family: ui-sans-serif, system-ui, sans-serif; 
@@ -44,15 +21,11 @@
         }
         .content { 
             padding: 12px 24px; 
->>>>>>> origin/ivan
             width: 100%; 
             display: flex; 
             flex-direction: column; 
             gap: 10px;
-<<<<<<< HEAD
-=======
             flex: 1;
->>>>>>> origin/ivan
         }
         .welcome-row { 
             display: flex; justify-content: space-between; 
@@ -81,10 +54,6 @@
         .stat-hint.up { color: #16a34a; }
         .stat-hint.down { color: #dc2626; }
         .grid-2-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-<<<<<<< HEAD
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-=======
->>>>>>> origin/ivan
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .card { 
             background: white; border-radius: 10px; 
@@ -184,36 +153,6 @@
 </head>
 <body>
 
-<<<<<<< HEAD
-<aside class="fixed inset-y-0 left-0 z-50 w-[240px] bg-white border-r border-slate-200 flex flex-col print:hidden">
-    <div class="flex items-center gap-3 p-4 border-b border-slate-200">
-        <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
-            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2a1 1 0 0 1 1 1v4h4a1 1 0 0 1 0 2h-4v4a1 1 0 0 1-2 0V9H7a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1z"/>
-                <path d="M4 16a8 8 0 0 1 16 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4z"/>
-            </svg>
-        </div>
-        <div>
-            <div class="text-sm font-extrabold text-slate-900 leading-tight">MediSens</div>
-            <div class="text-[0.6rem] font-bold text-slate-400 uppercase">Rural Health Unit</div>
-        </div>
-    </div>
-
-    <div class="px-4 pt-4 pb-1 text-[0.6rem] font-bold uppercase tracking-widest text-slate-400">Main Menu</div>
-    <nav class="flex-1 flex flex-col gap-0.5 px-2 overflow-y-auto">
-        <a href="doctor.html" class="flex items-center gap-2.5 py-2 text-xs font-semibold bg-[#EBF3FF] text-blue-600 rounded-r-lg relative -ml-2 pl-5 pr-3">
-            <div class="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 rounded-r-md"></div>
-            <span>🏠</span> Dashboard
-        </a>
-        <a href="records.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>📁</span> Records</a>
-        <a href="templates.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>➕</span> New Record</a>
-        <a href="consultation.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>🩺</span> Consultation</a>
-        <div class="mt-3 mb-1 px-3 text-[0.6rem] font-bold uppercase tracking-widest text-slate-400">System</div>
-        <a href="settings.html" class="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-lg"><span>⚙️</span> Settings</a>
-    </nav>
-
-    <div id="logoutBtn" class="p-3 border-t border-slate-200 bg-white mt-auto shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group">
-=======
 <aside class="fixed inset-y-0 left-0 z-50 w-[260px] md:w-[240px] bg-white border-r border-slate-200 flex flex-col transform transition-transform duration-300 ease-in-out print:hidden translate-x-0">
     
     <div class="flex items-center justify-between p-5 border-b border-slate-200 shrink-0">
@@ -246,7 +185,6 @@
     </nav>
 
     <div id="logoutBtn" class="p-3 border-t border-slate-200 bg-white mt-auto shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group" title="Click to Logout">
->>>>>>> origin/ivan
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
                 <div id="sidebarAv" class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">D</div>
@@ -255,11 +193,7 @@
                     <p class="text-[0.6rem] text-slate-500">General Practitioner</p>
                 </div>
             </div>
-<<<<<<< HEAD
-            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-=======
             <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
->>>>>>> origin/ivan
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
             </svg>
         </div>
@@ -282,10 +216,6 @@
         </div>
     </header>
 
-<<<<<<< HEAD
-    <!-- Content -->
-=======
->>>>>>> origin/ivan
     <div class="content">
         <div class="welcome-row">
             <div>
@@ -298,10 +228,6 @@
             </div>
         </div>
 
-<<<<<<< HEAD
-        <!-- Stats row -->
-=======
->>>>>>> origin/ivan
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-icon-wrap si-blue">👥</div>
@@ -327,10 +253,6 @@
                     <div class="stat-hint down">Needs review</div>
                 </div>
             </div>
-<<<<<<< HEAD
-            <!-- NEW: Follow-Up stat -->
-=======
->>>>>>> origin/ivan
             <div class="stat-card">
                 <div class="stat-icon-wrap si-purple">🔁</div>
                 <div class="stat-body">
@@ -341,13 +263,7 @@
             </div>
         </div>
 
-<<<<<<< HEAD
-        <!-- Middle row -->
         <div class="grid-2-3">
-            <!-- Patient queue -->
-=======
-        <div class="grid-2-3">
->>>>>>> origin/ivan
             <div class="card">
                 <div class="card-hd">
                     <div>
@@ -374,13 +290,7 @@
             </div>
         </div>
 
-<<<<<<< HEAD
-        <!-- Bottom row: 3 columns -->
         <div class="grid-3">
-            <!-- Quick Actions -->
-=======
-        <div class="grid-3">
->>>>>>> origin/ivan
             <div class="card">
                 <div class="card-hd">
                     <div class="card-title">Quick Actions</div>
@@ -392,10 +302,6 @@
                 </div>
             </div>
 
-<<<<<<< HEAD
-            <!-- Morbidity Analytics -->
-=======
->>>>>>> origin/ivan
             <div class="card">
                 <div class="card-hd">
                     <div class="card-title">Morbidity Analytics</div>
@@ -420,10 +326,6 @@
                 <button class="morb-btn">🩺 Full Morbidity Analytics →</button>
             </div>
 
-<<<<<<< HEAD
-            <!-- NEW: Follow-Up Patients -->
-=======
->>>>>>> origin/ivan
             <div class="card">
                 <div class="card-hd">
                     <div>

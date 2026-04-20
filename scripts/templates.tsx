@@ -293,10 +293,6 @@ function Templates() {
 
             <Sidebar 
                 activePage="new-record"
-<<<<<<< HEAD
-                doctorName={userName} 
-                doctorInitials={userInitials}
-=======
                 userName={userName} 
                 userInitials={userInitials}
                 userRole={getRoleLabel(userRole)}
@@ -326,7 +322,6 @@ function Templates() {
                         else window.location.href = '/pages/initial_consultation.html';
                     }
                 }}
->>>>>>> origin/ivan
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}

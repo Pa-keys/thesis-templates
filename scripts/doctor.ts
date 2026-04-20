@@ -12,10 +12,7 @@ interface Patient {
 }
 
 interface ConsultationQueueItem {
-<<<<<<< HEAD
     initialconsultation_id: number;
-=======
->>>>>>> origin/ivan
     patient_id: string;
     consultation_date: string;
     consultation_time: string | null;
@@ -30,16 +27,10 @@ interface ConsultationQueueItem {
 interface FollowUpItem {
     consultation_id: string;
     patient_id: string;
-<<<<<<< HEAD
     visit_date: string;
     visit_time: string | null;
     medication_treatment: string | null;
     follow_up_status: string | null;
-=======
-    follow_up_date: string;
-    follow_up_time: string | null;
-    management_treatment: string | null;
->>>>>>> origin/ivan
     patients: {
         firstName: string;
         lastName: string;
@@ -105,7 +96,6 @@ async function loadPatients(): Promise<void> {
 
 // ─── Load Patient Queue from initial_consultation ─────────────────────────────
 async function loadConsultationQueue(): Promise<void> {
-<<<<<<< HEAD
     // ✅ Correct column name in `consultation` table is `initial_consultation_id`
     const { data: existingConsults, error: consultError } = await supabase
         .from('consultation')
@@ -126,11 +116,6 @@ async function loadConsultationQueue(): Promise<void> {
         .from('initial_consultation')
         .select(`
             initialconsultation_id,
-=======
-    const { data, error } = await supabase
-        .from('initial_consultation')
-        .select(`
->>>>>>> origin/ivan
             patient_id,
             consultation_date,
             consultation_time,
@@ -145,7 +130,6 @@ async function loadConsultationQueue(): Promise<void> {
         .order('consultation_time', { ascending: false })
         .limit(5);
 
-<<<<<<< HEAD
     // ✅ Exclude initial_consultations that already have a saved consultation record
     if (consultedIds.length > 0) {
         query.not('initialconsultation_id', 'in', `(${consultedIds.join(',')})`);
@@ -153,8 +137,6 @@ async function loadConsultationQueue(): Promise<void> {
 
     const { data, error } = await query;
 
-=======
->>>>>>> origin/ivan
     if (error) {
         console.error('Failed to load consultation queue:', error);
         document.getElementById('patientQueue')!.innerHTML =
@@ -167,11 +149,7 @@ async function loadConsultationQueue(): Promise<void> {
 
     if (records.length === 0) {
         document.getElementById('patientQueue')!.innerHTML =
-<<<<<<< HEAD
             '<div class="loading-msg">No patients in queue.</div>';
-=======
-            '<div class="loading-msg">No recent consultations.</div>';
->>>>>>> origin/ivan
         return;
     }
 
@@ -197,11 +175,7 @@ async function loadConsultationQueue(): Promise<void> {
         }
 
         return `
-<<<<<<< HEAD
             <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}&icid=${r.initialconsultation_id}'" style="cursor:pointer;">
-=======
-            <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
->>>>>>> origin/ivan
                 <div class="queue-av">${avatar}</div>
                 <div class="queue-info">
                     <div class="queue-name">${firstName} ${lastName}</div>
@@ -213,7 +187,6 @@ async function loadConsultationQueue(): Promise<void> {
     }).join('');
 }
 
-<<<<<<< HEAD
 // ─── Load Follow-Ups from follow_up table ────────────────────────────────────
 async function loadFollowUps(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
@@ -227,38 +200,17 @@ async function loadFollowUps(): Promise<void> {
             visit_time,
             medication_treatment,
             follow_up_status,
-=======
-// ─── Load Follow-Ups from consultation ───────────────────────────────────────
-async function loadFollowUps(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-
-    const { data, error } = await supabase
-        .from('consultation')
-        .select(`
-            consultation_id,
-            patient_id,
-            follow_up_date,
-            follow_up_time,
-            management_treatment,
->>>>>>> origin/ivan
             patients (
                 firstName,
                 lastName,
                 sex
             )
         `)
-<<<<<<< HEAD
         .not('visit_date', 'is', null)
         .gte('visit_date', today)
         .neq('follow_up_status', 'done')
         .order('visit_date', { ascending: true })
         .order('visit_time', { ascending: true })
-=======
-        .not('follow_up_date', 'is', null)
-        .gte('follow_up_date', today)
-        .order('follow_up_date', { ascending: true })
-        .order('follow_up_time', { ascending: true })
->>>>>>> origin/ivan
         .limit(5);
 
     if (error) {
@@ -270,12 +222,7 @@ async function loadFollowUps(): Promise<void> {
 
     const records = (data as unknown as FollowUpItem[]) || [];
 
-<<<<<<< HEAD
     const todayCount = records.filter(r => r.visit_date?.split('T')[0] === today).length;
-=======
-    // Count how many are specifically today for the stat card
-    const todayCount = records.filter(r => r.follow_up_date === today).length;
->>>>>>> origin/ivan
     document.getElementById('followUpToday')!.textContent = String(todayCount);
     document.getElementById('followUpCount')!.textContent = String(records.length);
 
@@ -297,7 +244,6 @@ async function loadFollowUps(): Promise<void> {
         const sex       = p?.sex       || '—';
         const avatar    = firstName[0].toUpperCase();
 
-<<<<<<< HEAD
         const rawDate = r.visit_date?.split('T')[0] ?? '';
         const isToday = rawDate === today;
         const followDate = rawDate ? new Date(rawDate + 'T00:00:00') : null;
@@ -310,17 +256,6 @@ async function loadFollowUps(): Promise<void> {
         let timeLabel = '';
         if (r.visit_time) {
             const [h, m] = r.visit_time.split(':');
-=======
-        const isToday = r.follow_up_date === today;
-        const followDate = new Date(r.follow_up_date + 'T00:00:00'); // avoid timezone shift
-        const dateLabel = isToday
-            ? 'Today'
-            : followDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-        let timeLabel = '';
-        if (r.follow_up_time) {
-            const [h, m] = r.follow_up_time.split(':');
->>>>>>> origin/ivan
             const hour = parseInt(h);
             const ampm = hour >= 12 ? 'PM' : 'AM';
             timeLabel = ` · ${hour % 12 || 12}:${m} ${ampm}`;
@@ -330,17 +265,10 @@ async function loadFollowUps(): Promise<void> {
             ? 'background:#fef3c7;color:#d97706;border:1px solid #fde68a;'
             : 'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;';
 
-<<<<<<< HEAD
         const treatment = r.medication_treatment
             ? r.medication_treatment.length > 22
                 ? r.medication_treatment.slice(0, 22) + '…'
                 : r.medication_treatment
-=======
-        const treatment = r.management_treatment
-            ? r.management_treatment.length > 22
-                ? r.management_treatment.slice(0, 22) + '…'
-                : r.management_treatment
->>>>>>> origin/ivan
             : null;
 
         return `
@@ -356,10 +284,7 @@ async function loadFollowUps(): Promise<void> {
     }).join('');
 }
 
-<<<<<<< HEAD
 // ─── Render Patient Table ─────────────────────────────────────────────────────
-=======
->>>>>>> origin/ivan
 function renderTable(patients: Patient[]): void {
     const tbody = document.getElementById('tableBody')!;
     if (patients.length === 0) {
@@ -387,10 +312,7 @@ function renderTable(patients: Patient[]): void {
     `).join('');
 }
 
-<<<<<<< HEAD
 // ─── Search ───────────────────────────────────────────────────────────────────
-=======
->>>>>>> origin/ivan
 document.getElementById('searchInput')!.addEventListener('input', (e) => {
     const q = (e.target as HTMLInputElement).value.toLowerCase();
     renderTable(allPatients.filter(p =>
@@ -398,8 +320,5 @@ document.getElementById('searchInput')!.addEventListener('input', (e) => {
     ));
 });
 
-<<<<<<< HEAD
 // ─── Init ─────────────────────────────────────────────────────────────────────
-=======
->>>>>>> origin/ivan
 loadPatients();
