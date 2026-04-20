@@ -35,11 +35,7 @@ interface Patient {
     id: string;
     firstName: string; middleName: string; lastName: string; suffix: string;
     age: number | null; sex: string; bloodType: string;
-<<<<<<< HEAD
-    address?: string; // e.g. 'Bilucao, Malvar, Batangas'
-=======
     address?: string; 
->>>>>>> origin/ivan
 }
 
 // ─── Role Label Helper ────────────────────────────────────────────────────────
@@ -71,15 +67,12 @@ function Records() {
 
     const { isOnline, isSyncing } = useNetworkSync();
 
-<<<<<<< HEAD
-=======
     // Default nav items (fallback if sidebar doesn't generate them based on role)
     const defaultNavItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
         { id: 'records', label: 'Patient Records', icon: '📁' }
     ];
 
->>>>>>> origin/ivan
     // ─── Auth & Profile ───────────────────────────────────────────────────────
     useEffect(() => {
         supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -162,12 +155,6 @@ function Records() {
                 />
             )}
 
-<<<<<<< HEAD
-            <Sidebar
-                activePage="records"
-                doctorName={userName}
-                doctorInitials={userInitials}
-=======
             {/* FIXED PROPS HERE */}
             <Sidebar
                 activePage="records"
@@ -184,7 +171,6 @@ function Records() {
                         else if (userRole === 'BHW') window.location.href = '/pages/bhw.html';
                     }
                 }}
->>>>>>> origin/ivan
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}
@@ -279,19 +265,11 @@ function Records() {
                                         <option value="">All Barangays</option>
                                         {MALVAR_BARANGAYS.map(b => (
                                             <option key={b} value={b}>
-<<<<<<< HEAD
-                                                {b.split(',')[0]}  {/* show only barangay name, e.g. "Bagong Pook" */}
-=======
                                                 {b.split(',')[0]}
->>>>>>> origin/ivan
                                             </option>
                                         ))}
                                         <option value={OUTSIDE_MALVAR}>Outside Malvar</option>
                                     </select>
-<<<<<<< HEAD
-                                    {/* chevron icon */}
-=======
->>>>>>> origin/ivan
                                     <svg
                                         className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
