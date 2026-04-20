@@ -12,6 +12,7 @@ interface Patient {
 }
 
 interface ConsultationQueueItem {
+    initialconsultation_id: number;
     patient_id: string;
     consultation_date: string;
     consultation_time: string | null;
@@ -26,9 +27,10 @@ interface ConsultationQueueItem {
 interface FollowUpItem {
     consultation_id: string;
     patient_id: string;
-    follow_up_date: string;
-    follow_up_time: string | null;
-    management_treatment: string | null;
+    visit_date: string;
+    visit_time: string | null;
+    medication_treatment: string | null;
+    follow_up_status: string | null;
     patients: {
         firstName: string;
         lastName: string;
@@ -94,9 +96,26 @@ async function loadPatients(): Promise<void> {
 
 // ─── Load Patient Queue from initial_consultation ─────────────────────────────
 async function loadConsultationQueue(): Promise<void> {
-    const { data, error } = await supabase
+    // ✅ Correct column name in `consultation` table is `initial_consultation_id`
+    const { data: existingConsults, error: consultError } = await supabase
+        .from('consultation')
+        .select('initial_consultation_id')
+        .not('initial_consultation_id', 'is', null);
+
+    if (consultError) {
+        console.error('Failed to fetch existing consultations:', consultError);
+    }
+
+    // Filter out nulls and extract the IDs
+    const consultedIds: number[] = (existingConsults || [])
+        .map(c => c.initial_consultation_id)
+        .filter(Boolean);
+
+    // ✅ Correct column name in `initial_consultation` table is `initialconsultation_id`
+    const query = supabase
         .from('initial_consultation')
         .select(`
+            initialconsultation_id,
             patient_id,
             consultation_date,
             consultation_time,
@@ -111,6 +130,13 @@ async function loadConsultationQueue(): Promise<void> {
         .order('consultation_time', { ascending: false })
         .limit(5);
 
+    // ✅ Exclude initial_consultations that already have a saved consultation record
+    if (consultedIds.length > 0) {
+        query.not('initialconsultation_id', 'in', `(${consultedIds.join(',')})`);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
         console.error('Failed to load consultation queue:', error);
         document.getElementById('patientQueue')!.innerHTML =
@@ -123,7 +149,7 @@ async function loadConsultationQueue(): Promise<void> {
 
     if (records.length === 0) {
         document.getElementById('patientQueue')!.innerHTML =
-            '<div class="loading-msg">No recent consultations.</div>';
+            '<div class="loading-msg">No patients in queue.</div>';
         return;
     }
 
@@ -149,7 +175,7 @@ async function loadConsultationQueue(): Promise<void> {
         }
 
         return `
-            <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}'" style="cursor:pointer;">
+            <div class="queue-item" onclick="window.location.href='consultation.html?id=${r.patient_id}&icid=${r.initialconsultation_id}'" style="cursor:pointer;">
                 <div class="queue-av">${avatar}</div>
                 <div class="queue-info">
                     <div class="queue-name">${firstName} ${lastName}</div>
@@ -161,28 +187,30 @@ async function loadConsultationQueue(): Promise<void> {
     }).join('');
 }
 
-// ─── Load Follow-Ups from consultation ───────────────────────────────────────
+// ─── Load Follow-Ups from follow_up table ────────────────────────────────────
 async function loadFollowUps(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+    const today = new Date().toISOString().split('T')[0];
 
     const { data, error } = await supabase
-        .from('consultation')
+        .from('follow_up')
         .select(`
             consultation_id,
             patient_id,
-            follow_up_date,
-            follow_up_time,
-            management_treatment,
+            visit_date,
+            visit_time,
+            medication_treatment,
+            follow_up_status,
             patients (
                 firstName,
                 lastName,
                 sex
             )
         `)
-        .not('follow_up_date', 'is', null)
-        .gte('follow_up_date', today)
-        .order('follow_up_date', { ascending: true })
-        .order('follow_up_time', { ascending: true })
+        .not('visit_date', 'is', null)
+        .gte('visit_date', today)
+        .neq('follow_up_status', 'done')
+        .order('visit_date', { ascending: true })
+        .order('visit_time', { ascending: true })
         .limit(5);
 
     if (error) {
@@ -194,8 +222,7 @@ async function loadFollowUps(): Promise<void> {
 
     const records = (data as unknown as FollowUpItem[]) || [];
 
-    // Count how many are specifically today for the stat card
-    const todayCount = records.filter(r => r.follow_up_date === today).length;
+    const todayCount = records.filter(r => r.visit_date?.split('T')[0] === today).length;
     document.getElementById('followUpToday')!.textContent = String(todayCount);
     document.getElementById('followUpCount')!.textContent = String(records.length);
 
@@ -217,15 +244,18 @@ async function loadFollowUps(): Promise<void> {
         const sex       = p?.sex       || '—';
         const avatar    = firstName[0].toUpperCase();
 
-        const isToday = r.follow_up_date === today;
-        const followDate = new Date(r.follow_up_date + 'T00:00:00'); // avoid timezone shift
+        const rawDate = r.visit_date?.split('T')[0] ?? '';
+        const isToday = rawDate === today;
+        const followDate = rawDate ? new Date(rawDate + 'T00:00:00') : null;
         const dateLabel = isToday
             ? 'Today'
-            : followDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            : followDate && !isNaN(followDate.getTime())
+                ? followDate.toLocaleDateString([], { month: 'short', day: 'numeric' })
+                : '—';
 
         let timeLabel = '';
-        if (r.follow_up_time) {
-            const [h, m] = r.follow_up_time.split(':');
+        if (r.visit_time) {
+            const [h, m] = r.visit_time.split(':');
             const hour = parseInt(h);
             const ampm = hour >= 12 ? 'PM' : 'AM';
             timeLabel = ` · ${hour % 12 || 12}:${m} ${ampm}`;
@@ -235,10 +265,10 @@ async function loadFollowUps(): Promise<void> {
             ? 'background:#fef3c7;color:#d97706;border:1px solid #fde68a;'
             : 'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;';
 
-        const treatment = r.management_treatment
-            ? r.management_treatment.length > 22
-                ? r.management_treatment.slice(0, 22) + '…'
-                : r.management_treatment
+        const treatment = r.medication_treatment
+            ? r.medication_treatment.length > 22
+                ? r.medication_treatment.slice(0, 22) + '…'
+                : r.medication_treatment
             : null;
 
         return `
@@ -254,6 +284,7 @@ async function loadFollowUps(): Promise<void> {
     }).join('');
 }
 
+// ─── Render Patient Table ─────────────────────────────────────────────────────
 function renderTable(patients: Patient[]): void {
     const tbody = document.getElementById('tableBody')!;
     if (patients.length === 0) {
@@ -281,6 +312,7 @@ function renderTable(patients: Patient[]): void {
     `).join('');
 }
 
+// ─── Search ───────────────────────────────────────────────────────────────────
 document.getElementById('searchInput')!.addEventListener('input', (e) => {
     const q = (e.target as HTMLInputElement).value.toLowerCase();
     renderTable(allPatients.filter(p =>
@@ -288,4 +320,5 @@ document.getElementById('searchInput')!.addEventListener('input', (e) => {
     ));
 });
 
+// ─── Init ─────────────────────────────────────────────────────────────────────
 loadPatients();

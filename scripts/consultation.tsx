@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../shared/supabase';
-import { requireRole, logout } from '../shared/auth';
+import { requireRole } from '../shared/auth';
 import { Sidebar } from './sidebar';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
 import { OfflineBanner } from './OfflineBanner';
@@ -27,10 +27,237 @@ interface Medication {
     quantity: string;
 }
 
-function ConsultationPage() {
+interface ConsultationRecord {
+    consultation_id: number;
+    chief_complaints?: string;
+    diagnosis?: string;
+    hpi?: string;
+    family_history?: string;
+    medication_treatment?: string;
+    attending_provider?: string;
+}
 
+interface InitialConsultationRecord {
+    initialconsultation_id: number;
+    consultation_date?: string;
+    consultation_time?: string;
+    mode_of_transaction?: string;
+    referred_by?: string;
+    mode_of_transfer?: string;
+    chief_complaint?: string;
+    diagnosis?: string;
+}
+
+const toNumberOrNull = (val: string | undefined | null): number | null => {
+    if (val === undefined || val === null || val.trim() === '') return null;
+    const n = parseFloat(val);
+    return isNaN(n) ? null : n;
+};
+
+function HistoryPanel({ patientId, patientName, onClose }: {
+    patientId: string;
+    patientName: string;
+    onClose: () => void;
+}) {
+    const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
+    const [initialConsults, setInitialConsults] = useState<InitialConsultationRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState<'all' | 'consultation' | 'initial'>('all');
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    useEffect(() => {
+        async function fetchHistory() {
+            setLoading(true);
+
+            // Both consultation.patient_id and initial_consultation.patient_id are int8
+            // so we must cast patientId from string to number for both queries
+            const parsedId = parseInt(patientId);
+            const numericId = isNaN(parsedId) ? patientId : parsedId;
+
+            const [cRes, iRes] = await Promise.all([
+                supabase
+                    .from('consultation')
+                    .select('consultation_id, chief_complaints, diagnosis, hpi, family_history, medication_treatment, attending_provider')
+                    .eq('patient_id', numericId)
+                    .order('consultation_id', { ascending: false }),
+                supabase
+                    .from('initial_consultation')
+                    .select('initialconsultation_id, consultation_date, consultation_time, mode_of_transaction, referred_by, mode_of_transfer, chief_complaint, diagnosis')
+                    .eq('patient_id', numericId)
+                    .order('initialconsultation_id', { ascending: false }),
+            ]);
+
+            console.log('📋 Consultation fetch:', cRes.data, cRes.error);
+            console.log('🏥 Initial consultation fetch:', iRes.data, iRes.error);
+
+            if (cRes.error) console.error('Consultation fetch error:', cRes.error);
+            if (iRes.error) console.error('Initial consultation fetch error:', iRes.error);
+
+            if (cRes.data) setConsultations(cRes.data);
+            if (iRes.data) setInitialConsults(iRes.data as InitialConsultationRecord[]);
+            setLoading(false);
+        }
+        fetchHistory();
+    }, [patientId]);
+
+    const formatDate = (str?: string) => {
+        if (!str) return '—';
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? str : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
+
+    const sectionBtn = (label: string, key: typeof activeSection, count: number) => (
+        <button
+            onClick={() => setActiveSection(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+        >
+            {label} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
+        </button>
+    );
+
+    const RecordCard = ({ id, badge, badgeColor, date, title, subtitle, children }: {
+        id: string; badge: string; badgeColor: string;
+        date: string; title: string; subtitle?: string; children: React.ReactNode;
+    }) => (
+        <div className="border border-slate-200 rounded-xl overflow-hidden mb-2">
+            <button
+                onClick={() => toggle(id)}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+            >
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>{badge}</span>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-slate-800 truncate">{title}</div>
+                    {subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
+                </div>
+                <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
+                <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
+            </button>
+            {expandedId === id && (
+                <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-3">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+
+    const Field = ({ label, value }: { label: string; value?: string | number | null }) => (
+        value ? (
+            <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{label}</div>
+                <div className="text-sm text-slate-700">{value}</div>
+            </div>
+        ) : null
+    );
+
+    const showConsultations = activeSection === 'all' || activeSection === 'consultation';
+    const showInitial = activeSection === 'all' || activeSection === 'initial';
+    const totalCount = consultations.length + initialConsults.length;
+
+    return (
+        <>
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
+            <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
+                    <div>
+                        <div className="font-bold text-slate-900 text-base">Patient History</div>
+                        <div className="text-xs text-slate-500">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 font-bold text-lg transition-colors">✕</button>
+                </div>
+                <div className="flex gap-2 px-5 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
+                    {sectionBtn('All', 'all', totalCount)}
+                    {sectionBtn('Consultations', 'consultation', consultations.length)}
+                    {sectionBtn('Initial', 'initial', initialConsults.length)}
+                </div>
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center h-40 gap-3">
+                            <svg className="animate-spin w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                            </svg>
+                            <span className="text-sm text-slate-400">Loading records...</span>
+                        </div>
+                    ) : totalCount === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-40 gap-2">
+                            <span className="text-3xl">📭</span>
+                            <span className="text-sm text-slate-400">No history records found.</span>
+                        </div>
+                    ) : (
+                        <>
+                            {showInitial && initialConsults.length > 0 && (
+                                <div>
+                                    {activeSection === 'all' && (
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Initial Consultations</div>
+                                    )}
+                                    {initialConsults.map((rec) => {
+                                        const recId = `initial-${rec.initialconsultation_id}`;
+                                        return (
+                                            <RecordCard
+                                                key={recId}
+                                                id={recId}
+                                                badge="Initial"
+                                                badgeColor="bg-purple-100 text-purple-700"
+                                                date={formatDate(rec.consultation_date)}
+                                                title={rec.chief_complaint || 'Initial Consultation'}
+                                                subtitle={rec.diagnosis}
+                                            >
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                    <Field label="Date" value={formatDate(rec.consultation_date)} />
+                                                    <Field label="Time" value={rec.consultation_time} />
+                                                    <Field label="Chief Complaint" value={rec.chief_complaint} />
+                                                    <Field label="Diagnosis" value={rec.diagnosis} />
+                                                    <Field label="Mode of Transaction" value={rec.mode_of_transaction} />
+                                                    <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
+                                                    <Field label="Referred By" value={rec.referred_by} />
+                                                </div>
+                                            </RecordCard>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {showConsultations && consultations.length > 0 && (
+                                <div className={activeSection === 'all' && initialConsults.length > 0 ? 'mt-4' : ''}>
+                                    {activeSection === 'all' && (
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Consultations</div>
+                                    )}
+                                    {consultations.map((rec) => {
+                                        const recId = `consult-${rec.consultation_id}`;
+                                        return (
+                                            <RecordCard
+                                                key={recId}
+                                                id={recId}
+                                                badge="Consult"
+                                                badgeColor="bg-blue-100 text-blue-700"
+                                                date={`#${rec.consultation_id}`}
+                                                title={rec.chief_complaints || `Consultation #${rec.consultation_id}`}
+                                                subtitle={rec.diagnosis}
+                                            >
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                    <Field label="Chief Complaints" value={rec.chief_complaints} />
+                                                    <Field label="Diagnosis" value={rec.diagnosis} />
+                                                    <Field label="HPI" value={rec.hpi} />
+                                                    <Field label="Family History" value={rec.family_history} />
+                                                    <Field label="Medication & Treatment" value={rec.medication_treatment} />
+                                                    <Field label="Attending Provider" value={rec.attending_provider} />
+                                                </div>
+                                            </RecordCard>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+}
+
+function ConsultationPage() {
     const [formData, setFormData] = useState({
-        // ── Histories ──────────────────────────────────────────────────────
         familyHistory: '',
         immunizationHistory: '',
         smoking: '',
@@ -40,7 +267,6 @@ function ConsultationPage() {
         drinkingFrequency: '',
         drinkingYears: '',
 
-        // ── OBGyne ─────────────────────────────────────────────────────────
         menarche: '',
         onsetSexualIntercourse: '',
         menopause: '',
@@ -51,7 +277,6 @@ function ConsultationPage() {
         padsPerDay: '',
         birthControlMethod: '',
 
-        // ── Pregnancy History ──────────────────────────────────────────────
         gravidity: '',
         parity: '',
         typeOfDelivery: '',
@@ -61,21 +286,27 @@ function ConsultationPage() {
         livingChildren: '',
         preEclampsia: '',
 
-        // ── Clinical Assessment ────────────────────────────────────────────
         medicationAndTreatment: '',
 
-        // ── Follow-up ──────────────────────────────────────────────────────
         followUpDate: new Date().toISOString().split('T')[0],
         followUpTime: '',
+        followUpModeOfTx: 'Walk-in',
+        followUpModeOfTransfer: 'Ambulatory',
+        followUpChiefComplaint: '',
+        followUpDiagnosis: '',
+        followUpHpi: '',
+        followUpBp: '', followUpHr: '', followUpRr: '', followUpTemp: '', followUpO2: '',
+        followUpWeight: '', followUpHeight: '', followUpMuac: '',
+        followUpNutritionalStatus: '', followUpBmi: '',
+        followUpVaL: '', followUpVaR: '', followUpBloodType: '', followUpGenSurvey: '',
         managementTreatment: '',
+        followUpLabResults: '',
         attendingProvider: '',
 
-        // ── Clinical Notes ─────────────────────────────────────────────────
         chiefComplaints: '',
         diagnosis: '',
         hpi: '',
 
-        // ── Physical Exam ──────────────────────────────────────────────────
         bp: '', hr: '', rr: '', temp: '', weight: '', height: '',
         o2Saturation: '',
         muac: '',
@@ -84,7 +315,6 @@ function ConsultationPage() {
         visualAcuityLeft: '',
         visualAcuityRight: '',
 
-        // ── Lab Tests ──────────────────────────────────────────────────────
         labTests: {
             cbc: false, cbcPlatelet: false, hgbHct: false, chestXray: false,
             ultrasound: false, urinalysis: false, fecalysis: false, sputum: false,
@@ -96,21 +326,48 @@ function ConsultationPage() {
         labChiefComplaint: '',
         labRequestedBy: '',
 
-        // ── Prescription ───────────────────────────────────────────────────
         rxLicNo: '',
         rxPtrNo: '',
-        rxSignatureUrl: '',
     });
 
-    // Medications list for prescription
+    const followUpBmiInfo = useMemo(() => {
+        const w = parseFloat(formData.followUpWeight || '0');
+        const h = parseFloat(formData.followUpHeight || '0');
+        if (w > 0 && h > 0) {
+            const bmiValue = parseFloat((w / ((h / 100) * (h / 100))).toFixed(1));
+            let status = 'Normal';
+            let color = 'text-emerald-600';
+            if (bmiValue < 18.5) { status = 'Underweight'; color = 'text-amber-500'; }
+            else if (bmiValue >= 25 && bmiValue < 29.9) { status = 'Overweight'; color = 'text-orange-500'; }
+            else if (bmiValue >= 30) { status = 'Obese'; color = 'text-red-500'; }
+            return { value: bmiValue.toString(), status, color };
+        }
+        return null;
+    }, [formData.followUpWeight, formData.followUpHeight]);
+
+    const vitalsBmiInfo = useMemo(() => {
+        const w = parseFloat(formData.weight || '0');
+        const h = parseFloat(formData.height || '0');
+        if (w > 0 && h > 0) {
+            const bmiValue = parseFloat((w / ((h / 100) * (h / 100))).toFixed(1));
+            let status = 'Normal';
+            if (bmiValue < 18.5) status = 'Underweight';
+            else if (bmiValue >= 25 && bmiValue < 29.9) status = 'Overweight';
+            else if (bmiValue >= 30) status = 'Obese';
+            return { value: bmiValue.toString(), status };
+        }
+        return null;
+    }, [formData.weight, formData.height]);
+
     const [medications, setMedications] = useState<Medication[]>([
         { name: '', dosage: '', frequency: '', duration: '', quantity: '' }
     ]);
 
-    // ── NEW: track whether consultation has been saved ──────────────────────
     const [consultationSaved, setConsultationSaved] = useState(false);
+    const [followUpDone, setFollowUpDone] = useState(false);
 
     const sigCanvas = useRef<SignatureCanvas | null>(null);
+    const followUpSigCanvas = useRef<SignatureCanvas | null>(null);
 
     const [activeTab, setActiveTab] = useState(1);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -121,6 +378,7 @@ function ConsultationPage() {
 
     const [doctorName, setDoctorName] = useState('Loading...');
     const [doctorInitials, setDoctorInitials] = useState('D');
+    const [showHistory, setShowHistory] = useState(false);
 
     const { isOnline, isSyncing } = useNetworkSync();
 
@@ -131,7 +389,10 @@ function ConsultationPage() {
     const [vitalsId, setVitalsId] = useState<number | null>(null);
     const [vitalsLoading, setVitalsLoading] = useState(false);
 
-    // ─── INIT ────────────────────────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const patientIdFromUrl = urlParams.get('id');
+    const icidFromUrl = urlParams.get('icid');
+
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
 
@@ -150,13 +411,12 @@ function ConsultationPage() {
                 labRequestedBy: profile.fullName,
             }));
 
-            const patientId = new URLSearchParams(window.location.search).get('id');
-            if (!patientId) { setPatientLoading(false); return; }
+            if (!patientIdFromUrl) { setPatientLoading(false); return; }
 
             const { data, error } = await supabase
                 .from('patients')
                 .select('id, firstName, lastName, middleName, age, sex, bloodType, address, contactNumber')
-                .eq('id', patientId)
+                .eq('id', patientIdFromUrl)
                 .single();
 
             if (error) console.error('Failed to fetch patient:', error);
@@ -166,7 +426,6 @@ function ConsultationPage() {
         });
     }, []);
 
-    // ─── VITALS FETCH ────────────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
         setVitalsLoading(true);
@@ -201,59 +460,138 @@ function ConsultationPage() {
             });
     }, [patient?.id]);
 
-    // ─── CONSULTATION FETCH ───────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
-
         supabase
-            .from('consultation')
-            .select('*')
+            .from('lab_request')
+            .select('results, status')
             .eq('patient_id', patient.id)
-            .order('consultation_id', { ascending: false })
+            .eq('status', 'Completed')
+            .order('created_at', { ascending: false })
             .limit(1)
             .single()
             .then(({ data }) => {
-                if (!data) return;
-                setConsultationId(data.consultation_id);
-                setConsultationSaved(true); // already has a saved record
-                setFormData(prev => ({
-                    ...prev,
-                    familyHistory:          data.family_history ?? '',
-                    immunizationHistory:    data.immunization_history ?? '',
-                    smoking:                data.smoking_status ?? '',
-                    smokingSticksPerDay:    data.smoking_sticks_per_day?.toString() ?? '',
-                    smokingYears:           data.smoking_years?.toString() ?? '',
-                    drinking:               data.drinking_status ?? '',
-                    drinkingFrequency:      data.drinking_frequency ?? '',
-                    drinkingYears:          data.drinking_years?.toString() ?? '',
-                    menarche:               data.menarche_age?.toString() ?? '',
-                    onsetSexualIntercourse: data.sexual_onset_age?.toString() ?? '',
-                    menopause:              data.is_menopause ?? '',
-                    menopauseAge:           data.menopause_age?.toString() ?? '',
-                    lmp:                    data.lmp ?? '',
-                    intervalCycle:          data.interval_cycle ?? '',
-                    periodDuration:         data.period_duration ?? '',
-                    padsPerDay:             data.pads_per_day?.toString() ?? '',
-                    birthControlMethod:     data.birth_control_method ?? '',
-                    gravidity:              data.gravidity?.toString() ?? '',
-                    parity:                 data.parity?.toString() ?? '',
-                    typeOfDelivery:         data.delivery_type ?? '',
-                    fullTerm:               data.full_term_count?.toString() ?? '',
-                    premature:              data.premature_count?.toString() ?? '',
-                    abortion:               data.abortion_count?.toString() ?? '',
-                    livingChildren:         data.living_children_count?.toString() ?? '',
-                    preEclampsia:           data.pre_eclampsia ?? '',
-                    medicationAndTreatment: data.medication_treatment ?? '',
-                    followUpDate:           data.follow_up_date ?? new Date().toISOString().split('T')[0],
-                    followUpTime:           data.follow_up_time ?? '',
-                    managementTreatment:    data.management_treatment ?? '',
-                    attendingProvider:      data.attending_provider ?? prev.attendingProvider,
-                    chiefComplaints:        data.chief_complaints ?? '',
-                    diagnosis:              data.diagnosis ?? '',
-                    hpi:                    data.hpi ?? ''
-                }));
+                if (data?.results) setFormData(prev => ({ ...prev, followUpLabResults: data.results }));
             });
     }, [patient?.id]);
+
+    useEffect(() => {
+        if (!patient?.id) return;
+
+        const query = supabase
+            .from('consultation')
+            .select('*')
+            .eq('patient_id', patient.id);
+
+        if (icidFromUrl) {
+            query.eq('initial_consultation_id', parseInt(icidFromUrl));
+        } else {
+            query.order('consultation_id', { ascending: false }).limit(1);
+        }
+
+        query.single().then(({ data }) => {
+            if (!data) return;
+            setConsultationId(data.consultation_id);
+            setConsultationSaved(true);
+            if (data.follow_up_status === 'done') setFollowUpDone(true);
+            setFormData(prev => ({
+                ...prev,
+                familyHistory: data.family_history ?? '',
+                immunizationHistory: data.immunization_history ?? '',
+                smoking: data.smoking_status ?? '',
+                smokingSticksPerDay: data.smoking_sticks_per_day?.toString() ?? '',
+                smokingYears: data.smoking_years?.toString() ?? '',
+                drinking: data.drinking_status ?? '',
+                drinkingFrequency: data.drinking_frequency ?? '',
+                drinkingYears: data.drinking_years?.toString() ?? '',
+                menarche: data.menarche_age?.toString() ?? '',
+                onsetSexualIntercourse: data.sexual_onset_age?.toString() ?? '',
+                menopause: data.is_menopause ?? '',
+                menopauseAge: data.menopause_age?.toString() ?? '',
+                lmp: data.lmp ?? '',
+                intervalCycle: data.interval_cycle ?? '',
+                periodDuration: data.period_duration ?? '',
+                padsPerDay: data.pads_per_day?.toString() ?? '',
+                birthControlMethod: data.birth_control_method ?? '',
+                gravidity: data.gravidity?.toString() ?? '',
+                parity: data.parity?.toString() ?? '',
+                typeOfDelivery: data.delivery_type ?? '',
+                fullTerm: data.full_term_count?.toString() ?? '',
+                premature: data.premature_count?.toString() ?? '',
+                abortion: data.abortion_count?.toString() ?? '',
+                livingChildren: data.living_children_count?.toString() ?? '',
+                preEclampsia: data.pre_eclampsia ?? '',
+                medicationAndTreatment: data.medication_treatment ?? '',
+                managementTreatment: data.management_treatment ?? '',
+                attendingProvider: data.attending_provider ?? prev.attendingProvider,
+                chiefComplaints: data.chief_complaints ?? '',
+                diagnosis: data.diagnosis ?? '',
+                hpi: data.hpi ?? '',
+            }));
+        });
+    }, [patient?.id]);
+
+    useEffect(() => {
+        if (!patient?.id) return;
+
+        const buildFollowUpQuery = async () => {
+            let resolvedConsultationId = consultationId;
+
+            if (!resolvedConsultationId && icidFromUrl) {
+                const { data } = await supabase
+                    .from('consultation')
+                    .select('consultation_id')
+                    .eq('initial_consultation_id', parseInt(icidFromUrl))
+                    .single();
+                if (data) resolvedConsultationId = data.consultation_id;
+            }
+
+            const query = supabase
+                .from('follow_up')
+                .select('*')
+                .eq('patient_id', patient.id);
+
+            if (resolvedConsultationId) {
+                query.eq('consultation_id', resolvedConsultationId);
+            } else {
+                query.order('consultation_id', { ascending: false }).limit(1);
+            }
+
+            const { data } = await query.single();
+            if (!data) return;
+
+            if (data.follow_up_status === 'done') setFollowUpDone(true);
+
+            setFormData(prev => ({
+                ...prev,
+                followUpDate: data.visit_date ?? prev.followUpDate,
+                followUpTime: data.visit_time ?? '',
+                followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx,
+                followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
+                followUpChiefComplaint: data.chief_complaint ?? '',
+                followUpDiagnosis: data.diagnosis ?? '',
+                followUpHpi: data.history_of_present_illness ?? '',
+                followUpBp: data.bp ?? '',
+                followUpHr: data.heart_rate?.toString() ?? '',
+                followUpRr: data.respiratory_rate?.toString() ?? '',
+                followUpTemp: data.temperature?.toString() ?? '',
+                followUpO2: data.o2_saturation?.toString() ?? '',
+                followUpWeight: data.weight?.toString() ?? '',
+                followUpHeight: data.height?.toString() ?? '',
+                followUpMuac: data.muac?.toString() ?? '',
+                followUpNutritionalStatus: data.nutritional_status ?? '',
+                followUpBmi: data.bmi?.toString() ?? '',
+                followUpVaL: data.visual_acuity_left ?? '',
+                followUpVaR: data.visual_acuity_right ?? '',
+                followUpBloodType: data.blood_type ?? '',
+                followUpGenSurvey: data.general_survey ?? '',
+                managementTreatment: data.medication_treatment ?? prev.managementTreatment,
+                followUpLabResults: data.lab_results ?? prev.followUpLabResults,
+            }));
+        };
+
+        buildFollowUpQuery();
+    }, [patient?.id, consultationId]);
 
     useEffect(() => {
         const handleResize = () => { if (window.innerWidth >= 768) setIsMobileMenuOpen(false); };
@@ -261,46 +599,76 @@ function ConsultationPage() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // ─── HELPERS ─────────────────────────────────────────────────────────────
-
     const buildConsultationPayload = () => ({
-        patient_id:              patient?.id,
-        family_history:          formData.familyHistory || null,
-        immunization_history:    formData.immunizationHistory || null,
-        smoking_status:          formData.smoking || null,
-        smoking_sticks_per_day:  formData.smokingSticksPerDay ? parseInt(formData.smokingSticksPerDay) : null,
-        smoking_years:           formData.smokingYears ? parseInt(formData.smokingYears) : null,
-        drinking_status:         formData.drinking || null,
-        drinking_frequency:      formData.drinkingFrequency || null,
-        drinking_years:          formData.drinkingYears ? parseInt(formData.drinkingYears) : null,
-        menarche_age:            formData.menarche ? parseInt(formData.menarche) : null,
-        sexual_onset_age:        formData.onsetSexualIntercourse ? parseInt(formData.onsetSexualIntercourse) : null,
-        is_menopause:            formData.menopause || null,
-        menopause_age:           formData.menopauseAge ? parseInt(formData.menopauseAge) : null,
-        lmp:                     formData.lmp || null,
-        interval_cycle:          formData.intervalCycle || null,
-        period_duration:         formData.periodDuration || null,
-        pads_per_day:            formData.padsPerDay ? parseInt(formData.padsPerDay) : null,
-        birth_control_method:    formData.birthControlMethod || null,
-        gravidity:               formData.gravidity ? parseInt(formData.gravidity) : null,
-        parity:                  formData.parity ? parseInt(formData.parity) : null,
-        delivery_type:           formData.typeOfDelivery || null,
-        full_term_count:         formData.fullTerm ? parseInt(formData.fullTerm) : null,
-        premature_count:         formData.premature ? parseInt(formData.premature) : null,
-        abortion_count:          formData.abortion ? parseInt(formData.abortion) : null,
-        living_children_count:   formData.livingChildren ? parseInt(formData.livingChildren) : null,
-        pre_eclampsia:           formData.preEclampsia || null,
-        medication_treatment:    formData.medicationAndTreatment || null,
-        follow_up_date:          formData.followUpDate || null,
-        follow_up_time:          formData.followUpTime || null,
-        management_treatment:    formData.managementTreatment || null,
-        attending_provider:      formData.attendingProvider || null,
-        chief_complaints:        formData.chiefComplaints || null,
-        diagnosis:               formData.diagnosis || null,
-        hpi:                     formData.hpi || null
+        patient_id: patient?.id,
+        ...(icidFromUrl ? { initial_consultation_id: parseInt(icidFromUrl) } : {}),
+        family_history: formData.familyHistory || null,
+        immunization_history: formData.immunizationHistory || null,
+        smoking_status: formData.smoking || null,
+        smoking_sticks_per_day: formData.smokingSticksPerDay ? parseInt(formData.smokingSticksPerDay) : null,
+        smoking_years: formData.smokingYears ? parseInt(formData.smokingYears) : null,
+        drinking_status: formData.drinking || null,
+        drinking_frequency: formData.drinkingFrequency || null,
+        drinking_years: formData.drinkingYears ? parseInt(formData.drinkingYears) : null,
+        menarche_age: formData.menarche ? parseInt(formData.menarche) : null,
+        sexual_onset_age: formData.onsetSexualIntercourse ? parseInt(formData.onsetSexualIntercourse) : null,
+        is_menopause: formData.menopause || null,
+        menopause_age: formData.menopauseAge ? parseInt(formData.menopauseAge) : null,
+        lmp: formData.lmp || null,
+        interval_cycle: formData.intervalCycle || null,
+        period_duration: formData.periodDuration || null,
+        pads_per_day: formData.padsPerDay ? parseInt(formData.padsPerDay) : null,
+        birth_control_method: formData.birthControlMethod || null,
+        gravidity: formData.gravidity ? parseInt(formData.gravidity) : null,
+        parity: formData.parity ? parseInt(formData.parity) : null,
+        delivery_type: formData.typeOfDelivery || null,
+        full_term_count: formData.fullTerm ? parseInt(formData.fullTerm) : null,
+        premature_count: formData.premature ? parseInt(formData.premature) : null,
+        abortion_count: formData.abortion ? parseInt(formData.abortion) : null,
+        living_children_count: formData.livingChildren ? parseInt(formData.livingChildren) : null,
+        pre_eclampsia: formData.preEclampsia || null,
+        medication_treatment: formData.medicationAndTreatment || null,
+        management_treatment: formData.managementTreatment || null,
+        attending_provider: formData.attendingProvider || null,
+        chief_complaints: formData.chiefComplaints || null,
+        diagnosis: formData.diagnosis || null,
+        hpi: formData.hpi || null,
     });
 
-    // ─── HANDLERS ────────────────────────────────────────────────────────────
+    const buildFollowUpPayload = (resolvedConsultationId: number) => {
+        const sigUrl = followUpSigCanvas.current?.isEmpty()
+            ? null
+            : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
+
+        return {
+            patient_id: patient?.id,
+            consultation_id: resolvedConsultationId,
+            visit_date: formData.followUpDate || null,
+            visit_time: formData.followUpTime || null,
+            mode_of_transaction: formData.followUpModeOfTx || null,
+            mode_of_transfer: formData.followUpModeOfTransfer || null,
+            chief_complaint: formData.followUpChiefComplaint || null,
+            diagnosis: formData.followUpDiagnosis || null,
+            history_of_present_illness: formData.followUpHpi || null,
+            bp: formData.followUpBp || null,
+            heart_rate: toNumberOrNull(formData.followUpHr),
+            respiratory_rate: toNumberOrNull(formData.followUpRr),
+            temperature: toNumberOrNull(formData.followUpTemp),
+            o2_saturation: toNumberOrNull(formData.followUpO2),
+            weight: toNumberOrNull(formData.followUpWeight),
+            height: toNumberOrNull(formData.followUpHeight),
+            muac: toNumberOrNull(formData.followUpMuac),
+            nutritional_status: followUpBmiInfo?.status || formData.followUpNutritionalStatus || null,
+            bmi: followUpBmiInfo ? parseFloat(followUpBmiInfo.value) : toNumberOrNull(formData.followUpBmi),
+            visual_acuity_left: formData.followUpVaL || null,
+            visual_acuity_right: formData.followUpVaR || null,
+            blood_type: formData.followUpBloodType || patient?.bloodType || null,
+            general_survey: formData.followUpGenSurvey || null,
+            medication_treatment: formData.managementTreatment || null,
+            lab_results: formData.followUpLabResults || null,
+            signature_url: sigUrl || null,
+        };
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -334,37 +702,95 @@ function ConsultationPage() {
         setMedications(prev => prev.filter((_, i) => i !== index));
     };
 
-    // ── NEW: Save Consultation ────────────────────────────────────────────────
+    const ensureConsultationExists = async (): Promise<number | null> => {
+        if (consultationId) return consultationId;
+        if (!patient?.id) return null;
+
+        const payload = buildConsultationPayload();
+        const { data, error } = await supabase
+            .from('consultation')
+            .insert([payload])
+            .select('consultation_id')
+            .single();
+
+        if (error) {
+            console.error('Failed to auto-create consultation:', error);
+            return null;
+        }
+
+        if (data) {
+            setConsultationId(data.consultation_id);
+            setConsultationSaved(true);
+            return data.consultation_id;
+        }
+
+        return null;
+    };
+
     const handleSaveConsultation = async () => {
         if (!patient?.id) return;
         setLoading(true);
-        const payload = buildConsultationPayload();
 
         try {
+            const consultationPayload = buildConsultationPayload();
+
             if (isOnline) {
-                if (consultationId) {
+                let resolvedConsultationId = consultationId;
+
+                if (resolvedConsultationId) {
                     const { error } = await supabase
                         .from('consultation')
-                        .update(payload)
-                        .eq('consultation_id', consultationId);
+                        .update(consultationPayload)
+                        .eq('consultation_id', resolvedConsultationId);
+
                     if (error) throw error;
                 } else {
                     const { data, error } = await supabase
                         .from('consultation')
-                        .insert([payload])
+                        .insert([consultationPayload])
                         .select('consultation_id')
                         .single();
+
                     if (error) throw error;
-                    if (data) setConsultationId(data.consultation_id);
+
+                    resolvedConsultationId = data.consultation_id;
+                    setConsultationId(data.consultation_id);
                 }
+
+                const followUpPayload = buildFollowUpPayload(resolvedConsultationId);
+
+                const { data: existingFollowUp, error: followUpCheckError } = await supabase
+                    .from('follow_up')
+                    .select('consultation_id')
+                    .eq('consultation_id', resolvedConsultationId)
+                    .maybeSingle();
+
+                if (followUpCheckError) throw followUpCheckError;
+
+                if (existingFollowUp) {
+                    const { error } = await supabase
+                        .from('follow_up')
+                        .update(followUpPayload)
+                        .eq('consultation_id', resolvedConsultationId);
+
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabase
+                        .from('follow_up')
+                        .insert([followUpPayload]);
+
+                    if (error) throw error;
+                }
+
                 setConsultationSaved(true);
                 alert('Consultation saved successfully!');
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', {
                     id: Date.now(),
                     type: 'consultation',
-                    data: payload,
+                    data: consultationPayload,
                 });
+
                 setConsultationSaved(true);
                 alert('Offline: Consultation saved locally and will sync when connection returns!');
             }
@@ -375,35 +801,95 @@ function ConsultationPage() {
         }
     };
 
-    // Save Lab Request
+    const handleMarkFollowUpDone = async () => {
+        if (!patient?.id) return;
+        setLoading(true);
+
+        try {
+            const resolvedConsultationId = await ensureConsultationExists();
+            if (!resolvedConsultationId) throw new Error('Could not resolve consultation record.');
+
+            const sigUrl = followUpSigCanvas.current?.isEmpty()
+                ? null
+                : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
+
+            const donePayload = {
+                patient_id: patient.id,
+                consultation_id: resolvedConsultationId,
+                follow_up_status: 'done',
+                visit_date: formData.followUpDate || null,
+                visit_time: formData.followUpTime || null,
+                mode_of_transaction: formData.followUpModeOfTx || null,
+                mode_of_transfer: formData.followUpModeOfTransfer || null,
+                chief_complaint: formData.followUpChiefComplaint || null,
+                diagnosis: formData.followUpDiagnosis || null,
+                history_of_present_illness: formData.followUpHpi || null,
+                bp: formData.followUpBp || null,
+                heart_rate: toNumberOrNull(formData.followUpHr),
+                respiratory_rate: toNumberOrNull(formData.followUpRr),
+                temperature: toNumberOrNull(formData.followUpTemp),
+                o2_saturation: toNumberOrNull(formData.followUpO2),
+                weight: toNumberOrNull(formData.followUpWeight),
+                height: toNumberOrNull(formData.followUpHeight),
+                muac: toNumberOrNull(formData.followUpMuac),
+                nutritional_status: followUpBmiInfo?.status || formData.followUpNutritionalStatus || null,
+                bmi: followUpBmiInfo ? parseFloat(followUpBmiInfo.value) : toNumberOrNull(formData.followUpBmi),
+                visual_acuity_left: formData.followUpVaL || null,
+                visual_acuity_right: formData.followUpVaR || null,
+                blood_type: formData.followUpBloodType || patient?.bloodType || null,
+                general_survey: formData.followUpGenSurvey || null,
+                medication_treatment: formData.managementTreatment || null,
+                lab_results: formData.followUpLabResults || null,
+                signature_url: sigUrl || null,
+            };
+
+            const { data: existing, error: checkError } = await supabase
+                .from('follow_up')
+                .select('followup_id, consultation_id')
+                .eq('patient_id', patient.id)
+                .order('followup_id', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (checkError) throw checkError;
+
+            if (existing) {
+                const { error: updateError } = await supabase
+                    .from('follow_up')
+                    .update(donePayload)
+                    .eq('followup_id', existing.followup_id);
+
+                if (updateError) throw updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('follow_up')
+                    .insert([donePayload]);
+
+                if (insertError) throw insertError;
+            }
+
+            setFollowUpDone(true);
+            alert('Follow-up marked as done!');
+        } catch (err: any) {
+            console.error('Full error:', err);
+            alert('Failed to mark follow-up as done: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSaveLabRequest = async () => {
         if (!patient?.id) return;
         setLoading(true);
-        
-        const consultPayload = buildConsultationPayload();
-        // HOLD THE ID LOCALLY
-        let currentConsultId = consultationId; 
 
         try {
             if (isOnline) {
-                // Save consultation first
-                if (currentConsultId) {
-                    const { error } = await supabase.from('consultation').update(consultPayload).eq('consultation_id', currentConsultId);
-                    if (error) throw error;
-                } else {
-                    const { data, error } = await supabase.from('consultation').insert([consultPayload]).select('consultation_id').single();
-                    if (error) throw error;
-                    if (data) {
-                        currentConsultId = data.consultation_id; // Capture new ID
-                        setConsultationId(data.consultation_id); // Update state for later
-                        setConsultationSaved(true);
-                    }
-                }
+                const resolvedConsultationId = await ensureConsultationExists();
+                if (!resolvedConsultationId) throw new Error('Could not create consultation record.');
 
-                // BUILD LAB PAYLOAD WITH THE ID
                 const labPayload = {
                     patient_id: patient.id,
-                    consultation_id: currentConsultId, // LINKED!
+                    consultation_id: resolvedConsultationId,
                     request_date: new Date().toISOString().split('T')[0],
                     chief_complaint: formData.labChiefComplaint || null,
                     is_cbc: formData.labTests.cbc,
@@ -423,10 +909,8 @@ function ConsultationPage() {
                     status: 'Pending',
                 };
 
-                // Save lab request
                 const { error: labError } = await supabase.from('lab_request').insert([labPayload]);
                 if (labError) throw labError;
-                
                 alert('Lab request sent to laboratory successfully!');
             } else {
                 alert('Offline mode requires connecting to the server to generate a consultation ID first.');
@@ -439,47 +923,39 @@ function ConsultationPage() {
         }
     };
 
-    // Save Prescription
     const handleSavePrescription = async () => {
         if (!patient?.id) return;
-
-        // REQUIRE CONSULTATION TO EXIST FIRST
-        if (!consultationId) {
-             alert('Please save the Clinical Assessment / Consultation first before issuing a prescription.');
-             return;
-        }
 
         if (sigCanvas.current?.isEmpty()) {
             alert('Doctor signature is required before saving.');
             return;
         }
 
-        // 1. FILTER OUT ANY BLANK ROWS
         const validMedications = medications.filter(m => m.name.trim() !== '');
-
-        // 2. CHECK IF WE HAVE AT LEAST ONE VALID MEDICATION LEFT
         if (validMedications.length === 0) {
             alert('Please add at least one medication before saving.');
             return;
         }
-        
+
         setLoading(true);
-        const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
-        
-        const rxPayload = {
-            patient_id: patient.id,
-            consultation_id: consultationId, // LINKED!
-            prescription_date: new Date().toISOString().split('T')[0],
-            // 3. STRINGIFY ONLY THE VALID MEDICATIONS
-            rx_content: JSON.stringify(validMedications), 
-            license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null,
-            ptr_no: formData.rxPtrNo || null,
-            signature_url: sigUrl,
-            status: 'Pending',
-        };
 
         try {
             if (isOnline) {
+                const resolvedConsultationId = await ensureConsultationExists();
+                if (!resolvedConsultationId) throw new Error('Could not create consultation record.');
+
+                const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
+                const rxPayload = {
+                    patient_id: patient.id,
+                    consultation_id: resolvedConsultationId,
+                    prescription_date: new Date().toISOString().split('T')[0],
+                    rx_content: JSON.stringify(validMedications),
+                    license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null,
+                    ptr_no: formData.rxPtrNo || null,
+                    signature_url: sigUrl,
+                    status: 'Pending',
+                };
+
                 const { error } = await supabase.from('prescription').insert([rxPayload]);
                 if (error) throw error;
                 alert('Prescription saved and sent to pharmacy!');
@@ -567,12 +1043,18 @@ function ConsultationPage() {
                         {patient.address && <span className="text-xs text-slate-500 truncate max-w-xs">📍 {patient.address}</span>}
                     </div>
                 </div>
-                <button onClick={() => window.location.href = 'doctor.html'} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        onClick={() => setShowHistory(true)}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5"
+                    >
+                        🕐 View History
+                    </button>
+                    <button onClick={() => window.location.href = 'doctor.html'} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
+                </div>
             </div>
         );
     };
-
-    // ─── TAB RENDERS ─────────────────────────────────────────────────────────
 
     const renderTab1 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
@@ -689,21 +1171,152 @@ function ConsultationPage() {
 
     const renderTab4 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">IV. Follow-up Visits</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                <div><label className={labelCls}>Date</label><input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} /></div>
-                <div><label className={labelCls}>Time</label><input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} /></div>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
+                {followUpDone && (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">
+                        ✓ Follow-up Completed
+                    </span>
+                )}
             </div>
-            <div><label className={labelCls}>Management / Treatment</label><textarea name="managementTreatment" value={formData.managementTreatment} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} placeholder="Enter management or treatment plans..." /></div>
-            <div><label className={labelCls}>Attending Provider</label><input type="text" name="attendingProvider" value={formData.attendingProvider} onChange={handleChange} className={inputCls} /></div>
-            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
+
+            {!consultationSaved && (
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                    <span className="text-lg leading-none">ℹ️</span>
+                    <span>No consultation saved yet — follow-up details will be saved when you save the consultation on Tab 5.</span>
+                </div>
+            )}
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Visit Information</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className={labelCls}>Visit Date</label>
+                        <input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Visit Time</label>
+                        <input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Mode of Transaction</label>
+                        <select name="followUpModeOfTx" value={formData.followUpModeOfTx} onChange={handleChange} className={inputCls}>
+                            <option value="Walk-in">Walk-in</option>
+                            <option value="Teleconsult">Teleconsult</option>
+                            <option value="Referral">Referral</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>Mode of Transfer</label>
+                        <select name="followUpModeOfTransfer" value={formData.followUpModeOfTransfer} onChange={handleChange} className={inputCls}>
+                            <option value="Ambulatory">Ambulatory</option>
+                            <option value="Wheelchair">Wheelchair</option>
+                            <option value="Stretcher">Stretcher</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>Blood Type</label>
+                        <input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>General Survey</label>
+                        <input type="text" name="followUpGenSurvey" value={formData.followUpGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious, coherent..." />
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Clinical</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className={labelCls}>Chief Complaint</label>
+                        <textarea name="followUpChiefComplaint" value={formData.followUpChiefComplaint} onChange={handleChange} rows={3} className={textareaCls} placeholder="Primary reason for visit..." />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Diagnosis</label>
+                        <textarea name="followUpDiagnosis" value={formData.followUpDiagnosis} onChange={handleChange} rows={3} className={textareaCls} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className={labelCls}>History of Present Illness <span className="text-slate-400 font-normal normal-case ml-1">(Optional)</span></label>
+                        <textarea name="followUpHpi" value={formData.followUpHpi} onChange={handleChange} rows={3} className={textareaCls} />
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><label className={labelCls}>BP (mmHg)</label><input type="text" name="followUpBp" value={formData.followUpBp} onChange={handleChange} className={inputCls} placeholder="120/80" /></div>
+                    <div><label className={labelCls}>Heart Rate (bpm)</label><input type="text" name="followUpHr" value={formData.followUpHr} onChange={handleChange} className={inputCls} placeholder="72" /></div>
+                    <div><label className={labelCls}>Respiratory Rate (cpm)</label><input type="text" name="followUpRr" value={formData.followUpRr} onChange={handleChange} className={inputCls} placeholder="16" /></div>
+                    <div><label className={labelCls}>Temperature (°C)</label><input type="text" name="followUpTemp" value={formData.followUpTemp} onChange={handleChange} className={inputCls} placeholder="36.5" /></div>
+                    <div><label className={labelCls}>O₂ Saturation (%)</label><input type="text" name="followUpO2" value={formData.followUpO2} onChange={handleChange} className={inputCls} placeholder="98" /></div>
+                    <div><label className={labelCls}>MUAC (cm)</label><input type="text" name="followUpMuac" value={formData.followUpMuac} onChange={handleChange} className={inputCls} placeholder="28.5" /></div>
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Anthropometrics</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><label className={labelCls}>Weight (kg)</label><input type="text" name="followUpWeight" value={formData.followUpWeight} onChange={handleChange} className={inputCls} placeholder="65" /></div>
+                    <div><label className={labelCls}>Height (cm)</label><input type="text" name="followUpHeight" value={formData.followUpHeight} onChange={handleChange} className={inputCls} placeholder="165" /></div>
+                    <div>
+                        <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto)</span></label>
+                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-50 text-slate-500 cursor-default`} placeholder="—" />
+                        {followUpBmiInfo && <p className={`text-xs mt-1.5 font-semibold ${followUpBmiInfo.color}`}>{followUpBmiInfo.status}</p>}
+                    </div>
+                    <div><label className={labelCls}>Visual Acuity — Left</label><input type="text" name="followUpVaL" value={formData.followUpVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                    <div><label className={labelCls}>Visual Acuity — Right</label><input type="text" name="followUpVaR" value={formData.followUpVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-6">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Treatment &amp; Results</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className={labelCls}>Medication / Treatment <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span></label>
+                        <textarea rows={5} name="managementTreatment" value={formData.managementTreatment} onChange={handleChange} className={textareaCls} placeholder="Medications prescribed, treatment plan..." />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span></label>
+                        <textarea rows={5} name="followUpLabResults" value={formData.followUpLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
+                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end">
+                <div className="w-full md:w-80">
+                    <label className={labelCls}>Provider Signature</label>
+                    <div className="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl h-36 mb-2 relative overflow-hidden cursor-crosshair">
+                        <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-sm pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
+                        <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
+                    </div>
+                    <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
+                </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
-                <button onClick={() => setActiveTab(5)} className={`order-1 sm:order-2 w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: Clinical Notes →</button>
+                <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
+                    {consultationId && !followUpDone && (
+                        <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm bg-green-50 border-green-300 text-green-700 hover:bg-green-100">
+                            ✓ Mark Follow-up Done
+                        </button>
+                    )}
+                    {followUpDone && (
+                        <span className="w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border text-sm bg-green-100 border-green-300 text-green-700 flex items-center justify-center gap-1.5 cursor-default select-none">
+                            ✓ Follow-up Done
+                        </span>
+                    )}
+                    <button onClick={() => setActiveTab(5)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>
+                        Next: Clinical Notes →
+                    </button>
+                </div>
             </div>
         </div>
     );
 
-    // ── Tab 5 now has a Save Consultation button ──────────────────────────────
     const renderTab5 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Doctor's Clinical Notes</h3>
@@ -711,17 +1324,16 @@ function ConsultationPage() {
             <div><label className={labelCls}>Diagnosis</label><textarea name="diagnosis" value={formData.diagnosis} onChange={handleChange} className={`${textareaCls} min-h-[100px]`} /></div>
             <div><label className={labelCls}>History of Present Illnesses <span className="text-slate-400 font-normal normal-case">(Optional)</span></label><textarea name="hpi" value={formData.hpi} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} /></div>
 
-            {/* Save Consultation banner hint */}
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
                     <span className="text-lg leading-none">💡</span>
-                    <span>Save the consultation here before proceeding to Lab Request or E-Prescription — both require a saved consultation record.</span>
+                    <span>Save the consultation here before proceeding to Lab Request or E-Prescription.</span>
                 </div>
             )}
             {consultationSaved && (
                 <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-semibold">
                     <span>✅</span>
-                    <span>Consultation record saved — you can now issue lab requests and prescriptions.</span>
+                    <span>Consultation record saved.</span>
                 </div>
             )}
 
@@ -751,11 +1363,7 @@ function ConsultationPage() {
         const handleSaveVitals = async () => {
             if (!patient?.id) return;
             setLoading(true);
-            const w = parseFloat(formData.weight);
-            const h = parseFloat(formData.height);
-            const computedBmiValue = (w > 0 && h > 0)
-                ? parseFloat((w / ((h / 100) * (h / 100))).toFixed(1))
-                : (formData.bmi ? parseFloat(formData.bmi) : null);
+            const computedBmiValue = vitalsBmiInfo ? parseFloat(vitalsBmiInfo.value) : (formData.bmi ? parseFloat(formData.bmi) : null);
 
             const payload = {
                 patient_id: patient.id,
@@ -767,7 +1375,7 @@ function ConsultationPage() {
                 height: formData.height ? parseInt(formData.height) : null,
                 o2_saturation: formData.o2Saturation ? parseInt(formData.o2Saturation) : null,
                 muac: formData.muac ? parseFloat(formData.muac) : null,
-                nutritional_status: formData.nutritionalStatus || null,
+                nutritional_status: vitalsBmiInfo?.status || formData.nutritionalStatus || null,
                 bmi: computedBmiValue,
                 visual_acuity_left: formData.visualAcuityLeft || null,
                 visual_acuity_right: formData.visualAcuityRight || null,
@@ -795,11 +1403,9 @@ function ConsultationPage() {
             }
         };
 
-        const w = parseFloat(formData.weight);
-        const h = parseFloat(formData.height);
-        const computedBmi = (w > 0 && h > 0) ? (w / ((h / 100) * (h / 100))).toFixed(1) : '';
-        const bmiLabel = computedBmi ? parseFloat(computedBmi) < 18.5 ? 'Underweight' : parseFloat(computedBmi) < 25 ? 'Normal weight' : parseFloat(computedBmi) < 30 ? 'Overweight' : 'Obese' : '';
-        const bmiColor = computedBmi ? parseFloat(computedBmi) < 18.5 ? 'text-amber-500' : parseFloat(computedBmi) < 25 ? 'text-green-600' : parseFloat(computedBmi) < 30 ? 'text-orange-500' : 'text-red-500' : '';
+        const computedBmi = vitalsBmiInfo?.value ?? '';
+        const bmiLabel = vitalsBmiInfo?.status ?? '';
+        const bmiColor = computedBmi ? (parseFloat(computedBmi) < 18.5 ? 'text-amber-500' : parseFloat(computedBmi) < 25 ? 'text-green-600' : parseFloat(computedBmi) < 30 ? 'text-orange-500' : 'text-red-500') : '';
 
         return (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
@@ -827,7 +1433,7 @@ function ConsultationPage() {
                         <div><label className={labelCls}>Height (cm)</label><input type="text" name="height" value={formData.height} onChange={handleChange} className={inputCls} placeholder="165" /></div>
                         <div>
                             <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto-computed)</span></label>
-                            <input type="text" name="bmi" value={computedBmi || formData.bmi} readOnly={!!computedBmi} onChange={handleChange} className={`${inputCls} ${computedBmi ? 'bg-slate-50 text-slate-500 cursor-default' : ''}`} placeholder="—" />
+                            <input type="text" value={computedBmi || formData.bmi} readOnly={!!computedBmi} onChange={handleChange} className={`${inputCls} ${computedBmi ? 'bg-slate-50 text-slate-500 cursor-default' : ''}`} placeholder="—" />
                             {computedBmi && <p className={`text-xs mt-1.5 font-semibold ${bmiColor}`}>{bmiLabel}</p>}
                         </div>
                         <div className="col-span-2 md:col-span-3">
@@ -864,18 +1470,13 @@ function ConsultationPage() {
         );
     };
 
-    // ─── TAB 7: LABORATORY REQUEST ────────────────────────────────────────────
     const renderTab7 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VII. Laboratory Request</h3>
-
-            {/* Chief complaint */}
             <div>
                 <label className={labelCls}>Chief Complaint</label>
                 <input type="text" name="labChiefComplaint" value={formData.labChiefComplaint} onChange={handleChange} className={inputCls} placeholder="Enter chief complaint for lab request..." />
             </div>
-
-            {/* Tests grid */}
             <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-5">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Routine Tests</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
@@ -890,7 +1491,6 @@ function ConsultationPage() {
                     {renderCheckbox('bloodTyping', 'Blood Typing')}
                     {renderCheckbox('ecg', 'ECG')}
                 </div>
-
                 <div className="border-t border-slate-200 pt-5">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Fasting Tests <span className="text-slate-300 font-normal normal-case">(8–10 hrs)</span></p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
@@ -904,8 +1504,6 @@ function ConsultationPage() {
                         {renderCheckbox('sgpt', 'SGPT')}
                     </div>
                 </div>
-
-                {/* Others */}
                 <div className="border-t border-slate-200 pt-5 flex flex-col sm:flex-row sm:items-center gap-3">
                     {renderCheckbox('others', 'Others:')}
                     <input
@@ -919,21 +1517,14 @@ function ConsultationPage() {
                     />
                 </div>
             </div>
-
-            {/* Requested by */}
             <div>
                 <label className={labelCls}>Requested By</label>
                 <input type="text" name="labRequestedBy" value={formData.labRequestedBy} onChange={handleChange} className={inputCls} />
             </div>
-
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(6)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
                 <div className="flex flex-col sm:flex-row gap-3 order-1 sm:order-2">
-                    <button
-                        onClick={handleSaveLabRequest}
-                        disabled={loading || !patient?.id}
-                        className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}
-                    >
+                    <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto font-semibold py-3 px-6 rounded-lg border transition-all active:scale-95 disabled:opacity-50 text-sm ${isOnline ? 'bg-white border-blue-300 text-blue-700 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
                         {loading ? 'Sending...' : '📋 Send to Laboratory'}
                     </button>
                     <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: E-Prescription →</button>
@@ -942,12 +1533,9 @@ function ConsultationPage() {
         </div>
     );
 
-    // ─── TAB 8: E-PRESCRIPTION ────────────────────────────────────────────────
     const renderTab8 = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VIII. E-Prescription</h3>
-
-            {/* Patient summary strip */}
             {patient && (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                     <span><span className="text-slate-500">Patient:</span> <span className="font-semibold text-slate-800">{patientFullName}</span></span>
@@ -956,14 +1544,10 @@ function ConsultationPage() {
                     <span><span className="text-slate-500">Address:</span> <span className="font-semibold text-slate-800">{patient.address || '—'}</span></span>
                 </div>
             )}
-
-            {/* Rx symbol */}
             <div className="flex items-center gap-3">
                 <span className="text-5xl font-serif leading-none text-slate-800 select-none">℞</span>
                 <span className="text-sm text-slate-400 font-medium">Add medications below</span>
             </div>
-
-            {/* Medications list */}
             <div className="space-y-3">
                 {medications.map((med, i) => (
                     <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -978,72 +1562,34 @@ function ConsultationPage() {
                                 <label className={labelCls}>Medication Name</label>
                                 <input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} placeholder="e.g. Amoxicillin 500mg" />
                             </div>
-                            <div>
-                                <label className={labelCls}>Dosage</label>
-                                <input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 500mg" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Frequency (Sig)</label>
-                                <input type="text" value={med.frequency} onChange={e => handleMedChange(i, 'frequency', e.target.value)} className={inputCls} placeholder="e.g. 1x a day" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Duration</label>
-                                <input type="text" value={med.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} className={inputCls} placeholder="e.g. 7 days" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Quantity</label>
-                                <input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" />
-                            </div>
+                            <div><label className={labelCls}>Dosage</label><input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 500mg" /></div>
+                            <div><label className={labelCls}>Frequency (Sig)</label><input type="text" value={med.frequency} onChange={e => handleMedChange(i, 'frequency', e.target.value)} className={inputCls} placeholder="e.g. 1x a day" /></div>
+                            <div><label className={labelCls}>Duration</label><input type="text" value={med.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} className={inputCls} placeholder="e.g. 7 days" /></div>
+                            <div><label className={labelCls}>Quantity</label><input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" /></div>
                         </div>
                     </div>
                 ))}
             </div>
-
-            <button
-                onClick={handleAddMed}
-                className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-lg transition-all active:scale-95"
-            >
+            <button onClick={handleAddMed} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-lg transition-all active:scale-95">
                 + Add Another Medication
             </button>
-
-            {/* Signature + credentials */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div>
                     <label className={labelCls}>Doctor's Signature</label>
                     <div className="border-2 border-dashed border-slate-200 rounded-xl overflow-hidden bg-white relative">
                         <div className="absolute top-2 left-3 text-xs text-slate-300 pointer-events-none select-none">Sign here</div>
-                        <SignatureCanvas
-                            ref={sigCanvas}
-                            penColor="#1e293b"
-                            canvasProps={{ className: 'w-full', height: 130 }}
-                        />
+                        <SignatureCanvas ref={sigCanvas} penColor="#1e293b" canvasProps={{ className: 'w-full', height: 130 }} />
                     </div>
-                    <button
-                        onClick={() => sigCanvas.current?.clear()}
-                        className="mt-2 text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors"
-                    >
-                        Clear signature
-                    </button>
+                    <button onClick={() => sigCanvas.current?.clear()} className="mt-2 text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">Clear signature</button>
                 </div>
                 <div className="space-y-4">
-                    <div>
-                        <label className={labelCls}>License No.</label>
-                        <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="PRC license number" />
-                    </div>
-                    <div>
-                        <label className={labelCls}>PTR No.</label>
-                        <input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="PTR number" />
-                    </div>
+                    <div><label className={labelCls}>License No.</label><input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="PRC license number" /></div>
+                    <div><label className={labelCls}>PTR No.</label><input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="PTR number" /></div>
                 </div>
             </div>
-
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-100">
                 <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 w-full sm:w-auto text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold py-3 px-6 rounded-lg transition-all active:scale-95">← Back</button>
-                <button
-                    onClick={handleSavePrescription}
-                    disabled={loading || !patient?.id}
-                    className={`order-1 sm:order-2 w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 duration-200 ${primaryBtnBg}`}
-                >
+                <button onClick={handleSavePrescription} disabled={loading || !patient?.id} className={`order-1 sm:order-2 w-full sm:w-auto text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50 duration-200 ${primaryBtnBg}`}>
                     {loading ? 'Saving...' : '💊 Authorize & Send to Pharmacy'}
                 </button>
             </div>
@@ -1061,11 +1607,32 @@ function ConsultationPage() {
         { id: 8, label: "8. E-Prescription" },
     ];
 
+    const navItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'consultation', label: 'Consultation', icon: '🩺' },
+    ];
+
+    const handleNavigate = (id: string) => {
+        if (id === 'dashboard') {
+            window.location.href = 'doctor.html';
+        }
+    };
+
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden">
             {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity" onClick={() => setIsMobileMenuOpen(false)} />}
 
-            <Sidebar activePage="consultation" doctorName={doctorName} doctorInitials={doctorInitials} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} />
+            <Sidebar
+                activePage="consultation"
+                userName={doctorName}
+                userInitials={doctorInitials}
+                userRole="Doctor"
+                navItems={navItems}
+                onNavigate={handleNavigate}
+                isMobileMenuOpen={isMobileMenuOpen}
+                setIsMobileMenuOpen={setIsMobileMenuOpen}
+                isOnline={isOnline}
+            />
 
             <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px] print:pl-0">
                 <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 print:hidden shadow-sm md:shadow-none">
@@ -1122,6 +1689,14 @@ function ConsultationPage() {
                     </div>
                 </main>
             </div>
+
+            {showHistory && patient && (
+                <HistoryPanel
+                    patientId={patient.id}
+                    patientName={patientFullName}
+                    onClose={() => setShowHistory(false)}
+                />
+            )}
         </div>
     );
 }

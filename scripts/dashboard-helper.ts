@@ -6,43 +6,73 @@ interface Patient { id: string; firstName: string; lastName: string; age: number
 export async function initDashboard(roleStr: Parameters<typeof requireRole>[0], stat4Id: string, stat4Fn: (patients: Patient[]) => string, clickable: boolean) {
     const profile = await requireRole(roleStr);
     const initials = profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('sidebarName')!.textContent = profile.fullName;
-    document.getElementById('topbarName')!.textContent  = profile.fullName;
-    document.getElementById('sidebarAv')!.textContent   = initials;
-    document.getElementById('topbarAv')!.textContent    = initials;
-    document.getElementById('logoutBtn')!.addEventListener('click', logout);
+    
+    // Safely update DOM elements if they exist (prevents crashes on React-migrated pages)
+    const sidebarNameEl = document.getElementById('sidebarName');
+    if (sidebarNameEl) sidebarNameEl.textContent = profile.fullName;
+    
+    const topbarNameEl = document.getElementById('topbarName');
+    if (topbarNameEl) topbarNameEl.textContent = profile.fullName;
+    
+    const sidebarAvEl = document.getElementById('sidebarAv');
+    if (sidebarAvEl) sidebarAvEl.textContent = initials;
+    
+    const topbarAvEl = document.getElementById('topbarAv');
+    if (topbarAvEl) topbarAvEl.textContent = initials;
+    
+    const logoutBtnEl = document.getElementById('logoutBtn');
+    if (logoutBtnEl) logoutBtnEl.addEventListener('click', logout);
 
     const { data, error } = await supabase
         .from('patients')
         .select('id, firstName, lastName, age, sex, bloodType, contactNumber')
         .order('lastName', { ascending: true });
 
-    if (error) { console.error(error); return; }
+    if (error) { 
+        console.error(error); 
+        return { profile, initials }; 
+    }
+    
     const patients = (data as Patient[]) || [];
 
-    document.getElementById('totalPatients')!.textContent = String(patients.length);
-    document.getElementById('totalMale')!.textContent     = String(patients.filter(p => p.sex === 'Male').length);
-    document.getElementById('totalFemale')!.textContent   = String(patients.filter(p => p.sex === 'Female').length);
-    document.getElementById(stat4Id)!.textContent         = stat4Fn(patients);
+    // Safe stats update
+    const totalPatientsEl = document.getElementById('totalPatients');
+    if (totalPatientsEl) totalPatientsEl.textContent = String(patients.length);
+    
+    const totalMaleEl = document.getElementById('totalMale');
+    if (totalMaleEl) totalMaleEl.textContent = String(patients.filter(p => p.sex === 'Male').length);
+    
+    const totalFemaleEl = document.getElementById('totalFemale');
+    if (totalFemaleEl) totalFemaleEl.textContent = String(patients.filter(p => p.sex === 'Female').length);
+    
+    const stat4El = document.getElementById(stat4Id);
+    if (stat4El) stat4El.textContent = stat4Fn(patients);
 
     const recent = patients.slice(0, 5);
-    document.getElementById('queueCount')!.textContent = String(recent.length);
-    document.getElementById('patientQueue')!.innerHTML = recent.length === 0
-        ? '<div class="loading-msg">No patients.</div>'
-        : recent.map(p => `
-            <div class="q-item" ${clickable ? `onclick="window.location.href='details.html?id=${p.id}'"` : ''}>
-                <div class="q-av">${(p.firstName?.[0] || '?').toUpperCase()}</div>
-                <div class="q-info">
-                    <div class="q-name">${p.firstName} ${p.lastName}</div>
-                    <div class="q-sub">${p.sex || '—'} · ${p.bloodType || '—'}</div>
+    const queueCountEl = document.getElementById('queueCount');
+    if (queueCountEl) queueCountEl.textContent = String(recent.length);
+    
+    const patientQueueEl = document.getElementById('patientQueue');
+    if (patientQueueEl) {
+        patientQueueEl.innerHTML = recent.length === 0
+            ? '<div class="loading-msg">No patients.</div>'
+            : recent.map(p => `
+                <div class="q-item" ${clickable ? `onclick="window.location.href='details.html?id=${p.id}'"` : ''}>
+                    <div class="q-av">${(p.firstName?.[0] || '?').toUpperCase()}</div>
+                    <div class="q-info">
+                        <div class="q-name">${p.firstName} ${p.lastName}</div>
+                        <div class="q-sub">${p.sex || '—'} · ${p.bloodType || '—'}</div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
+    }
 
     let all = patients;
 
     function renderTable(list: Patient[]) {
-        const tbody = document.getElementById('tableBody')!;
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        
         tbody.innerHTML = list.length === 0 ? '<tr><td colspan="6" class="loading-msg">No patients found.</td></tr>'
             : list.map(p => `
                 <tr ${clickable ? `class="clickable" onclick="window.location.href='details.html?id=${p.id}'"` : ''}>
@@ -65,8 +95,14 @@ export async function initDashboard(roleStr: Parameters<typeof requireRole>[0], 
 
     renderTable(all);
 
-    document.getElementById('searchInput')!.addEventListener('input', (e) => {
-        const q = (e.target as HTMLInputElement).value.toLowerCase();
-        renderTable(all.filter(p => `${p.firstName} ${p.lastName}`.toLowerCase().includes(q)));
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const q = (e.target as HTMLInputElement).value.toLowerCase();
+            renderTable(all.filter(p => `${p.firstName} ${p.lastName}`.toLowerCase().includes(q)));
+        });
+    }
+
+    // Return profile data so React components can use it
+    return { profile, initials };
 }
