@@ -461,19 +461,30 @@ function ConsultationPage() {
     }, [patient?.id]);
 
     useEffect(() => {
-        if (!patient?.id) return;
-        supabase
-            .from('lab_request')
-            .select('results, status')
-            .eq('patient_id', patient.id)
-            .eq('status', 'Completed')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-            .then(({ data }) => {
-                if (data?.results) setFormData(prev => ({ ...prev, followUpLabResults: data.results }));
-            });
-    }, [patient?.id]);
+    if (!patient?.id) return;
+
+    supabase
+        .from('lab_result')
+        .select('findings')
+        .eq('patient_id', patient.id)
+        .order('labresult_id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data, error }) => {
+            if (error) {
+                console.error('Failed to fetch lab findings:', error);
+                return;
+            }
+
+            if (data?.findings) {
+                setFormData(prev => ({
+                    ...prev,
+                    followUpLabResults: data.findings,
+                }));
+            }
+        });
+}, [patient?.id]);
+
 
     useEffect(() => {
         if (!patient?.id) return;
@@ -563,31 +574,32 @@ function ConsultationPage() {
             if (data.follow_up_status === 'done') setFollowUpDone(true);
 
             setFormData(prev => ({
-                ...prev,
-                followUpDate: data.visit_date ?? prev.followUpDate,
-                followUpTime: data.visit_time ?? '',
-                followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx,
-                followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
-                followUpChiefComplaint: data.chief_complaint ?? '',
-                followUpDiagnosis: data.diagnosis ?? '',
-                followUpHpi: data.history_of_present_illness ?? '',
-                followUpBp: data.bp ?? '',
-                followUpHr: data.heart_rate?.toString() ?? '',
-                followUpRr: data.respiratory_rate?.toString() ?? '',
-                followUpTemp: data.temperature?.toString() ?? '',
-                followUpO2: data.o2_saturation?.toString() ?? '',
-                followUpWeight: data.weight?.toString() ?? '',
-                followUpHeight: data.height?.toString() ?? '',
-                followUpMuac: data.muac?.toString() ?? '',
-                followUpNutritionalStatus: data.nutritional_status ?? '',
-                followUpBmi: data.bmi?.toString() ?? '',
-                followUpVaL: data.visual_acuity_left ?? '',
-                followUpVaR: data.visual_acuity_right ?? '',
-                followUpBloodType: data.blood_type ?? '',
-                followUpGenSurvey: data.general_survey ?? '',
-                managementTreatment: data.medication_treatment ?? prev.managementTreatment,
-                followUpLabResults: data.lab_results ?? prev.followUpLabResults,
-            }));
+    ...prev,
+    followUpDate: data.visit_date ?? prev.followUpDate,
+    followUpTime: data.visit_time ?? '',
+    followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx,
+    followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
+    followUpChiefComplaint: data.chief_complaint ?? '',
+    followUpDiagnosis: data.diagnosis ?? '',
+    followUpHpi: data.history_of_present_illness ?? '',
+    followUpBp: data.bp ?? '',
+    followUpHr: data.heart_rate?.toString() ?? '',
+    followUpRr: data.respiratory_rate?.toString() ?? '',
+    followUpTemp: data.temperature?.toString() ?? '',
+    followUpO2: data.o2_saturation?.toString() ?? '',
+    followUpWeight: data.weight?.toString() ?? '',
+    followUpHeight: data.height?.toString() ?? '',
+    followUpMuac: data.muac?.toString() ?? '',
+    followUpNutritionalStatus: data.nutritional_status ?? '',
+    followUpBmi: data.bmi?.toString() ?? '',
+    followUpVaL: data.visual_acuity_left ?? '',
+    followUpVaR: data.visual_acuity_right ?? '',
+    followUpBloodType: data.blood_type ?? '',
+    followUpGenSurvey: data.general_survey ?? '',
+    managementTreatment: data.medication_treatment ?? prev.managementTreatment,
+    followUpLabResults: prev.followUpLabResults,
+}));
+
         };
 
         buildFollowUpQuery();
