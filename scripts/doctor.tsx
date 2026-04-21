@@ -50,7 +50,7 @@ const DoctorDashboard = () => {
         return `${hour}:${minute} ${ampm}`;
     };
 
-    useEffect(() => {
+useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
 
@@ -58,114 +58,81 @@ const DoctorDashboard = () => {
         window.addEventListener('offline', handleOffline);
 
         const loadDashboardData = async () => {
-            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+            try {
+                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
-            // 1. Stat: Total Patients
-            const { count: pCount } = await supabase
-                .from('patients')
-                .select('*', { count: 'exact', head: true });
-            setTotalPatients(pCount || 0);
+                // 1. Stat: Total Patients
+                const { count: pCount } = await supabase.from('patients').select('*', { count: 'exact', head: true });
+                setTotalPatients(pCount || 0);
 
-            // 2. Stat: Visits Today
-            const { count: vToday } = await supabase
-                .from('initial_consultation')
-                .select('*', { count: 'exact', head: true })
-                .eq('consultation_date', today);
-            setVisitsToday(vToday || 0);
+                // 2. Stat: Visits Today
+                const { count: vToday } = await supabase.from('initial_consultation').select('*', { count: 'exact', head: true }).eq('consultation_date', today);
+                setVisitsToday(vToday || 0);
 
-            // 3. Patient Queue
-            const { data: qData } = await supabase
-                .from('initial_consultation')
-                .select(`
-                    initialconsultation_id, 
-                    patient_id, 
-                    consultation_time, 
-                    patients!inner(firstName, lastName, sex, bloodType)
-                `)
-                .eq('consultation_date', today)
-                .order('consultation_time', { ascending: true });
-            setQueue(qData || []);
+                // 3. Patient Queue
+                const { data: completedConsults } = await supabase.from('consultation').select('initial_consultation_id').not('initial_consultation_id', 'is', null);
+                const completedIds = completedConsults?.map(c => c.initial_consultation_id).filter(Boolean) || [];
 
-            // 4. Upcoming Follow-ups
-            const { data: fData } = await supabase
-                .from('follow_up')
-                .select(`
-                    followup_id, 
-                    patient_id, 
-                    visit_date, 
-                    patients!inner(firstName, lastName, sex)
-                `)
-                .neq('follow_up_status', 'done')
-                .gte('visit_date', today)
-                .order('visit_date', { ascending: true })
-                .limit(5);
-            setFollowUps(fData || []);
+                let queueQuery = supabase
+                    .from('initial_consultation')
+                    .select(`
+                        initialconsultation_id, 
+                        patient_id, 
+                        consultation_time, 
+                        patients!inner(firstName, lastName, sex, bloodType)
+                    `)
+                    .eq('consultation_date', today)
+                    .order('consultation_time', { ascending: true });
 
-            // 5. Visit Trends (Last 7 Days)
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // Includes today
-            
-            const { data: tData } = await supabase
-                .from('initial_consultation')
-                .select('consultation_date')
-                .gte('consultation_date', sevenDaysAgo.toISOString().split('T')[0]);
-
-            const dayMap: Record<string, number> = {};
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                dayMap[d.toLocaleDateString('en-CA')] = 0;
-            }
-
-            tData?.forEach(v => {
-                if (dayMap[v.consultation_date] !== undefined) {
-                    dayMap[v.consultation_date]++;
+                // Safely filter out completed IDs
+                if (completedIds.length > 0) {
+                    queueQuery = queueQuery.not('initialconsultation_id', 'in', `(${completedIds.join(',')})`);
                 }
-            });
 
-            setTrendData(
-                Object.keys(dayMap).map(k => ({
-                    date: k,
-                    count: dayMap[k]
-                }))
-            );
+                const { data: qData, error: qError } = await queueQuery;
+                if (qError) console.error("Queue Fetch Error:", qError);
+                
+                console.log("Queue re-fetched successfully. Queue length:", qData?.length);
+                setQueue(qData || []); 
 
-            // 6. Morbidity Analytics (Strict Targets)
-            const targets = ['Common Cold', 'Pneumonia', 'Acid Reflux', 'Asthma', 'High Cholesterol', 'Stroke', 'Arthritis'];
+                // 4. Upcoming Follow-ups
+                const { data: fData } = await supabase.from('follow_up').select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`).neq('follow_up_status', 'done').gte('visit_date', today).order('visit_date', { ascending: true }).limit(5);
+                setFollowUps(fData || []);
 
-            const { data: mData } = await supabase
-                .from('initial_consultation')
-                .select('diagnosis')
-                .in('diagnosis', targets);
+                // 5. Visit Trends
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+                const { data: tData } = await supabase.from('initial_consultation').select('consultation_date').gte('consultation_date', sevenDaysAgo.toISOString().split('T')[0]);
+                const dayMap: Record<string, number> = {};
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(); d.setDate(d.getDate() - i);
+                    dayMap[d.toLocaleDateString('en-CA')] = 0;
+                }
+                tData?.forEach(v => { if (dayMap[v.consultation_date] !== undefined) dayMap[v.consultation_date]++; });
+                setTrendData(Object.keys(dayMap).map(k => ({ date: k, count: dayMap[k] })));
 
-            const morbCounts = targets.map(t => ({
-                label: t,
-                count: mData?.filter(d => d.diagnosis === t).length || 0
-            }));
-
-            setMorbidityData(morbCounts);
+                // 6. Morbidity Analytics
+                const targets = ['Common Cold', 'Pneumonia', 'Acid Reflux', 'Asthma', 'High Cholesterol', 'Stroke', 'Arthritis'];
+                const { data: mData } = await supabase.from('initial_consultation').select('diagnosis').in('diagnosis', targets);
+                setMorbidityData(targets.map(t => ({ label: t, count: mData?.filter(d => d.diagnosis === t).length || 0 })));
+                
+            } catch (err) {
+                console.error("Dashboard Load Error:", err);
+            }
         };
 
         const fetchData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-
             if (!session) {
                 window.location.href = '/pages/login.html';
                 return;
             }
 
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('id', session.user.id)
-                .single();
-
+            const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
             if (profile) {
                 const name = profile.full_name || 'Dr. User';
                 setUserName(name);
-                setUserInitials(
-                    name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-                );
+                setUserInitials(name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
             }
 
             await loadDashboardData();
@@ -173,9 +140,27 @@ const DoctorDashboard = () => {
 
         fetchData();
 
+        // ─── ROBUST REALTIME SUBSCRIPTION ───
+        console.log("Initializing Supabase Realtime...");
+        const queueSubscription = supabase
+            .channel('doctor-dashboard-queue')
+            .on(
+                'postgres_changes',
+                // Using '*' instead of 'INSERT' catches ALL updates, inserts, and deletes
+                { event: '*', schema: 'public', table: 'initial_consultation' },
+                (payload) => {
+                    console.log('REALTIME EVENT FIRED! Nurse updated triage:', payload);
+                    loadDashboardData(); 
+                }
+            )
+            .subscribe((status) => {
+                console.log("Realtime Subscription Status:", status);
+            });
+
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            supabase.removeChannel(queueSubscription);
         };
     }, []);
 

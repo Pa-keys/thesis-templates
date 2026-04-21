@@ -18,20 +18,34 @@ interface InitialConsultationData {
     generalSurvey: string;
 }
 
-const EMPTY_FORM: InitialConsultationData = {
-    dateOfConsultation: '', consultationTime: '', referredBy: '',
-    modeOfTransaction: '', modeOfTransfer: '', chiefComplaints: '',
-    diagnosis: '', diagnosisOther: '', historyOfPresentIllness: '',
-    bp: '', hr: '', rr: '', temp: '', weight: '', height: '',
-    o2Sat: '', muac: '', nutritionalStatus: '', bmi: '',
-    visualAcuityLeft: '', visualAcuityRight: '', bloodType: '', generalSurvey: '',
-};
-
 const DIAGNOSIS_OPTIONS = [
     'Common Cold', 'Pneumonia', 'High Blood Pressure', 'Diabetes', 'Asthma',
     'Dengue', 'Fever', 'Diarrhea', 'UTI', 'Tuberculosis', 'High Cholesterol',
     'Heart Disease', 'Stroke', 'Acid Reflux', 'Arthritis', 'Others',
 ];
+
+// ─── ✨ STEP 1: PASTE HERE ✨ ───
+const getManilaDate = () => {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+};
+
+const getManilaTime = () => {
+    return new Date().toLocaleTimeString('en-GB', { 
+        timeZone: 'Asia/Manila', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+};
+
+const getEmptyForm = (): InitialConsultationData => ({
+    dateOfConsultation: getManilaDate(), 
+    consultationTime: getManilaTime(), 
+    referredBy: '', modeOfTransaction: '', modeOfTransfer: '', chiefComplaints: '',
+    diagnosis: '', diagnosisOther: '', historyOfPresentIllness: '',
+    bp: '', hr: '', rr: '', temp: '', weight: '', height: '',
+    o2Sat: '', muac: '', nutritionalStatus: '', bmi: '',
+    visualAcuityLeft: '', visualAcuityRight: '', bloodType: '', generalSurvey: '',
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const toNumberOrNull = (val: string) => {
@@ -61,7 +75,7 @@ const getNutritionalStatus = (bmi: string) => {
 
 // ─── Exported Pure Component ──────────────────────────────────────────────────
 export function ConsultationComponent() {
-    const [formData, setFormData] = useState<InitialConsultationData>(EMPTY_FORM);
+    const [formData, setFormData] = useState<InitialConsultationData>(getEmptyForm);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Patient Data States
@@ -191,7 +205,7 @@ export function ConsultationComponent() {
             showToast('Consultation record saved successfully!', true);
 
             setFormData({
-                ...EMPTY_FORM,
+                ...getEmptyForm(),
                 bloodType: formData.bloodType,
             });
 
@@ -451,5 +465,3 @@ export function ConsultationComponent() {
         </div>
     );
 }
-
-
