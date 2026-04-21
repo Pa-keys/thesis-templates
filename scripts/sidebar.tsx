@@ -17,7 +17,6 @@ interface SidebarProps {
     isMobileMenuOpen: boolean;
     setIsMobileMenuOpen: (isOpen: boolean) => void;
     isOnline: boolean;
-    allowedTabs?: string[]; // Array of tab names to display
 }
 
 export function Sidebar({ 
@@ -25,6 +24,7 @@ export function Sidebar({
     onNavigate, isMobileMenuOpen, setIsMobileMenuOpen, isOnline 
 }: SidebarProps) {
     
+    // Dynamic styles based on connection status to maintain UI consistency
     const logoBg = isOnline ? 'bg-blue-600' : 'bg-amber-500';
     const activeBg = isOnline ? 'bg-[#EBF3FF]' : 'bg-amber-50';
     const activeText = isOnline ? 'text-blue-600' : 'text-amber-600';
@@ -32,7 +32,7 @@ export function Sidebar({
 
     return (
         <>
-            {/* Backdrop for mobile to click out of sidebar */}
+            {/* Mobile Backdrop */}
             {isMobileMenuOpen && (
                 <div 
                     className="fixed inset-0 bg-slate-900/50 z-40 md:hidden transition-opacity"
@@ -42,7 +42,7 @@ export function Sidebar({
             
             <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] md:w-[240px] bg-white border-r border-slate-200 flex flex-col transform transition-transform duration-300 ease-in-out print:hidden ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}>
                 
-                {/* Header / Logo */}
+                {/* Brand Header */}
                 <div className="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md shrink-0 transition-colors duration-500 ${logoBg}`}>
@@ -55,7 +55,7 @@ export function Sidebar({
                     </div>
                 </div>
             
-            {/* Main Navigation */}
+            {/* Navigation Section */}
             <div className="px-5 py-4 text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 shrink-0">Main Menu</div>
             <nav className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto scrollbar-hide">
                 {navItems.map((item) => {
@@ -82,7 +82,7 @@ export function Sidebar({
                 })}
             </nav>
 
-            {/* REVERTED: Original Clickable Profile Block as Logout */}
+            {/* Integrated Profile & Logout Block */}
             <div 
                 onClick={async () => {
                     if (confirm('Are you sure you want to logout?')) {

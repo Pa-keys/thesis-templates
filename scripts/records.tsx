@@ -53,7 +53,7 @@ function getRoleLabel(role: string): string {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-function Records() {
+export function Records() {
     const [session, setSession] = useState<Session | null>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [userName, setUserName] = useState('Loading...');

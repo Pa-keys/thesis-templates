@@ -647,14 +647,14 @@ function ConsultationPage() {
         hpi: formData.hpi || null,
     });
 
-    const buildFollowUpPayload = (resolvedConsultationId: number) => {
+    const buildFollowUpPayload = (resolvedConsultationId: number | null) => {
         const sigUrl = followUpSigCanvas.current?.isEmpty()
             ? null
             : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
 
         return {
             patient_id: patient?.id,
-            consultation_id: resolvedConsultationId,
+            consultation_id: resolvedConsultationId!,
             visit_date: formData.followUpDate || null,
             visit_time: formData.followUpTime || null,
             mode_of_transaction: formData.followUpModeOfTx || null,

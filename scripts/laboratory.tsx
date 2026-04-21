@@ -425,8 +425,7 @@ const LaboratoryDashboard = () => {
     const [selectedRequest, setSelectedRequest] = useState<LabRequest | null>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-        { id: 'lab', label: 'Lab Requests', icon: '🧪' },
+        { id: 'lab', label: 'Dashboard', icon: '🧪' },
     ];
 
     useEffect(() => {
@@ -461,19 +460,29 @@ const LaboratoryDashboard = () => {
                     .slice(0, 2)
             );
 
-            await loadRequests();
+            // True flag forces the initial loading spinner to show
+            await loadRequests(true);
         };
 
         fetchData();
 
+        // ADDED: Supabase Realtime Subscription so data flows automatically
+        const channel = supabase
+            .channel('lab-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lab_request' }, () => loadRequests(false))
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lab_request' }, () => loadRequests(false))
+            .subscribe();
+
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            supabase.removeChannel(channel);
         };
     }, []);
 
-    const loadRequests = async () => {
-        setLoading(true);
+    // OPTIMIZED: The showSpinner parameter ensures we don't flash a white screen during background real-time updates
+    const loadRequests = async (showSpinner = false) => {
+        if (showSpinner) setLoading(true);
         try {
             const { data: labData, error } = await supabase
                 .from('lab_request')
@@ -525,7 +534,7 @@ const LaboratoryDashboard = () => {
             console.error('Failed to load lab requests:', err.message);
             alert('Error loading lab requests: ' + err.message);
         } finally {
-            setLoading(false);
+            if (showSpinner) setLoading(false);
         }
     };
 
@@ -569,6 +578,7 @@ const LaboratoryDashboard = () => {
             r.is_cholesterol,
         ].filter(Boolean).length + (r.others ? 1 : 0);
 
+    // FILTER LOGIC: This automatically re-evaluates anytime statusFilter or requests change
     const filtered = requests.filter(r => {
         const name = `${r.patient_firstName ?? ''} ${r.patient_lastName ?? ''}`.toLowerCase();
         const matchSearch =
@@ -641,18 +651,12 @@ const LaboratoryDashboard = () => {
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
                     <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl">
+                        {/* REMOVED: Refresh button. Just a clean header now. */}
                         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-2xl font-extrabold text-slate-800">Lab Requests 🧪</h1>
-                                <p className="text-sm text-slate-500 mt-1">Process and submit results for pending requests.</p>
+                                <p className="text-sm text-slate-500 mt-1">Process and submit results. Updates automatically.</p>
                             </div>
-
-                            <button
-                                onClick={loadRequests}
-                                className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm px-4 py-2 rounded-xl shadow-sm transition-all active:scale-95"
-                            >
-                                🔄 Refresh
-                            </button>
                         </div>
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
