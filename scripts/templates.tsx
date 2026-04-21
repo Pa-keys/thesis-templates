@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom/client';
-import { createClient, Session } from '@supabase/supabase-js';
-import { Sidebar } from './sidebar';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '../shared/supabase';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
-import { OfflineBanner } from './OfflineBanner'; 
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// ─── Reusable Tailwind Classes ───────────────────────────────────────────────
+const inputClasses = "w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-slate-50 focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
+const labelClasses = "block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5";
+const fieldsetClasses = "bg-white rounded-2xl shadow-sm border border-slate-100 mb-6 overflow-hidden";
+const legendClasses = "w-full px-6 py-4 border-b border-slate-100 text-sm font-extrabold text-slate-800 uppercase tracking-wider bg-slate-50/50 flex items-center gap-2";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PatientForm {
@@ -47,31 +47,20 @@ const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student
 
 // ─── Malvar Barangays ─────────────────────────────────────────────────────────
 const MALVAR_BARANGAYS = [
-    'Bagong Pook, Malvar, Batangas',
-    'Bilucao, Malvar, Batangas',
-    'Bulihan, Malvar, Batangas',
-    'Luta del Norte, Malvar, Batangas',
-    'Luta del Sur, Malvar, Batangas',
-    'Poblacion, Malvar, Batangas',
-    'San Andres, Malvar, Batangas',
-    'San Fernando, Malvar, Batangas',
-    'San Gregorio, Malvar, Batangas',
-    'San Isidro, Malvar, Batangas',
-    'San Juan, Malvar, Batangas',
-    'San Pedro I, Malvar, Batangas',
-    'San Pedro II, Malvar, Batangas',
-    'San Pioquinto, Malvar, Batangas',
+    'Bagong Pook, Malvar, Batangas', 'Bilucao, Malvar, Batangas',
+    'Bulihan, Malvar, Batangas', 'Luta del Norte, Malvar, Batangas',
+    'Luta del Sur, Malvar, Batangas', 'Poblacion, Malvar, Batangas',
+    'San Andres, Malvar, Batangas', 'San Fernando, Malvar, Batangas',
+    'San Gregorio, Malvar, Batangas', 'San Isidro, Malvar, Batangas',
+    'San Juan, Malvar, Batangas', 'San Pedro I, Malvar, Batangas',
+    'San Pedro II, Malvar, Batangas', 'San Pioquinto, Malvar, Batangas',
     'Santiago, Malvar, Batangas',
 ] as const;
 
 const OUTSIDE_MALVAR = '__outside__';
 
 // ─── Address Field Component ──────────────────────────────────────────────────
-function AddressField({ value, onChange }: {
-    value: string;
-    onChange: (val: string) => void;
-}) {
-    // Determine if current value is one of the barangays or a custom entry
+function AddressField({ value, onChange }: { value: string; onChange: (val: string) => void; }) {
     const isKnownBarangay = MALVAR_BARANGAYS.includes(value as typeof MALVAR_BARANGAYS[number]);
     const isCustom = value !== '' && !isKnownBarangay;
 
@@ -83,33 +72,15 @@ function AddressField({ value, onChange }: {
         const val = e.target.value;
         setSelectVal(val);
         if (val === OUTSIDE_MALVAR) {
-            onChange(''); // clear so user types their address
+            onChange(''); 
         } else {
             onChange(val);
         }
     };
 
-    const handleCustomInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange(e.target.value);
-    };
-
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <select
-                value={selectVal}
-                onChange={handleSelect}
-                required={selectVal !== OUTSIDE_MALVAR}
-                style={{
-                    padding: '8px 12px',
-                    border: '1.5px solid #E2E8F0',
-                    borderRadius: '8px',
-                    fontFamily: 'inherit',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                    background: 'white',
-                    width: '100%',
-                }}
-            >
+        <div className="flex flex-col gap-3 w-full">
+            <select value={selectVal} onChange={handleSelect} required={selectVal !== OUTSIDE_MALVAR} className={inputClasses}>
                 <option value="" disabled>Select barangay...</option>
                 {MALVAR_BARANGAYS.map(b => (
                     <option key={b} value={b}>{b}</option>
@@ -121,110 +92,57 @@ function AddressField({ value, onChange }: {
                 <input
                     type="text"
                     value={value}
-                    onChange={handleCustomInput}
+                    onChange={(e) => onChange(e.target.value)}
                     placeholder="Enter full address..."
                     required
-                    style={{
-                        padding: '8px 12px',
-                        border: '1.5px solid #E2E8F0',
-                        borderRadius: '8px',
-                        fontFamily: 'inherit',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        width: '100%',
-                    }}
+                    className={inputClasses}
                 />
             )}
         </div>
     );
 }
 
-// ─── Role Label Helper ────────────────────────────────────────────────────────
-function getRoleLabel(role: string): string {
-    const map: Record<string, string> = {
-        doctor:     'General Practitioner',
-        nurse:      'Registered Nurse',
-        BHW:        'Barangay Health Worker',
-        midwives:   'Midwife',
-        pharmacist: 'Pharmacist',
-        labaratory: 'Medical Technologist',
-        admin:      'Administrator',
-    };
-    return map[role] || role;
-}
-
-// ─── Radio Option Component ───────────────────────────────────────────────────
-function RadioOption({ name, value, label, checked, onChange }: {
-    name: string; value: string; label: string;
-    checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
+// ─── Radio Option Component (Modern Chips) ────────────────────────────────────
+function RadioOption({ name, value, label, checked, onChange }: { name: string; value: string; label: string; checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; }) {
     return (
-        <label className={`radio-option${checked ? ' selected' : ''}`}>
-            <input type="radio" name={name} value={value} checked={checked} onChange={onChange} />
-            <span className="radio-dot">{checked && <span></span>}</span>
+        <label className={`cursor-pointer px-4 py-2.5 border rounded-xl text-sm font-semibold transition-all ${checked ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'}`}>
+            <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="hidden" />
             {label}
         </label>
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-function Templates() {
+// ─── Exported Pure Component ──────────────────────────────────────────────────
+export function TemplatesComponent() {
     const [session, setSession] = useState<Session | null>(null);
-    const [userRole, setUserRole] = useState<string>('');
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [userName, setUserName] = useState('Loading...');
-    const [userInitials, setUserInitials] = useState('U');
-
     const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState(false);
+    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-    const { isOnline, isSyncing } = useNetworkSync();
+    const { isOnline } = useNetworkSync();
 
-    // ─── Auth & Profile ───────────────────────────────────────────────────────
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
-
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (!session) {
-                window.location.href = '/pages/login.html';
-                return;
-            }
-
+        supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role, full_name')
-                .eq('id', session.user.id)
-                .single();
-
-            if (profile) {
-                const name = profile.full_name || 'User';
-                const role = profile.role || '';
-                setUserName(name);
-                setUserRole(role);
-                const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-                setUserInitials(initials);
-            }
         });
     }, []);
 
-    // ─── Fetch Patients ───────────────────────────────────────────────────────
     const fetchPatients = useCallback(async (filterText = '') => {
-        const { data, error } = await supabase
-            .from('patients')
-            .select('*')
-            .order('lastName', { ascending: true });
+        const { data, error } = await supabase.from('patients').select('*').order('lastName', { ascending: true });
         if (error) { console.error(error); return; }
         const lower = filterText.toLowerCase();
-        setPatients((data as Patient[]).filter(p =>
-            `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(lower)
-        ));
+        setPatients((data as Patient[]).filter(p => `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(lower)));
     }, []);
 
     useEffect(() => { if (session) fetchPatients(); }, [session, fetchPatients]);
+
+    const showToast = (msg: string, ok: boolean) => {
+        setToast({ msg, ok });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
@@ -236,7 +154,6 @@ function Templates() {
         setForm(f => ({ ...f, [name]: value, ...(name === 'category' && value === '4Ps' ? { categoryOthers: '' } : {}) }));
     };
 
-    // ─── Save ─────────────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -246,353 +163,213 @@ function Templates() {
             if (isOnline) {
                 const { error } = await supabase.from('patients').insert([payload]);
                 if (error) throw error;
-                alert('Patient record saved to database!');
+                showToast('Patient record saved to database!', true);
             } else {
-                await saveToIndexedDB('MediSensDB', 'offline_patients', {
-                    id: Date.now(),
-                    type: 'patient_registration',
-                    data: payload
-                });
-                alert('You are offline. Patient record saved locally and will sync when connection returns!');
+                await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'patient_registration', data: payload });
+                showToast('Offline Mode: Record saved locally. Will sync when online.', true);
             }
             setForm(EMPTY_FORM);
             fetchPatients();
         } catch (error: any) {
             console.error("Save Error:", error);
-            alert('Error saving record: ' + error.message);
+            showToast('Error saving record: ' + error.message, false);
         } finally {
             setSaving(false);
         }
     };
 
-    // ─── Back Navigation based on role ───────────────────────────────────────
-    const handleBackNavigation = () => {
-        const dashboards: Record<string, string> = {
-            doctor:     '/pages/doctor.html',
-            nurse:      '/pages/nurse.html',
-            BHW:        '/pages/bhw.html',
-            midwives:   '/pages/midwife.html',
-            pharmacist: '/pages/pharmacist.html',
-            labaratory: '/pages/laboratory.html',
-            admin:      '/pages/admin.html',
-        };
-        window.location.href = dashboards[userRole] || '/pages/login.html';
-    };
-
     if (!session) return null;
 
     return (
-        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden">
-            
-            {isMobileMenuOpen && (
-                <div 
-                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                />
+        <div className="w-full relative">
+            {toast && (
+                <div className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                    <span>{toast.ok ? '✅' : '❌'}</span> {toast.msg}
+                </div>
             )}
 
-            <Sidebar 
-                activePage="new-record"
-                userName={userName} 
-                userInitials={userInitials}
-                userRole={getRoleLabel(userRole)}
-                navItems={
-                    userRole === 'doctor' ? [
-                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                        { id: 'records', label: 'Patient Records', icon: '📁' },
-                        { id: 'consultation', label: 'Consultation', icon: '📋' }
-                    ] : userRole === 'nurse' ? [
-                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                        { id: 'new-record', label: 'New Record', icon: '➕' },
-                        { id: 'consultation', label: 'Consultation', icon: '📋' }
-                    ] : userRole === 'BHW' ? [
-                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                        { id: 'new-record', label: 'New Record', icon: '➕' }
-                    ] : [
-                        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                        { id: 'new-record', label: 'New Record', icon: '➕' }
-                    ]
-                }
-                onNavigate={(pageId) => {
-                    if (pageId === 'dashboard') handleBackNavigation();
-                    if (pageId === 'records') window.location.href = '/pages/records.html';
-                    if (pageId === 'new-record') window.location.href = '/pages/templates.html';
-                    if (pageId === 'consultation') {
-                        if (userRole === 'doctor') window.location.href = '/pages/consultation.html';
-                        else window.location.href = '/pages/initial_consultation.html';
-                    }
-                }}
-                isMobileMenuOpen={isMobileMenuOpen}
-                setIsMobileMenuOpen={setIsMobileMenuOpen}
-                isOnline={isOnline}
-            />
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
+                        Patient Registration
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">Register a new patient into the system for initial triage.</p>
+                </div>
 
-            <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px] print:pl-0">
-                
-                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 print:hidden shadow-sm md:shadow-none">
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => setIsMobileMenuOpen(true)} 
-                            className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800">Patient Registration</div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 md:gap-5">
-                        <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-full transition-colors duration-300 ${
-                            !isOnline 
-                                ? 'bg-amber-50 border-amber-200' 
-                                : isSyncing 
-                                    ? 'bg-blue-50 border-blue-200' 
-                                    : 'bg-green-50 border-green-200'
-                        }`}>
-                            <span className="relative flex h-2.5 w-2.5">
-                                {isOnline && !isSyncing && (
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                )}
-                                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                                    !isOnline ? 'bg-amber-500' : isSyncing ? 'bg-blue-500 animate-pulse' : 'bg-green-500'
-                                }`}></span>
-                            </span>
-                            <span className={`text-[0.65rem] font-extrabold uppercase tracking-widest ${
-                                !isOnline ? 'text-amber-700' : isSyncing ? 'text-blue-700' : 'text-green-700'
-                            }`}>
-                                {!isOnline ? 'Offline Mode' : isSyncing ? 'Syncing...' : 'System Online'}
-                            </span>
-                        </div>
-
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
-
-                        <div className="text-right hidden sm:block ml-2">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500">{getRoleLabel(userRole)}</div>
-                        </div>
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">
-                            {userInitials}
-                        </div>
-                    </div>
-                </header>
-
-                <OfflineBanner isOnline={isOnline} />
-
-                <main className="w-full flex-1 p-4 md:p-8 flex justify-center">
-                    <div className="page" style={{ margin: 0 }}>
-                        
-                        <div className="page-header" style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
-                            <div>
-                                <h1 style={{ margin: 0 }}>Patient Intake &amp; Triage</h1>
-                                <p style={{ margin: '4px 0 0 0' }}>Register a new patient into the system.</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <form onSubmit={handleSubmit}>
-                                {/* Section I: Patient Info */}
-                                <div className="card">
-                                    <div className="card-header">
-                                        <div className="card-header-icon">👤</div>
-                                        <div className="card-header-title">I. Patient's Information Record</div>
-                                    </div>
-                                    <div className="card-body">
-                                        <div className="form-grid cols-4">
-                                            <div className="field">
-                                                <label>Last Name</label>
-                                                <input type="text" id="lastName" value={form.lastName} onChange={handleChange} placeholder="Dela Cruz" required />
-                                            </div>
-                                            <div className="field">
-                                                <label>First Name</label>
-                                                <input type="text" id="firstName" value={form.firstName} onChange={handleChange} placeholder="Juan" required />
-                                            </div>
-                                            <div className="field">
-                                                <label>Middle Name</label>
-                                                <input type="text" id="middleName" value={form.middleName} onChange={handleChange} placeholder="Santos" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Suffix</label>
-                                                <input type="text" id="suffix" value={form.suffix} onChange={handleChange} placeholder="Jr." />
-                                            </div>
-                                            <div className="field">
-                                                <label>Age</label>
-                                                <input type="number" id="age" value={form.age} onChange={handleChange} placeholder="30" required min="0" max="150" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Sex</label>
-                                                <select id="sex" value={form.sex} onChange={handleChange} required>
-                                                    <option value="" disabled>Select</option>
-                                                    <option value="Male">Male</option>
-                                                    <option value="Female">Female</option>
-                                                </select>
-                                            </div>
-                                            <div className="field">
-                                                <label>Civil Status</label>
-                                                <select id="civilStatus" value={form.civilStatus} onChange={handleChange} required>
-                                                    <option value="" disabled>Select</option>
-                                                    {CIVIL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="field">
-                                                <label>Birthday</label>
-                                                <input type="date" id="birthday" value={form.birthday} onChange={handleChange} required />
-                                            </div>
-
-                                            {/* ── Address with barangay dropdown ── */}
-                                            <div className="field col-span-2">
-                                                <label>Address (Brgy, Malvar)</label>
-                                                <AddressField
-                                                    value={form.address}
-                                                    onChange={(val) => setForm(f => ({ ...f, address: val }))}
-                                                />
-                                            </div>
-
-                                            <div className="field col-span-2">
-                                                <label>Contact #</label>
-                                                <input type="tel" id="contactNumber" value={form.contactNumber} onChange={handleChange} placeholder="09XXXXXXXXX" pattern="[0-9]*" />
-                                            </div>
-                                            <div className="field col-span-2">
-                                                <label>Nationality</label>
-                                                <input type="text" id="nationality" value={form.nationality} onChange={handleChange} placeholder="Filipino" required />
-                                            </div>
-                                            <div className="field">
-                                                <label>Religion</label>
-                                                <input type="text" id="religion" value={form.religion} onChange={handleChange} placeholder="Catholic" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Birth Place</label>
-                                                <input type="text" id="birthPlace" value={form.birthPlace} onChange={handleChange} placeholder="Malvar, Batangas" />
-                                            </div>
-                                            <div className="field col-span-2">
-                                                <label>Educational Attainment</label>
-                                                <select id="educationalAttain" value={form.educationalAttain} onChange={handleChange} required>
-                                                    <option value="" disabled>Select</option>
-                                                    {EDUCATION_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="field col-span-2">
-                                                <label>Employment Status</label>
-                                                <select id="employmentStatus" value={form.employmentStatus} onChange={handleChange} required>
-                                                    <option value="" disabled>Select</option>
-                                                    {EMPLOYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="field col-span-2">
-                                                <label>Blood Type</label>
-                                                <select id="bloodType" value={form.bloodType} onChange={handleChange} required>
-                                                    <option value="" disabled>Select Blood Type</option>
-                                                    {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Section II: PhilHealth */}
-                                <div className="card">
-                                    <div className="card-header">
-                                        <div className="card-header-icon">🏥</div>
-                                        <div className="card-header-title">II. PhilHealth &amp; Categorization</div>
-                                    </div>
-                                    <div className="card-body">
-                                        <div className="form-grid cols-2">
-                                            <div className="field">
-                                                <label>PhilHealth No.</label>
-                                                <input type="text" id="philhealthNo" value={form.philhealthNo} onChange={handleChange} placeholder="XX-XXXXXXXXX-X" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Category</label>
-                                                <div className="radio-group">
-                                                    {['Member', 'Dependent', '4Ps', 'None'].map(v => (
-                                                        <RadioOption key={v} name="philhealthStatus" value={v} label={v} checked={form.philhealthStatus === v} onChange={handleRadio} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="field col-span-2">
-                                                <label>Classification</label>
-                                                <div className="radio-group">
-                                                    <RadioOption name="category" value="4Ps" label="4Ps" checked={form.category === '4Ps'} onChange={handleRadio} />
-                                                    <RadioOption name="category" value="Other/s" label="Other/s" checked={form.category === 'Other/s'} onChange={handleRadio} />
-                                                    {form.category === 'Other/s' && (
-                                                        <input type="text" id="categoryOthers" value={form.categoryOthers} onChange={handleChange}
-                                                            placeholder="Please specify" required
-                                                            style={{ padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '0.85rem', outline: 'none', minWidth: '180px' }} />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Section III: Emergency Contact */}
-                                <div className="card">
-                                    <div className="card-header">
-                                        <div className="card-header-icon">🆘</div>
-                                        <div className="card-header-title">III. Emergency Contact</div>
-                                    </div>
-                                    <div className="card-body">
-                                        <div className="form-grid cols-3">
-                                            <div className="field">
-                                                <label>Relative's Name</label>
-                                                <input type="text" id="relativeName" value={form.relativeName} onChange={handleChange} placeholder="Full Name" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Relationship</label>
-                                                <input type="text" id="relativeRelation" value={form.relativeRelation} onChange={handleChange} placeholder="e.g. Spouse" />
-                                            </div>
-                                            <div className="field">
-                                                <label>Relative's Address</label>
-                                                <input type="text" id="relativeAddress" value={form.relativeAddress} onChange={handleChange} placeholder="Address" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button type="submit" className="save-btn" disabled={saving}>
-                                    💾 {saving ? 'Saving...' : 'Save Registration'}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* ── RIGHT: Patient list ── */}
-                        <div>
-                            <div className="list-card">
-                                <div className="list-header">
-                                    <div className="list-header-title">Patient Records</div>
-                                    <span className="list-count" id="listCount">{patients.length}</span>
-                                </div>
-                                <div className="search-wrap">
-                                    <input
-                                        type="text"
-                                        placeholder="🔍  Search by name..."
-                                        value={search}
-                                        onChange={e => { setSearch(e.target.value); fetchPatients(e.target.value); }}
-                                    />
-                                </div>
-                                <div className="patient-list">
-                                    {patients.length === 0 ? (
-                                        <div className="empty-list">No patients found.</div>
-                                    ) : patients.map(p => (
-                                        <div key={p.id} className="patient-row" onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}>
-                                            <div className="patient-av">{(p.firstName?.[0] || '?').toUpperCase()}</div>
-                                            <div className="patient-info">
-                                                <div className="patient-name">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
-                                                <div className="patient-meta">{p.sex || '—'} · {p.age ?? '—'} yrs · {p.bloodType || '—'}</div>
-                                            </div>
-                                            <span className="patient-arrow">→</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </main>
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                    <span className="text-xs font-bold text-slate-700">Live • Auto-sync enabled</span>
+                </div>
             </div>
+
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
+                <form onSubmit={handleSubmit} className="flex-1 w-full min-w-0">
+                    
+                    {/* Section I: Patient Info */}
+                    <fieldset className={fieldsetClasses}>
+                        <div className={legendClasses}>
+                            <span className="text-blue-600">①</span> Patient's Information Record
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+                                <div><label className={labelClasses}>Last Name</label><input type="text" id="lastName" value={form.lastName} onChange={handleChange} className={inputClasses} placeholder="Dela Cruz" required /></div>
+                                <div><label className={labelClasses}>First Name</label><input type="text" id="firstName" value={form.firstName} onChange={handleChange} className={inputClasses} placeholder="Juan" required /></div>
+                                <div><label className={labelClasses}>Middle Name</label><input type="text" id="middleName" value={form.middleName} onChange={handleChange} className={inputClasses} placeholder="Santos" /></div>
+                                <div><label className={labelClasses}>Suffix</label><input type="text" id="suffix" value={form.suffix} onChange={handleChange} className={inputClasses} placeholder="Jr." /></div>
+                                
+                                <div><label className={labelClasses}>Age</label><input type="number" id="age" value={form.age} onChange={handleChange} className={inputClasses} placeholder="30" required min="0" max="150" /></div>
+                                <div>
+                                    <label className={labelClasses}>Sex</label>
+                                    <select id="sex" value={form.sex} onChange={handleChange} className={inputClasses} required>
+                                        <option value="" disabled>Select</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>Civil Status</label>
+                                    <select id="civilStatus" value={form.civilStatus} onChange={handleChange} className={inputClasses} required>
+                                        <option value="" disabled>Select</option>
+                                        {CIVIL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div><label className={labelClasses}>Birthday</label><input type="date" id="birthday" value={form.birthday} onChange={handleChange} className={inputClasses} required /></div>
+
+                                <div className="col-span-1 sm:col-span-2 md:col-span-4">
+                                    <label className={labelClasses}>Address (Brgy, Malvar)</label>
+                                    <AddressField value={form.address} onChange={(val) => setForm(f => ({ ...f, address: val }))} />
+                                </div>
+
+                                <div className="col-span-1 sm:col-span-2"><label className={labelClasses}>Contact #</label><input type="tel" id="contactNumber" value={form.contactNumber} onChange={handleChange} className={inputClasses} placeholder="09XXXXXXXXX" pattern="[0-9]*" /></div>
+                                <div className="col-span-1 sm:col-span-2"><label className={labelClasses}>Nationality</label><input type="text" id="nationality" value={form.nationality} onChange={handleChange} className={inputClasses} placeholder="Filipino" required /></div>
+                                <div className="col-span-1 sm:col-span-2"><label className={labelClasses}>Religion</label><input type="text" id="religion" value={form.religion} onChange={handleChange} className={inputClasses} placeholder="Catholic" /></div>
+                                <div className="col-span-1 sm:col-span-2"><label className={labelClasses}>Birth Place</label><input type="text" id="birthPlace" value={form.birthPlace} onChange={handleChange} className={inputClasses} placeholder="Malvar, Batangas" /></div>
+                                
+                                <div className="col-span-1 sm:col-span-2">
+                                    <label className={labelClasses}>Educational Attainment</label>
+                                    <select id="educationalAttain" value={form.educationalAttain} onChange={handleChange} className={inputClasses} required>
+                                        <option value="" disabled>Select</option>
+                                        {EDUCATION_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-span-1 sm:col-span-2">
+                                    <label className={labelClasses}>Employment Status</label>
+                                    <select id="employmentStatus" value={form.employmentStatus} onChange={handleChange} className={inputClasses} required>
+                                        <option value="" disabled>Select</option>
+                                        {EMPLOYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-span-1 sm:col-span-2">
+                                    <label className={labelClasses}>Blood Type</label>
+                                    <select id="bloodType" value={form.bloodType} onChange={handleChange} className={inputClasses} required>
+                                        <option value="" disabled>Select Blood Type</option>
+                                        {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    {/* Section II: PhilHealth */}
+                    <fieldset className={fieldsetClasses}>
+                        <div className={legendClasses}>
+                            <span className="text-pink-600">②</span> PhilHealth & Categorization
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className={labelClasses}>PhilHealth No.</label>
+                                    <input type="text" id="philhealthNo" value={form.philhealthNo} onChange={handleChange} className={inputClasses} placeholder="XX-XXXXXXXXX-X" />
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>Category</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {['Member', 'Dependent', '4Ps', 'None'].map(v => (
+                                            <RadioOption key={v} name="philhealthStatus" value={v} label={v} checked={form.philhealthStatus === v} onChange={handleRadio} />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="col-span-1 md:col-span-2">
+                                    <label className={labelClasses}>Classification</label>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <RadioOption name="category" value="4Ps" label="4Ps" checked={form.category === '4Ps'} onChange={handleRadio} />
+                                        <RadioOption name="category" value="Other/s" label="Other/s" checked={form.category === 'Other/s'} onChange={handleRadio} />
+                                        {form.category === 'Other/s' && (
+                                            <input type="text" id="categoryOthers" value={form.categoryOthers} onChange={handleChange} className={`${inputClasses} w-auto min-w-[200px]`} placeholder="Please specify" required />
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    {/* Section III: Emergency Contact */}
+                    <fieldset className={fieldsetClasses}>
+                        <div className={legendClasses}>
+                            <span className="text-green-600">③</span> Emergency Contact
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div><label className={labelClasses}>Relative's Name</label><input type="text" id="relativeName" value={form.relativeName} onChange={handleChange} className={inputClasses} placeholder="Full Name" /></div>
+                                <div><label className={labelClasses}>Relationship</label><input type="text" id="relativeRelation" value={form.relativeRelation} onChange={handleChange} className={inputClasses} placeholder="e.g. Spouse" /></div>
+                                <div><label className={labelClasses}>Relative's Address</label><input type="text" id="relativeAddress" value={form.relativeAddress} onChange={handleChange} className={inputClasses} placeholder="Address" /></div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div className="flex justify-end gap-4 mt-6 mb-12 border-t border-slate-200 pt-6">
+                        <button type="submit" disabled={saving} className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white shadow-lg text-sm transition-all ${saving ? 'bg-blue-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-blue-500/30'}`}>
+                            {saving ? '⏳ Saving...' : '💾 Save Registration'}
+                        </button>
+                    </div>
+                </form>
+
+                {/* ── RIGHT: Recent Patients Sidebar ── */}
+                <div className="w-full lg:w-[350px] shrink-0">
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sticky top-6">
+                        <div className="flex justify-between items-center mb-5">
+                            <div className="font-bold text-slate-800">Recent Records</div>
+                            <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold">{patients.length}</span>
+                        </div>
+                        <div className="relative mb-5">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Search by name..."
+                                value={search}
+                                onChange={e => { setSearch(e.target.value); fetchPatients(e.target.value); }}
+                                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-colors"
+                            />
+                        </div>
+                        <div className="max-h-[600px] overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
+                            {patients.length === 0 ? (
+                                <div className="text-center text-slate-400 text-sm py-8">No patients found.</div>
+                            ) : patients.map(p => (
+                                <div 
+                                    key={p.id} 
+                                    className="flex items-center gap-3 p-3 hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl cursor-pointer transition-all group" 
+                                    onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}
+                                >
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0 shadow-sm">
+                                        {(p.firstName?.[0] || '?').toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors truncate">
+                                            {p.lastName}, {p.firstName} {p.middleName || ''}
+                                        </div>
+                                        <div className="text-[0.65rem] text-slate-500 mt-0.5 truncate uppercase tracking-wider font-semibold">
+                                            {p.sex || '—'} · {p.age ?? '—'} YRS · {p.bloodType || '—'}
+                                        </div>
+                                    </div>
+                                    <span className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all font-bold">→</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode><Templates /></React.StrictMode>
-);

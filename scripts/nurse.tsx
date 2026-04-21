@@ -3,6 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
 
+// ─── Imported Pure Components ────────────────────────────────────────────────
+import { RecordsComponent } from './records';
+import { TemplatesComponent } from './templates';
+import { ConsultationComponent } from './initial_consultation';
+
+// ─── Interfaces ──────────────────────────────────────────────────────────────
 interface Patient {
     id: string;
     firstName: string;
@@ -26,6 +32,9 @@ const NurseDashboard = () => {
     const [consentedPatients, setConsentedPatients] = useState<Patient[]>([]);
     const [totalPatientsCount, setTotalPatientsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // State to manage which SPA tab is currently active
+    const [activePage, setActivePage] = useState('dashboard');
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
@@ -119,21 +128,23 @@ const NurseDashboard = () => {
         `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Helper to safely route to consultation and pass the ID via history state without reloading
+    const handleConsultNavigate = (patientId: string) => {
+        window.history.pushState({}, '', `?id=${patientId}`);
+        setActivePage('consultation');
+    };
+
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
             
             <Sidebar
-                activePage="dashboard"
+                activePage={activePage}
                 userName={userName}
                 userInitials={userInitials}
                 userRole="Registered Nurse"
                 navItems={navItems}
-                onNavigate={(id) => {
-                    if (id === 'dashboard') window.location.href = '/pages/nurse.html';
-                    if (id === 'records') window.location.href = '/pages/records.html';
-                    if (id === 'new-record') window.location.href = '/pages/templates.html';
-                    if (id === 'consultation') window.location.href = '/pages/initial_consultation.html';
-                }}
+                // Update state instantly, NO window.location.href reloads
+                onNavigate={(id) => setActivePage(id)}
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}
@@ -141,6 +152,7 @@ const NurseDashboard = () => {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
                 
+                {/* Persistent Header */}
                 <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
@@ -148,7 +160,9 @@ const NurseDashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
-                        <div className="font-bold text-lg text-slate-800">Nurse Dashboard</div>
+                        <div className="font-bold text-lg text-slate-800 capitalize">
+                            {activePage === 'dashboard' ? 'Nurse Dashboard' : activePage.replace('-', ' ')}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -171,122 +185,146 @@ const NurseDashboard = () => {
                 </header>
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl">
+                    <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl flex flex-col gap-6">
                         
-                        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-extrabold text-slate-800">Good day! 💉</h1>
-                                <p className="text-sm text-slate-500 mt-1">Patients below have signed their consent and are ready for vitals and consultation.</p>
-                            </div>
-                            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                                <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                                <span className="text-xs font-bold text-slate-700">Live • Auto-updates</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div className="bg-green-50 p-5 rounded-2xl border border-green-200 shadow-sm flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center text-xl shrink-0">✅</div>
-                                <div>
-                                    <div className="text-sm font-semibold text-green-700">Consented Patients</div>
-                                    <div className="text-2xl font-bold text-green-800 mt-1">{stats.consented}</div>
-                                    <div className="text-xs font-bold text-green-600 mt-1">Ready for vitals</div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">👥</div>
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-500">Total Patients</div>
-                                    <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0">♀</div>
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-500">Female</div>
-                                    <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
-                                </div>
-                            </div>
-                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">♂</div>
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-500">Male</div>
-                                    <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
-                            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-800">Consented Patients</h2>
-                                    <p className="text-xs text-slate-500">These patients have signed their consent and are ready for nurse assessment.</p>
-                                </div>
-                                <span className="bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
-                                    ✅ {stats.consented} patients
-                                </span>
-                            </div>
-                            
-                            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                <div className="relative max-w-md">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search by name..." 
-                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm bg-white"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="p-4">
-                                {filteredPatients.length === 0 ? (
-                                    <div className="text-center py-16">
-                                        <div className="text-4xl mb-3">⏳</div>
-                                        <p className="text-slate-500 font-medium">No consented patients found.</p>
+                        {/* ─── DASHBOARD CONTENT ─── */}
+                        {activePage === 'dashboard' && (
+                            <>
+                                <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h1 className="text-2xl font-extrabold text-slate-800">Good day!</h1>
+                                        <p className="text-sm text-slate-500 mt-1">Patients below have signed their consent and are ready for vitals and consultation.</p>
                                     </div>
-                                ) : (
-                                    <div className="flex flex-col gap-3">
-                                        {filteredPatients.map(p => {
-                                            const isMale = p.sex === 'Male';
-                                            const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-                                            const category = p.category === 'Other/s' ? `Others (${p.categoryOthers || 'unspecified'})` : (p.category || '—');
-
-                                            return (
-                                                <div key={p.id} onClick={() => window.location.href=`/pages/initial_consultation.html?id=${p.id}`} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-teal-500 hover:shadow-md cursor-pointer transition-all">
-                                                    <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm ${isMale ? 'bg-blue-600' : 'bg-pink-500'}`}>
-                                                        {(p.firstName?.[0] || '?').toUpperCase()}
-                                                    </div>
-                                                    
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-bold text-slate-800 text-base">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
-                                                        <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                                                            <span className="flex items-center gap-1">👤 {p.sex || '—'}</span>
-                                                            <span className="flex items-center gap-1">🎂 {p.age ?? '—'} yrs</span>
-                                                            <span className="flex items-center gap-1">🩸 {p.bloodType || '—'}</span>
-                                                            <span className="flex items-center gap-1">🏥 {p.philhealthStatus || '—'}</span>
-                                                            <span className="flex items-center gap-1">📋 {category}</span>
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 mt-1">
-                                                            <span className="flex items-center gap-1">📍 {p.address || 'No address'}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100">
-                                                        <div className="text-xs text-slate-400 font-medium text-right hidden sm:block">Registered<br/>{date}</div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="bg-green-50 text-green-600 border border-green-200 px-2 py-1 rounded-full text-[0.65rem] font-bold">✅ Consent Signed</span>
-                                                            <button className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">📋 Consult</button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                                        <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                                        <span className="text-xs font-bold text-slate-700">Live • Auto-updates</span>
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-green-50 p-5 rounded-2xl border border-green-200 shadow-sm flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center text-xl shrink-0">✅</div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-green-700">Consented Patients</div>
+                                            <div className="text-2xl font-bold text-green-800 mt-1">{stats.consented}</div>
+                                            <div className="text-xs font-bold text-green-600 mt-1">Ready for vitals</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">👥</div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-500">Total Patients</div>
+                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0">♀</div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-500">Female</div>
+                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">♂</div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-500">Male</div>
+                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+                                    <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-800">Consented Patients</h2>
+                                            <p className="text-xs text-slate-500">These patients have signed their consent and are ready for nurse assessment.</p>
+                                        </div>
+                                        <span className="bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
+                                            ✅ {stats.consented} patients
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                                        <div className="relative max-w-md">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search by name..." 
+                                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm bg-white"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4">
+                                        {filteredPatients.length === 0 ? (
+                                            <div className="text-center py-16">
+                                                <div className="text-4xl mb-3">⏳</div>
+                                                <p className="text-slate-500 font-medium">No consented patients found.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-3">
+                                                {filteredPatients.map(p => {
+                                                    const isMale = p.sex === 'Male';
+                                                    const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                                                    const category = p.category === 'Other/s' ? `Others (${p.categoryOthers || 'unspecified'})` : (p.category || '—');
+
+                                                    return (
+                                                        <div 
+                                                            key={p.id} 
+                                                            onClick={() => handleConsultNavigate(p.id)} 
+                                                            className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-teal-500 hover:shadow-md cursor-pointer transition-all"
+                                                        >
+                                                            <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm ${isMale ? 'bg-blue-600' : 'bg-pink-500'}`}>
+                                                                {(p.firstName?.[0] || '?').toUpperCase()}
+                                                            </div>
+                                                            
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-bold text-slate-800 text-base">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
+                                                                <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                                                                    <span className="flex items-center gap-1">👤 {p.sex || '—'}</span>
+                                                                    <span className="flex items-center gap-1">🎂 {p.age ?? '—'} yrs</span>
+                                                                    <span className="flex items-center gap-1">🩸 {p.bloodType || '—'}</span>
+                                                                    <span className="flex items-center gap-1">🏥 {p.philhealthStatus || '—'}</span>
+                                                                    <span className="flex items-center gap-1">📋 {category}</span>
+                                                                </div>
+                                                                <div className="text-xs text-slate-500 mt-1">
+                                                                    <span className="flex items-center gap-1">📍 {p.address || 'No address'}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100">
+                                                                <div className="text-xs text-slate-400 font-medium text-right hidden sm:block">Registered<br/>{date}</div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="bg-green-50 text-green-600 border border-green-200 px-2 py-1 rounded-full text-[0.65rem] font-bold">✅ Consent Signed</span>
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleConsultNavigate(p.id);
+                                                                        }} 
+                                                                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                                                                    >
+                                                                        📋 Consult
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* ─── MODULAR COMPONENT RENDERING ─── */}
+                        {activePage === 'records' && <RecordsComponent />}
+                        
+                        {activePage === 'new-record' && <TemplatesComponent />}
+                        
+                        {activePage === 'consultation' && <ConsultationComponent />}
 
                     </div>
                 </div>
