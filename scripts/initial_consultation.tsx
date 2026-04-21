@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../shared/supabase';
 
 // ─── ✨ GLASSMORPHISM Tailwind Classes ✨ ────────────────────────────────────
@@ -33,6 +33,31 @@ const DIAGNOSIS_OPTIONS = [
     'Heart Disease', 'Stroke', 'Acid Reflux', 'Arthritis', 'Others',
 ];
 
+// ─── Vital Sign Field Definitions ─────────────────────────────────────────────
+const VITAL_FIELDS: {
+    label: string;
+    name: keyof InitialConsultationData;
+    type: string;
+    placeholder?: string;
+    readOnly?: boolean;
+    step?: string;
+    allowedPattern?: RegExp;
+}[] = [
+    { label: 'BP (mmHg)',        name: 'bp',               type: 'text',   placeholder: '120/80', allowedPattern: /^[\d/]*$/ },
+    { label: 'Heart Rate (bpm)', name: 'hr',               type: 'number' },
+    { label: 'Resp. Rate (cpm)', name: 'rr',               type: 'number' },
+    { label: 'Temp (°C)',        name: 'temp',             type: 'number', step: '0.1' },
+    { label: 'O2 Sat (%)',       name: 'o2Sat',            type: 'number' },
+    { label: 'Weight (kg)',      name: 'weight',           type: 'number', step: '0.1' },
+    { label: 'Height (cm)',      name: 'height',           type: 'number', step: '0.1' },
+    { label: 'BMI',              name: 'bmi',              type: 'text',   readOnly: true },
+    { label: 'MUAC',             name: 'muac',             type: 'text',   allowedPattern: /^[\d.]*$/ },
+    { label: 'Nutrition Status', name: 'nutritionalStatus', type: 'text',  readOnly: true },
+    { label: 'Vis. Acuity (L)', name: 'visualAcuityLeft',  type: 'text',  placeholder: '20/20', allowedPattern: /^[\d/]*$/ },
+    { label: 'Vis. Acuity (R)', name: 'visualAcuityRight', type: 'text',  placeholder: '20/20', allowedPattern: /^[\d/]*$/ },
+    { label: 'Blood Type',       name: 'bloodType',        type: 'text',  placeholder: 'O+', readOnly: true },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const toNumberOrNull = (val: string) => {
     if (!val || val.trim() === '') return null;
@@ -63,20 +88,31 @@ const getNutritionalStatus = (bmi: string) => {
 export function ConsultationComponent() {
     const [formData, setFormData] = useState<InitialConsultationData>(EMPTY_FORM);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Patient Data States
     const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
     const [patientName, setPatientName] = useState('');
-    const [patientInfo, setPatientInfo] = useState<any>(null); // Stores full fetched details
-    
+    const [patientInfo, setPatientInfo] = useState<any>(null);
+
     const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-    // ─── Fetch Patient Details dynamically on Mount ───────────────────────────
+    // Refs for timer cleanup
+    const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Cleanup timers on unmount
     useEffect(() => {
-        // Evaluate the URL *inside* the component so it updates when SPA navigates
+        return () => {
+            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+            if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+        };
+    }, []);
+
+    // ─── Fetch Patient Details on Mount ───────────────────────────────────────
+    useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
-        
+
         setCurrentPatientId(id);
 
         if (!id) {
@@ -87,15 +123,13 @@ export function ConsultationComponent() {
         const fetchPatientDetails = async () => {
             const { data, error } = await supabase
                 .from('patients')
-                .select('*') // Fetching all details to populate the UI badge
+                .select('*')
                 .eq('id', id)
                 .single();
 
             if (data) {
                 setPatientName(`${data.lastName}, ${data.firstName} ${data.middleName || ''}`.trim());
                 setPatientInfo(data);
-                
-                // Pre-fill blood type from patient record
                 setFormData(prev => ({
                     ...prev,
                     bloodType: data.bloodType || '',
@@ -115,16 +149,15 @@ export function ConsultationComponent() {
         const nutritionalStatus = getNutritionalStatus(bmi);
 
         setFormData(prev => {
-            if (prev.bmi === bmi && prev.nutritionalStatus === nutritionalStatus) {
-                return prev;
-            }
+            if (prev.bmi === bmi && prev.nutritionalStatus === nutritionalStatus) return prev;
             return { ...prev, bmi, nutritionalStatus };
         });
     }, [formData.weight, formData.height]);
 
     const showToast = (msg: string, ok: boolean) => {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setToast({ msg, ok });
-        setTimeout(() => setToast(null), 4000);
+        toastTimerRef.current = setTimeout(() => setToast(null), 4000);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -147,7 +180,7 @@ export function ConsultationComponent() {
     // ─── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!currentPatientId) {
             alert('No patient ID found. Please select a patient from the dashboard first.');
             return;
@@ -156,16 +189,20 @@ export function ConsultationComponent() {
         setIsSubmitting(true);
 
         try {
-            const { error: e1 } = await supabase.from('initial_consultation').insert([{
-                patient_id: currentPatientId,
-                consultation_date: formData.dateOfConsultation || null,
-                consultation_time: formData.consultationTime || null,
-                mode_of_transaction: formData.modeOfTransaction || null,
-                referred_by: formData.referredBy || null,
-                mode_of_transfer: formData.modeOfTransfer || null,
-                chief_complaint: formData.chiefComplaints || null,
-                diagnosis: getResolvedDiagnosis() || null,
-            }]);
+            const { data: consData, error: e1 } = await supabase
+                .from('initial_consultation')
+                .insert([{
+                    patient_id: currentPatientId,
+                    consultation_date: formData.dateOfConsultation || null,
+                    consultation_time: formData.consultationTime || null,
+                    mode_of_transaction: formData.modeOfTransaction || null,
+                    referred_by: formData.referredBy || null,
+                    mode_of_transfer: formData.modeOfTransfer || null,
+                    chief_complaint: formData.chiefComplaints || null,
+                    diagnosis: getResolvedDiagnosis() || null,
+                }])
+                .select('initialconsultation_id')
+                .single();
 
             if (e1) throw new Error('initial_consultation: ' + e1.message);
 
@@ -186,22 +223,30 @@ export function ConsultationComponent() {
                 general_survey: formData.generalSurvey || null,
             }]);
 
-            if (e2) throw new Error('vital_sign: ' + e2.message);
+            if (e2) {
+                // Rollback the consultation row if vital signs insert fails
+                if (consData?.initialconsultation_id) {
+                    await supabase.from('initial_consultation').delete().eq('id', consData.initialconsultation_id);
+                }
+                throw new Error('vital_sign: ' + e2.message);
+            }
 
             showToast('Consultation record saved successfully!', true);
 
+            // Only reset form on success
             setFormData({
                 ...EMPTY_FORM,
                 bloodType: formData.bloodType,
             });
 
-            // Safely redirect back to dashboard after save
-            setTimeout(() => {
+            redirectTimerRef.current = setTimeout(() => {
                 window.location.href = '/pages/nurse.html';
             }, 1500);
+
         } catch (err: any) {
             console.error(err);
             showToast('Failed to save: ' + err.message, false);
+            // Form data is preserved on failure so the user doesn't lose their input
         } finally {
             setIsSubmitting(false);
         }
@@ -210,8 +255,20 @@ export function ConsultationComponent() {
     return (
         <div className="w-full max-w-5xl mx-auto relative pb-12">
             {toast && (
-                <div className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    <span>{toast.ok ? '✅' : '❌'}</span> {toast.msg}
+                <div
+                    role="alert"
+                    aria-live="assertive"
+                    className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}
+                >
+                    <span>{toast.ok ? '✅' : '❌'}</span>
+                    {toast.msg}
+                    <button
+                        onClick={() => setToast(null)}
+                        className="ml-2 opacity-60 hover:opacity-100 transition-opacity text-current"
+                        aria-label="Dismiss"
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
 
@@ -220,8 +277,7 @@ export function ConsultationComponent() {
                     <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
                         📋 Initial Consultation
                     </h1>
-                    
-                    {/* Patient Information Badge rendering */}
+
                     {patientInfo ? (
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                             <span className="font-bold text-blue-800 bg-blue-100/50 border border-blue-200 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">
@@ -255,14 +311,13 @@ export function ConsultationComponent() {
                 ← Back to Dashboard
             </button>
 
-            {/* Hide form if no patient is selected to prevent bad database inserts */}
             {!currentPatientId ? (
-                 <div className="w-full bg-white/30 backdrop-blur-xl border border-white/60 rounded-3xl p-12 text-center shadow-[0_8px_32px_0_rgba(31,38,135,0.05)]">
-                     <div className="text-5xl mb-4">🔍</div>
-                     <h2 className="text-xl font-bold text-slate-800">No Patient Selected</h2>
-                     <p className="text-slate-500 mt-2">Navigate to the Dashboard and click "Consult" on a patient record to proceed.</p>
-                     <button onClick={() => window.location.href = '/pages/nurse.html'} className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md">Go to Dashboard</button>
-                 </div>
+                <div className="w-full bg-white/30 backdrop-blur-xl border border-white/60 rounded-3xl p-12 text-center shadow-[0_8px_32px_0_rgba(31,38,135,0.05)]">
+                    <div className="text-5xl mb-4">🔍</div>
+                    <h2 className="text-xl font-bold text-slate-800">No Patient Selected</h2>
+                    <p className="text-slate-500 mt-2">Navigate to the Dashboard and click "Consult" on a patient record to proceed.</p>
+                    <button onClick={() => window.location.href = '/pages/nurse.html'} className="mt-6 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md">Go to Dashboard</button>
+                </div>
             ) : (
                 <form onSubmit={handleSubmit} className="w-full">
                     <fieldset className={fieldsetClasses}>
@@ -382,21 +437,7 @@ export function ConsultationComponent() {
 
                         <div className="p-6 bg-slate-50/10">
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                                {[
-                                    { label: 'BP (mmHg)', name: 'bp', type: 'text', placeholder: '120/80' },
-                                    { label: 'Heart Rate (bpm)', name: 'hr', type: 'number' },
-                                    { label: 'Resp. Rate (cpm)', name: 'rr', type: 'number' },
-                                    { label: 'Temp (°C)', name: 'temp', type: 'number', step: '0.1' },
-                                    { label: 'O2 Sat (%)', name: 'o2Sat', type: 'number' },
-                                    { label: 'Weight (kg)', name: 'weight', type: 'number', step: '0.1' },
-                                    { label: 'Height (cm)', name: 'height', type: 'number', step: '0.1' },
-                                    { label: 'BMI', name: 'bmi', type: 'text', readOnly: true },
-                                    { label: 'MUAC', name: 'muac', type: 'text' },
-                                    { label: 'Nutrition Status', name: 'nutritionalStatus', type: 'text', readOnly: true },
-                                    { label: 'Vis. Acuity (L)', name: 'visualAcuityLeft', type: 'text', placeholder: '20/20' },
-                                    { label: 'Vis. Acuity (R)', name: 'visualAcuityRight', type: 'text', placeholder: '20/20' },
-                                    { label: 'Blood Type', name: 'bloodType', type: 'text', placeholder: 'O+', readOnly: true },
-                                ].map(f => (
+                                {VITAL_FIELDS.map(f => (
                                     <div key={f.name} className="bg-white/40 backdrop-blur-md p-3 rounded-xl border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.3)]">
                                         <label className="block text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 mb-1.5 drop-shadow-sm">
                                             {f.label}
@@ -404,12 +445,29 @@ export function ConsultationComponent() {
                                         <input
                                             type={f.type}
                                             name={f.name}
-                                            value={(formData as any)[f.name]}
+                                            value={formData[f.name]}
                                             onChange={handleChange}
-                                            readOnly={(f as any).readOnly || false}
-                                            className={`w-full border border-white/40 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/30 focus:border-white/80 outline-none transition-all ${(f as any).readOnly ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed shadow-none' : 'bg-white/50 focus:bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'}`}
-                                            placeholder={(f as any).placeholder || ''}
-                                            step={(f as any).step}
+                                            readOnly={f.readOnly || false}
+                                            step={f.step}
+                                            placeholder={f.placeholder || ''}
+
+                                            // Block e, E, +, - in number inputs (browser quirk)
+                                            onKeyDown={f.type === 'number' ? (e) => {
+                                                if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                                            } : undefined}
+
+                                            // Block disallowed characters on input (covers keyboard + mobile)
+                                            onBeforeInput={f.allowedPattern ? (e: React.FormEvent<HTMLInputElement> & { data: string }) => {
+                                                if (e.data && !f.allowedPattern!.test(e.data)) e.preventDefault();
+                                            } : undefined}
+
+                                            // Block disallowed characters on paste
+                                            onPaste={f.allowedPattern ? (e) => {
+                                                const pasted = e.clipboardData.getData('text');
+                                                if (!f.allowedPattern!.test(pasted)) e.preventDefault();
+                                            } : undefined}
+
+                                            className={`w-full border border-white/40 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/30 focus:border-white/80 outline-none transition-all ${f.readOnly ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed shadow-none' : 'bg-white/50 focus:bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'}`}
                                         />
                                     </div>
                                 ))}
@@ -451,5 +509,3 @@ export function ConsultationComponent() {
         </div>
     );
 }
-
-

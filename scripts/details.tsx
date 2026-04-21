@@ -184,9 +184,11 @@ function DetailsPage() {
                         ) : showConsent ? (
                             <div className="animate-in fade-in duration-300">
                                 <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">← Back to Details</button>
+                                {/* ← CHANGED: rhuPersonnel prop added, passes logged-in user's full_name */}
                                 <PatientConsent 
                                     patientId={patient.id} 
-                                    patientName={`${patient.firstName} ${patient.lastName}`} 
+                                    patientName={`${patient.firstName} ${patient.lastName}`}
+                                    rhuPersonnel={userName}
                                     onConsentSaved={() => { setShowConsent(false); loadPatient(); }} 
                                 />
                             </div>

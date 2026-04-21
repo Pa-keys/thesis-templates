@@ -1,4 +1,4 @@
-/// &lt;reference types="vite/client" /&gt;
+/// <reference types="vite/client" />
 
 import React, { useState, useRef } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -11,6 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 interface ConsentProps {
     patientId: string;
     patientName: string;
+    rhuPersonnel?: string;      // ← ADDED
     onConsentSaved: () => void;
 }
 
@@ -285,8 +286,9 @@ function SigPad({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function PatientConsent({ patientId, patientName, onConsentSaved }: ConsentProps) {
-    const [rhuPersonnel, setRhuPersonnel] = useState('');
+export default function PatientConsent({ patientId, patientName, rhuPersonnel: initialPersonnel = '', onConsentSaved }: ConsentProps) {
+    // ← CHANGED: pre-filled from prop, locked as read-only
+    const [rhuPersonnel] = useState(initialPersonnel);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const patientSigCanvas = useRef<SignatureCanvas | null>(null);
@@ -403,25 +405,14 @@ export default function PatientConsent({ patientId, patientName, onConsentSaved 
                                 style={styles.inputDisabled}
                             />
                         </div>
+                        {/* ← CHANGED: now disabled, auto-filled from logged-in user */}
                         <div style={styles.inputGroup}>
                             <label style={styles.inputLabel}>RHU Personnel (Printed Name)</label>
                             <input
                                 type="text"
-                                placeholder="Print name here"
                                 value={rhuPersonnel}
-                                onChange={e => setRhuPersonnel(e.target.value)}
-                                required
-                                style={styles.input}
-                                onFocus={e => {
-                                    e.target.style.borderColor = '#2563EB';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)';
-                                    e.target.style.background = '#FFFFFF';
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor = '#E2E8F0';
-                                    e.target.style.boxShadow = 'none';
-                                    e.target.style.background = '#F1F5F9';
-                                }}
+                                disabled
+                                style={styles.inputDisabled}
                             />
                         </div>
                     </div>
