@@ -430,26 +430,392 @@ export function ConsultationPage({
         } catch (err: any) { alert('Failed to save consultation: ' + err.message); } finally { setLoading(false); }
     };
 
-    const handleMarkFollowUpDone = async () => {
+ const handleMarkFollowUpDone = async () => {
         if (!patient?.id) return;
         setLoading(true);
+
         try {
             const resolvedConsultationId = await ensureConsultationExists();
             if (!resolvedConsultationId) throw new Error('Could not resolve consultation record.');
-            const donePayload = buildFollowUpPayload(resolvedConsultationId, 'done');
 
-            const { data: existing, error: checkError } = await supabase.from('follow_up').select('followup_id, consultation_id').eq('patient_id', patient.id).order('followup_id', { ascending: false }).limit(1).maybeSingle();
+            const sigUrl = followUpSigCanvas.current?.isEmpty()
+                ? null
+                : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
+
+            const donePayload = {
+                patient_id: patient.id,
+                consultation_id: resolvedConsultationId,
+                follow_up_status: 'done',
+                visit_date: formData.followUpDate || null,
+                visit_time: formData.followUpTime || null,
+                mode_of_transaction: formData.followUpModeOfTx || null,
+                mode_of_transfer: formData.followUpModeOfTransfer || null,
+                chief_complaint: formData.followUpChiefComplaint || null,
+                diagnosis: formData.followUpDiagnosis || null,
+                history_of_present_illness: formData.followUpHpi || null,
+                bp: formData.followUpBp || null,
+                heart_rate: toNumberOrNull(formData.followUpHr),
+                respiratory_rate: toNumberOrNull(formData.followUpRr),
+                temperature: toNumberOrNull(formData.followUpTemp),
+                o2_saturation: toNumberOrNull(formData.followUpO2),
+                weight: toNumberOrNull(formData.followUpWeight),
+                height: toNumberOrNull(formData.followUpHeight),
+                muac: toNumberOrNull(formData.followUpMuac),
+                nutritional_status: followUpBmiInfo?.status || formData.followUpNutritionalStatus || null,
+                bmi: followUpBmiInfo ? parseFloat(followUpBmiInfo.value) : toNumberOrNull(formData.followUpBmi),
+                visual_acuity_left: formData.followUpVaL || null,
+                visual_acuity_right: formData.followUpVaR || null,
+                blood_type: formData.followUpBloodType || patient?.bloodType || null,
+                general_survey: formData.followUpGenSurvey || null,
+                medication_treatment: formData.managementTreatment || null,
+                lab_results: formData.followUpLabResults || null,
+                signature_url: sigUrl || null,
+            };
+
+            const { data: existing, error: checkError } = await supabase
+                .from('follow_up')
+                .select('followup_id, consultation_id')
+                .eq('patient_id', patient.id)
+                .order('followup_id', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
             if (checkError) throw checkError;
+
             if (existing) {
-                const { error: updateError } = await supabase.from('follow_up').update(donePayload).eq('followup_id', existing.followup_id);
+                const { error: updateError } = await supabase
+                    .from('follow_up')
+                    .update(donePayload)
+                    .eq('followup_id', existing.followup_id);
+
                 if (updateError) throw updateError;
             } else {
-                const { error: insertError } = await supabase.from('follow_up').insert([donePayload]);
+                const { error: insertError } = await supabase
+                    .from('follow_up')
+                    .insert([donePayload]);
+
                 if (insertError) throw insertError;
             }
+
             setFollowUpDone(true);
             alert('Follow-up marked as done!');
-        } catch (err: any) { console.error('Full error:', err); alert('Failed to mark follow-up as done: ' + err.message); } finally { setLoading(false); }
+        } catch (err: any) {
+            console.error('Full error:', err);
+            alert('Failed to mark follow-up as done: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+const handlePrintPrescription = () => {
+        const validMeds = medications.filter(m => m.name.trim() !== '');
+        if (validMeds.length === 0) {
+            alert('Please add at least one medication before printing.');
+            return;
+        }
+
+        // 1. Perfectly isolated HTML for the Rx Pad matching the provided format
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Prescription - ${patientFullName}</title>
+                <style>
+                    /* Forces 1 Page A5 format, removes browser headers/footers */
+                    @page { size: A5 portrait; margin: 10mm; }
+                    body { 
+                        font-family: 'Times New Roman', Times, serif; 
+                        color: #000; 
+                        line-height: 1.2; 
+                        padding: 10px 15px; 
+                        margin: 0;
+                    }
+                    
+                    /* Header Formatting */
+                    .header { text-align: center; margin-bottom: 12px; }
+                    .header p { margin: 2px 0; font-size: 13px; }
+                    .header h3 { margin: 5px 0 0 0; font-weight: bold; font-size: 16px; letter-spacing: 0.5px; }
+                    
+                    /* Dividers */
+                    .divider { border-bottom: 1.5px solid #000; margin: 12px 0; }
+                    
+                    /* Patient Info Form Layout */
+                    .patient-info { font-size: 14px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px; }
+                    .row { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
+                    .field { display: flex; align-items: flex-end; }
+                    .field span { margin-right: 5px; white-space: nowrap; }
+                    .value { 
+                        border-bottom: 1px solid #000; 
+                        flex-grow: 1; 
+                        padding: 0 5px; 
+                        text-align: center;
+                        font-weight: bold;
+                    }
+                    
+                    /* Rx Symbol */
+                    .rx-symbol { font-size: 48px; font-weight: bold; margin: 15px 0 5px 10px; line-height: 1; font-style: italic; }
+                    
+                    /* Medication List */
+                    .med-list { min-height: 280px; padding: 0 20px 0 45px; }
+                    .med-item { margin-bottom: 15px; font-size: 14px; }
+                    .med-name { font-weight: bold; font-size: 15px; margin-bottom: 3px; }
+                    .med-sig { margin-left: 20px; }
+                    
+                    /* Footer Formatting */
+                    .footer { display: flex; justify-content: space-between; align-items: flex-end; font-size: 13px; page-break-inside: avoid; }
+                    .next-visit { display: flex; align-items: flex-end; }
+                    
+                    .doctor-block { text-align: center; width: 220px; }
+                    .sig-line { border-bottom: 1px solid #000; margin-bottom: 5px; height: 40px; }
+                    .doc-name { font-weight: bold; font-size: 15px; text-transform: uppercase; }
+                    .doc-creds { font-size: 12px; display: flex; flex-direction: column; align-items: center; margin-top: 3px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <p>Republic of the Philippines</p>
+                    <p>Province of Batangas</p>
+                    <p>Municipality of Malvar</p>
+                    <h3>MUNICIPAL HEALTH OFFICE</h3>
+                </div>
+                
+                <div class="divider"></div>
+
+                <div class="patient-info">
+                    <div class="row">
+                        <div class="field" style="width: 68%;">
+                            <span>Name:</span> 
+                            <div class="value" style="text-align: left;">${patientFullName}</div>
+                        </div>
+                        <div class="field" style="width: 30%;">
+                            <span>Date:</span> 
+                            <div class="value">${new Date().toLocaleDateString('en-US')}</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="field" style="width: 18%;">
+                            <span>Age:</span> 
+                            <div class="value">${patient?.age || '&nbsp;'}</div>
+                        </div>
+                        <div class="field" style="width: 18%;">
+                            <span>Sex:</span> 
+                            <div class="value">${patient?.sex || '&nbsp;'}</div>
+                        </div>
+                        <div class="field" style="width: 60%;">
+                            <span>Address:</span> 
+                            <div class="value" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${patient?.address ? patient.address.split(',')[0] : '&nbsp;'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="rx-symbol">&#8478;</div>
+
+                <div class="med-list">
+                    ${validMeds.map(m => `
+                        <div class="med-item">
+                            <div class="med-name">${m.quantity ? `${m.quantity} ` : ''}${m.name}</div>
+                            <div class="med-sig">Sig: ${m.dosage} ${m.frequency || ''} ${m.duration ? `for ${m.duration}` : ''}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="footer">
+                    <div class="next-visit">
+                        <span>Next Visit:</span>
+                        <div class="value" style="width: 100px;">
+                            ${formData.followUpDate ? new Date(formData.followUpDate).toLocaleDateString('en-US') : '&nbsp;'}
+                        </div>
+                    </div>
+                    <div class="doctor-block">
+                        <div class="sig-line"></div>
+                        <div class="doc-name">${doctorName}, MD</div>
+                        <div class="doc-creds">
+                            <span>Lic No: ${formData.rxLicNo || '________________'}</span>
+                            <span>PTR No: ${formData.rxPtrNo || '________________'}</span>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // 2. Create a hidden iframe to prevent the React dashboard from printing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentWindow?.document;
+        if (!iframeDoc) return;
+
+        iframeDoc.open();
+        iframeDoc.write(html);
+        iframeDoc.close();
+
+        // 3. Focus the iframe and trigger print
+        setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            
+            // Clean up the iframe after the print dialog is closed
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000);
+        }, 500);
+    };
+
+const handlePrintMedCert = () => {
+        if (!formData.diagnosis || formData.diagnosis.trim() === '') {
+            alert('Please enter a Diagnosis before printing.');
+            return;
+        }
+
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Medical Certificate - ${patientFullName}</title>
+                <style>
+                    /* Force A4 and remove browser headers/footers */
+                    @page { 
+                        size: A4 portrait; 
+                        margin: 15mm 20mm; 
+                    }
+                    * { box-sizing: border-box; }
+                    html, body { height: 100%; margin: 0; padding: 0; }
+                    
+                    body { 
+                        font-family: 'Times New Roman', Times, serif; 
+                        color: #000; 
+                        font-size: 15px;
+                        line-height: 1.5;
+                    }
+
+                    /* Wrapper to force footer to bottom */
+                    .page-container {
+                        display: flex;
+                        flex-direction: column;
+                        min-height: 260mm; /* Fixed height for A4 printable area */
+                        position: relative;
+                    }
+
+                    .header { text-align: center; margin-bottom: 20px; }
+                    .header p { margin: 1px 0; font-size: 14px; }
+                    .header h3 { margin: 4px 0 0 0; font-weight: bold; font-size: 17px; text-transform: uppercase; }
+                    
+                    .title { text-align: center; font-weight: bold; font-size: 22px; margin: 25px 0; text-decoration: underline; letter-spacing: 2px; }
+                    
+                    .date-block { text-align: right; margin-bottom: 30px; }
+                    
+                    .salutation { font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+                    
+                    .body-text { text-align: justify; margin-bottom: 25px; text-indent: 40px; line-height: 1.8; }
+                    .field-value { border-bottom: 1px solid #000; font-weight: bold; padding: 0 4px; display: inline-block; text-align: center; }
+                    
+                    .section { margin-bottom: 20px; }
+                    .section-label { font-weight: bold; font-size: 16px; display: block; margin-bottom: 4px; }
+                    .section-content { 
+                        min-height: 40px; 
+                        border-bottom: 1px solid #000; 
+                        font-weight: bold; 
+                        padding-left: 10px; 
+                        font-style: italic;
+                        line-height: 1.3;
+                    }
+                    
+                    /* ─── PINS FOOTER TO BOTTOM ─── */
+                    .footer { 
+                        margin-top: auto; /* This pushes the block to the very bottom */
+                        display: flex; 
+                        justify-content: flex-end; 
+                        padding-bottom: 10mm; /* Gap from the bottom edge */
+                    }
+                    
+                    .doctor-block { text-align: center; width: 300px; }
+                    .sig-line { border-bottom: 1.5px solid #000; margin-bottom: 5px; height: 40px; }
+                    .doc-name { font-weight: bold; font-size: 16px; text-transform: uppercase; }
+                    .doc-creds { font-size: 13px; margin-top: 2px; text-align: center; line-height: 1.4; }
+                </style>
+            </head>
+            <body>
+                <div class="page-container">
+                    <div class="header">
+                        <p>Republic of the Philippines</p>
+                        <p>Province of Batangas</p>
+                        <p>Municipality of Malvar</p>
+                        <h3>MUNICIPAL HEALTH OFFICE</h3>
+                    </div>
+                    
+                    <div class="title">MEDICAL CERTIFICATE</div>
+                    
+                    <div class="date-block">
+                        Malvar, Batangas<br>
+                        <strong>${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>
+                    </div>
+
+                    <div class="salutation">TO WHOM IT MAY CONCERN:</div>
+
+                    <div class="body-text">
+                        This is to certify that <span class="field-value" style="min-width: 180px;">${patientFullName}</span>, 
+                        <span class="field-value" style="min-width: 40px;">${patient?.age || '___'}</span> years old, 
+                        <span class="field-value" style="min-width: 60px;">${patient?.sex || '___'}</span>, a resident of 
+                        <span class="field-value" style="min-width: 220px;">${patient?.address || '___________________________'}</span>, 
+                        was examined and treated at the Municipal Health Office on 
+                        <span class="field-value">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span> 
+                        with the following diagnosis:
+                    </div>
+
+                    <div class="section">
+                        <span class="section-label">Diagnosis:</span>
+                        <div class="section-content">${formData.diagnosis || ''}</div>
+                    </div>
+
+                    <div class="section">
+                        <span class="section-label">Remarks / Recommendation:</span>
+                        <div class="section-content">${formData.medicationAndTreatment || ''}</div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="doctor-block">
+                            <div class="sig-line"></div>
+                            <div class="doc-name">${doctorName}, MD</div>
+                            <div class="doc-creds">
+                                License No: ${formData.rxLicNo || '________________'}<br>
+                                PTR No: ${formData.rxPtrNo || '________________'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+        const iframeDoc = iframe.contentWindow?.document;
+        if (!iframeDoc) return;
+        iframeDoc.open();
+        iframeDoc.write(html);
+        iframeDoc.close();
+
+        setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => document.body.removeChild(iframe), 1000);
+        }, 500);
     };
 
     const handleSaveLabRequest = async () => {
@@ -631,37 +997,234 @@ export function ConsultationPage({
     );
 
     const renderTab4 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">IV. Follow-up Visit</h3>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
+                {followUpDone && (
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">
+                        ✓ Follow-up Completed
+                    </span>
+                )}
+            </div>
+
+            {!consultationSaved && (
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                    <span className="text-lg leading-none">ℹ️</span>
+                    <span>No consultation saved yet — follow-up details will be saved when you save the consultation on Tab 5.</span>
+                </div>
+            )}
+
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Visit Information</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div><label className={labelCls}>Visit Date</label><input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} /></div>
-                    <div><label className={labelCls}>Visit Time</label><input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} /></div>
-                    <div><label className={labelCls}>Mode of Transaction</label><select name="followUpModeOfTx" value={formData.followUpModeOfTx} onChange={handleChange} className={inputCls}><option value="Walk-in">Walk-in</option><option value="Teleconsult">Teleconsult</option><option value="Referral">Referral</option></select></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className={labelCls}>Visit Date</label>
+                        <input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Visit Time</label>
+                        <input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Mode of Transaction</label>
+                        <select name="followUpModeOfTx" value={formData.followUpModeOfTx} onChange={handleChange} className={inputCls}>
+                            <option value="Walk-in">Walk-in</option>
+                            <option value="Teleconsult">Teleconsult</option>
+                            <option value="Referral">Referral</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>Mode of Transfer</label>
+                        <select name="followUpModeOfTransfer" value={formData.followUpModeOfTransfer} onChange={handleChange} className={inputCls}>
+                            <option value="Ambulatory">Ambulatory</option>
+                            <option value="Wheelchair">Wheelchair</option>
+                            <option value="Stretcher">Stretcher</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>Blood Type</label>
+                        <input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>General Survey</label>
+                        <input type="text" name="followUpGenSurvey" value={formData.followUpGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious, coherent..." />
+                    </div>
                 </div>
             </div>
-            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(3)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button><button onClick={() => setActiveTab(5)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Clinical Notes →</button></div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Clinical</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className={labelCls}>Chief Complaint</label>
+                        <textarea name="followUpChiefComplaint" value={formData.followUpChiefComplaint} onChange={handleChange} rows={3} className={textareaCls} placeholder="Primary reason for visit..." />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Diagnosis</label>
+                        <textarea name="followUpDiagnosis" value={formData.followUpDiagnosis} onChange={handleChange} rows={3} className={textareaCls} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className={labelCls}>History of Present Illness <span className="text-slate-400 font-normal normal-case ml-1">(Optional)</span></label>
+                        <textarea name="followUpHpi" value={formData.followUpHpi} onChange={handleChange} rows={3} className={textareaCls} />
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><label className={labelCls}>BP (mmHg)</label><input type="text" name="followUpBp" value={formData.followUpBp} onChange={handleChange} className={inputCls} placeholder="120/80" /></div>
+                    <div><label className={labelCls}>Heart Rate (bpm)</label><input type="text" name="followUpHr" value={formData.followUpHr} onChange={handleChange} className={inputCls} placeholder="72" /></div>
+                    <div><label className={labelCls}>Respiratory Rate (cpm)</label><input type="text" name="followUpRr" value={formData.followUpRr} onChange={handleChange} className={inputCls} placeholder="16" /></div>
+                    <div><label className={labelCls}>Temperature (°C)</label><input type="text" name="followUpTemp" value={formData.followUpTemp} onChange={handleChange} className={inputCls} placeholder="36.5" /></div>
+                    <div><label className={labelCls}>O₂ Saturation (%)</label><input type="text" name="followUpO2" value={formData.followUpO2} onChange={handleChange} className={inputCls} placeholder="98" /></div>
+                    <div><label className={labelCls}>MUAC (cm)</label><input type="text" name="followUpMuac" value={formData.followUpMuac} onChange={handleChange} className={inputCls} placeholder="28.5" /></div>
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Anthropometrics</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><label className={labelCls}>Weight (kg)</label><input type="text" name="followUpWeight" value={formData.followUpWeight} onChange={handleChange} className={inputCls} placeholder="65" /></div>
+                    <div><label className={labelCls}>Height (cm)</label><input type="text" name="followUpHeight" value={formData.followUpHeight} onChange={handleChange} className={inputCls} placeholder="165" /></div>
+                    <div>
+                        <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto)</span></label>
+                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-50 text-slate-500 cursor-default`} placeholder="—" />
+                        {followUpBmiInfo && <p className={`text-xs mt-1.5 font-semibold ${followUpBmiInfo.color}`}>{followUpBmiInfo.status}</p>}
+                    </div>
+                    <div><label className={labelCls}>Visual Acuity — Left</label><input type="text" name="followUpVaL" value={formData.followUpVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                    <div><label className={labelCls}>Visual Acuity — Right</label><input type="text" name="followUpVaR" value={formData.followUpVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-6">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Treatment &amp; Results</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className={labelCls}>Medication / Treatment <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span></label>
+                        <textarea rows={5} name="managementTreatment" value={formData.managementTreatment} onChange={handleChange} className={textareaCls} placeholder="Medications prescribed, treatment plan..." />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span></label>
+                        <textarea rows={5} name="followUpLabResults" value={formData.followUpLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
+                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-end">
+                <div className="w-full md:w-80">
+                    <label className={labelCls}>Provider Signature</label>
+                    <div className="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl h-36 mb-2 relative overflow-hidden cursor-crosshair">
+                        <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-sm pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
+                        <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
+                    </div>
+                    <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
+                </div>
+            </div>
+
+            {/* ─── ACTION BUTTONS (Contained Layout) ─── */}
+            <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
+                <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">
+                    ← Back
+                </button>
+                
+                {/* Right side wrapper: Distinct Action Container Box */}
+                <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm">
+                    <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">Follow-up Actions</p>
+                    
+                    {/* The Follow-up Done button is permanently visible and styled cleanly */}
+                    {!followUpDone ? (
+                        <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full bg-white hover:bg-green-50 text-green-700 py-3 px-6 rounded-xl font-bold transition-colors border border-green-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
+                            {loading ? 'Processing...' : '✓ Mark Follow-up as Done'}
+                        </button>
+                    ) : (
+                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default">
+                            ✓ Follow-up Completed
+                        </div>
+                    )}
+                    
+                    <button onClick={() => setActiveTab(5)} className={`w-full text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
+                        Next: Clinical Notes →
+                    </button>
+                </div>
+            </div>
         </div>
     );
 
-    const renderTab5 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Doctor's Clinical Notes</h3>
-            <div><label className={labelCls}>Chief Complaints</label><textarea name="chiefComplaints" value={formData.chiefComplaints} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} /></div>
-            <div><label className={labelCls}>Diagnosis</label><textarea name="diagnosis" value={formData.diagnosis} onChange={handleChange} className={`${textareaCls} min-h-[100px]`} /></div>
-            <div><label className={labelCls}>History of Present Illnesses</label><textarea name="hpi" value={formData.hpi} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} /></div>
-            <div className="flex justify-between pt-4">
-                <button onClick={() => setActiveTab(4)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button>
-                <div className="flex gap-3">
-                    <button onClick={handleSaveConsultation} className="bg-white border-blue-300 text-blue-700 py-3 px-6 rounded-lg border font-semibold">💾 Save Consultation</button>
-                    <button onClick={() => setActiveTab(7)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Lab Request →</button>
+
+const renderTab5 = () => (
+        <div className={cardCls}>
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Clinical Notes & Certification</h3>            </div>
+            
+            <div className="space-y-6">
+                {/* Updated to focus only on Certification requirements */}
+                <div>
+                    <label className={labelCls}>Diagnosis: <span className="text-rose-500">*</span></label>
+                    <textarea 
+                        name="diagnosis" 
+                        value={formData.diagnosis} 
+                        onChange={handleChange} 
+                        className={`${textareaCls} min-h-[120px] border-l-4 border-l-blue-500`} 
+                        placeholder="Enter final diagnosis for the Medical Certificate..." 
+                    />
+                </div>
+                <div>
+                    <label className={labelCls}>Remarks / Recommendation:</label>
+                    <textarea 
+                        name="medicationAndTreatment" 
+                        value={formData.medicationAndTreatment} 
+                        onChange={handleChange} 
+                        className={`${textareaCls} min-h-[120px]`} 
+                        placeholder="Enter instructions, rest period, or follow-up recommendations..." 
+                    />
+                </div>
+            </div>
+
+            {/* Doctor License field - Needed for the Certificate footer */}
+            <div className="pt-6 mt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label className={labelCls}>Doctor License No. (PRC)</label>
+                    <input 
+                        type="text" 
+                        name="rxLicNo" 
+                        value={formData.rxLicNo} 
+                        onChange={handleChange} 
+                        className={inputCls} 
+                        placeholder="Required for signature block" 
+                    />
+                </div>
+            </div>
+            
+            {/* ─── ACTION BUTTONS ─── */}
+            <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
+                <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">
+                    ← Back
+                </button>
+                
+                <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto">
+                    {/* Action Container for Printing */}
+                    <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
+                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">
+                            📄 Print Medical Certificate
+                        </button>
+                    </div>
+
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">
+                            💾 Save Draft
+                        </button>
+                        <button onClick={() => setActiveTab(6)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
+                            Next Tab →
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 
-    const renderTab7 = () => (
+    const renderTab6 = () => (
         <div className={cardCls}>
             <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
                 <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VI. Laboratory Request</h3>
@@ -740,23 +1303,75 @@ export function ConsultationPage({
         </div>
     );
 
-    const renderTab8 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
-            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VII. E-Prescription</h3>
-            <div className="space-y-3">
+const renderTab7 = () => (
+        <div className={cardCls}>
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VII. E-Prescription</h3>
+            </div>
+            
+            <div className="space-y-4 mb-6">
                 {medications.map((med, i) => (
-                    <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <div className="sm:col-span-2 md:col-span-2"><label className={labelCls}>Medication Name</label><input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} /></div>
-                            <div><label className={labelCls}>Dosage</label><input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} /></div>
+                    <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all hover:border-blue-200">
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {medications.length > 1 && <button onClick={() => handleRemoveMed(i)} className="text-xs bg-white border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg font-bold transition-colors">Remove</button>}
+                        </div>
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Medication {i + 1}</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="sm:col-span-2 md:col-span-2">
+                                <label className={labelCls}>Medication Name</label>
+                                <input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} placeholder="e.g. Amoxicillin 500mg" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Sig / Dosage</label>
+                                <input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 1 tab 3x a day" />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Quantity</label>
+                                <input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" />
+                            </div>
                         </div>
                     </div>
                 ))}
             </div>
-            <button onClick={handleAddMed} className="text-sm font-semibold text-blue-600">+ Add Another Medication</button>
-            <div className="flex justify-between pt-4">
-                <button onClick={() => setActiveTab(7)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button>
-                <button onClick={handleSavePrescription} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>💊 Authorize & Send to Pharmacy</button>
+            
+            <button onClick={handleAddMed} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-sm font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all mb-8">
+                + Add Another Medication
+            </button>
+
+            {/* Doctor Info Fields (Required for legal printout) */}
+            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                    <label className={labelCls}>License No. (PRC)</label>
+                    <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="e.g. 0123456" />
+                </div>
+                <div>
+                    <label className={labelCls}>PTR No.</label>
+                    <input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="e.g. 1234567" />
+                </div>
+            </div>
+
+            {/* ─── ACTION BUTTONS (Stacked & Separated Layout) ─── */}
+            <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
+                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">
+                    ← Back
+                </button>
+                
+                {/* Right side wrapper */}
+                <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
+                    
+                    {/* Print Button in its own subtle container */}
+                    <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
+                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">
+                            🖨️ Print Physical Copy
+                        </button>
+                    </div>
+                    
+                    {/* Primary Submit Button standing alone */}
+                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
+                        💊 Authorize & Send to Pharmacy
+                    </button>
+
+                </div>
             </div>
         </div>
     );
@@ -764,7 +1379,7 @@ export function ConsultationPage({
     const tabs = [
         { id: 1, label: "1. Histories" }, { id: 2, label: "2. OBGyne" }, { id: 3, label: "3. Assessment" },
         { id: 4, label: "4. Follow-up" }, { id: 5, label: "5. Clinical Notes" },
-        { id: 7, label: "6. Lab Request" }, { id: 8, label: ". E-Prescription" },
+        { id: 7, label: "6. Lab Request" }, { id: 8, label: "7. E-Prescription" },
     ];
 
     return (
@@ -802,8 +1417,8 @@ export function ConsultationPage({
                     {activeTab === 3 && renderTab3()}
                     {activeTab === 4 && renderTab4()}
                     {activeTab === 5 && renderTab5()}
-                    {activeTab === 7 && renderTab7()}
-                    {activeTab === 8 && renderTab8()}
+                    {activeTab === 7 && renderTab6()}
+                    {activeTab === 8 && renderTab7()}
                 </div>
             </div>
 
