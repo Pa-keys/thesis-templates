@@ -113,42 +113,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 supabase
                     .from('consultation')
                     .select(`
-                        consultation_id,
-                        chief_complaints,
-                        diagnosis,
-                        hpi,
-                        assessment,
-                        plan,
-                        family_history,
-                        immunization_history,
-                        smoking_status,
-                        smoking_sticks_per_day,
-                        smoking_years,
-                        drinking_status,
-                        drinking_frequency,
-                        drinking_years,
-                        menarche_age,
-                        sexual_onset_age,
-                        is_menopause,
-                        menopause_age,
-                        lmp,
-                        interval_cycle,
-                        period_duration,
-                        pads_per_day,
-                        birth_control_method,
-                        gravidity,
-                        parity,
-                        delivery_type,
-                        full_term_count,
-                        premature_count,
-                        abortion_count,
-                        living_children_count,
-                        pre_eclampsia,
-                        medication_treatment,
-                        management_treatment,
-                        past_med_surge_history,
-                        attending_provider,
-                        initial_consultation_id
+                        consultation_id, chief_complaints, diagnosis, hpi, assessment, plan, family_history, immunization_history, smoking_status, smoking_sticks_per_day, smoking_years, drinking_status, drinking_frequency, drinking_years, menarche_age, sexual_onset_age, is_menopause, menopause_age, lmp, interval_cycle, period_duration, pads_per_day, birth_control_method, gravidity, parity, delivery_type, full_term_count, premature_count, abortion_count, living_children_count, pre_eclampsia, medication_treatment, management_treatment, past_med_surge_history, attending_provider, initial_consultation_id
                     `)
                     .eq('patient_id', numericId)
                     .order('consultation_id', { ascending: false }),
@@ -157,37 +122,16 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 supabase
                     .from('initial_consultation')
                     .select(`
-                        initialconsultation_id,
-                        consultation_date,
-                        consultation_time,
-                        mode_of_transaction,
-                        referred_by,
-                        mode_of_transfer,
-                        chief_complaint,
-                        diagnosis
+                        initialconsultation_id, consultation_date, consultation_time, mode_of_transaction, referred_by, mode_of_transfer, chief_complaint, diagnosis
                     `)
                     .eq('patient_id', numericId)
                     .order('initialconsultation_id', { ascending: false }),
 
-                // Fetch ALL vital_sign columns (linked via initial_consultation_id)
+                // Fetch ALL vital_sign columns
                 supabase
                     .from('vital_sign')
                     .select(`
-                        vitals_id,
-                        bp,
-                        heart_rate,
-                        respiratory_rate,
-                        temperature,
-                        o2_saturation,
-                        weight,
-                        height,
-                        muac,
-                        nutritional_status,
-                        bmi,
-                        visual_acuity_left,
-                        visual_acuity_right,
-                        general_survey,
-                        initial_consultation_id
+                        vitals_id, bp, heart_rate, respiratory_rate, temperature, o2_saturation, weight, height, muac, nutritional_status, bmi, visual_acuity_left, visual_acuity_right, general_survey, initial_consultation_id
                     `)
                     .eq('patient_id', numericId)
                     .order('vitals_id', { ascending: false }),
@@ -195,7 +139,6 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
 
             if (cRes.data) setConsultations(cRes.data as ConsultationRecord[]);
 
-            // Join vitals into each initial consultation record by initial_consultation_id
             if (iRes.data) {
                 const vitalsMap = new Map<number, VitalSignRecord>();
                 if (vRes.data) {
@@ -230,10 +173,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
             onClick={() => setActiveSection(key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
         >
-            {label}{' '}
-            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>
-                {count}
-            </span>
+            {label} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
         </button>
     );
 
@@ -246,9 +186,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 onClick={() => toggle(id)}
                 className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
             >
-                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>
-                    {badge}
-                </span>
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>{badge}</span>
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-slate-800 truncate">{title}</div>
                     {subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
@@ -256,15 +194,10 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
                 <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
             </button>
-            {expandedId === id && (
-                <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">
-                    {children}
-                </div>
-            )}
+            {expandedId === id && <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">{children}</div>}
         </div>
     );
 
-    // Only renders when value is truthy
     const Field = ({ label, value }: { label: string; value?: string | number | null }) =>
         value ? (
             <div>
@@ -273,11 +206,8 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
             </div>
         ) : null;
 
-    // Sub-section divider inside expanded cards
     const SectionHeader = ({ label }: { label: string }) => (
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 pb-1 border-t border-slate-200">
-            {label}
-        </div>
+        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 pb-1 border-t border-slate-200">{label}</div>
     );
 
     const totalCount = consultations.length + initialConsults.length;
@@ -286,7 +216,6 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
         <>
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
-
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
                     <div>
@@ -306,28 +235,14 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 {/* Scrollable Records List */}
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-3">
-                            <span className="text-sm text-slate-400">Loading records...</span>
-                        </div>
+                        <div className="flex flex-col items-center justify-center h-40 gap-3"><span className="text-sm text-slate-400">Loading records...</span></div>
                     ) : totalCount === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-2">
-                            <span className="text-3xl">📭</span>
-                            <span className="text-sm text-slate-400">No history records found.</span>
-                        </div>
+                        <div className="flex flex-col items-center justify-center h-40 gap-2"><span className="text-3xl">📭</span><span className="text-sm text-slate-400">No history records found.</span></div>
                     ) : (
                         <>
-                            {/* ── INITIAL CONSULTATIONS with joined Vital Signs ── */}
+                            {/* Initial Consultations */}
                             {(activeSection === 'all' || activeSection === 'initial') && initialConsults.map((rec) => (
-                                <RecordCard
-                                    key={`initial-${rec.initialconsultation_id}`}
-                                    id={`initial-${rec.initialconsultation_id}`}
-                                    badge="Initial"
-                                    badgeColor="bg-purple-100 text-purple-700"
-                                    date={formatDate(rec.consultation_date)}
-                                    title={rec.chief_complaint || 'Initial Consultation'}
-                                    subtitle={rec.diagnosis}
-                                >
-                                    {/* Visit Info */}
+                                <RecordCard key={`initial-${rec.initialconsultation_id}`} id={`initial-${rec.initialconsultation_id}`} badge="Initial" badgeColor="bg-purple-100 text-purple-700" date={formatDate(rec.consultation_date)} title={rec.chief_complaint || 'Initial Consultation'} subtitle={rec.diagnosis}>
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                         <Field label="Date" value={formatDate(rec.consultation_date)} />
                                         <Field label="Time" value={rec.consultation_time} />
@@ -337,8 +252,6 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                         <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
                                         <Field label="Referred By" value={rec.referred_by} />
                                     </div>
-
-                                    {/* Vital Signs — only shown if a vitals record was joined */}
                                     {rec.vitals && (
                                         <>
                                             <SectionHeader label="Vital Signs" />
@@ -350,7 +263,6 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                                 <Field label="O₂ Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
                                                 <Field label="MUAC" value={rec.vitals.muac != null ? `${rec.vitals.muac} cm` : null} />
                                             </div>
-
                                             <SectionHeader label="Anthropometrics" />
                                             <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                                                 <Field label="Weight" value={rec.vitals.weight != null ? `${rec.vitals.weight} kg` : null} />
@@ -360,27 +272,14 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                                 <Field label="VA Left" value={rec.vitals.visual_acuity_left} />
                                                 <Field label="VA Right" value={rec.vitals.visual_acuity_right} />
                                             </div>
-
-                                            {rec.vitals.general_survey && (
-                                                <Field label="General Survey" value={rec.vitals.general_survey} />
-                                            )}
+                                            {rec.vitals.general_survey && <Field label="General Survey" value={rec.vitals.general_survey} />}
                                         </>
                                     )}
                                 </RecordCard>
                             ))}
-
-                            {/* ── FOLLOW-UP CONSULTATIONS — all fields ── */}
+                            {/* Follow-up Consultations */}
                             {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
-                                <RecordCard
-                                    key={`consult-${rec.consultation_id}`}
-                                    id={`consult-${rec.consultation_id}`}
-                                    badge="Consult"
-                                    badgeColor="bg-blue-100 text-blue-700"
-                                    date={`#${rec.consultation_id}`}
-                                    title={rec.chief_complaints || `Consultation #${rec.consultation_id}`}
-                                    subtitle={rec.diagnosis}
-                                >
-                                    {/* Clinical */}
+                                <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
                                     <SectionHeader label="Clinical" />
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                         <Field label="Chief Complaints" value={rec.chief_complaints} />
@@ -390,8 +289,6 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                         <Field label="Plan" value={rec.plan} />
                                         <Field label="Attending Provider" value={rec.attending_provider} />
                                     </div>
-
-                                    {/* Treatment */}
                                     {(rec.medication_treatment || rec.management_treatment || rec.past_med_surge_history) && (
                                         <>
                                             <SectionHeader label="Treatment & History" />
@@ -402,62 +299,30 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                             </div>
                                         </>
                                     )}
-
-                                    {/* Social History */}
                                     {(rec.family_history || rec.immunization_history || rec.smoking_status || rec.drinking_status) && (
                                         <>
                                             <SectionHeader label="Social & Family History" />
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                 <Field label="Family History" value={rec.family_history} />
                                                 <Field label="Immunization History" value={rec.immunization_history} />
-                                                <Field
-                                                    label="Smoking"
-                                                    value={
-                                                        rec.smoking_status === 'Yes'
-                                                            ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs`
-                                                            : rec.smoking_status
-                                                    }
-                                                />
-                                                <Field
-                                                    label="Drinking"
-                                                    value={
-                                                        rec.drinking_status === 'Yes'
-                                                            ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs`
-                                                            : rec.drinking_status
-                                                    }
-                                                />
+                                                <Field label="Smoking" value={rec.smoking_status === 'Yes' ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs` : rec.smoking_status} />
+                                                <Field label="Drinking" value={rec.drinking_status === 'Yes' ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs` : rec.drinking_status} />
                                             </div>
                                         </>
                                     )}
-
-                                    {/* OBGyne */}
                                     {(rec.menarche_age != null || rec.gravidity != null || rec.parity != null || rec.lmp || rec.birth_control_method) && (
                                         <>
                                             <SectionHeader label="OBGyne & Pregnancy" />
                                             <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                                                 <Field label="Menarche (y/o)" value={rec.menarche_age} />
                                                 <Field label="Sexual Onset (y/o)" value={rec.sexual_onset_age} />
-                                                <Field
-                                                    label="Menopause"
-                                                    value={
-                                                        rec.is_menopause === 'Yes'
-                                                            ? `Yes — age ${rec.menopause_age ?? '?'}`
-                                                            : rec.is_menopause
-                                                    }
-                                                />
+                                                <Field label="Menopause" value={rec.is_menopause === 'Yes' ? `Yes — age ${rec.menopause_age ?? '?'}` : rec.is_menopause} />
                                                 <Field label="LMP" value={rec.lmp ? formatDate(rec.lmp) : null} />
                                                 <Field label="Interval Cycle" value={rec.interval_cycle ? `${rec.interval_cycle} days` : null} />
                                                 <Field label="Period Duration" value={rec.period_duration ? `${rec.period_duration} days` : null} />
                                                 <Field label="Pads / Day" value={rec.pads_per_day} />
                                                 <Field label="Birth Control" value={rec.birth_control_method} />
-                                                <Field
-                                                    label="G / P"
-                                                    value={
-                                                        rec.gravidity != null || rec.parity != null
-                                                            ? `G${rec.gravidity ?? '?'} P${rec.parity ?? '?'}`
-                                                            : null
-                                                    }
-                                                />
+                                                <Field label="G / P" value={rec.gravidity != null || rec.parity != null ? `G${rec.gravidity ?? '?'} P${rec.parity ?? '?'}` : null} />
                                                 <Field label="Delivery Type" value={rec.delivery_type} />
                                                 <Field label="Full Term" value={rec.full_term_count} />
                                                 <Field label="Premature" value={rec.premature_count} />
@@ -599,14 +464,32 @@ export function ConsultationPage({
         });
     }, [patient?.id]);
 
-    useEffect(() => {
-        if (!patient?.id) return;
-        supabase.from('lab_result').select('findings').eq('patient_id', patient.id).order('labresult_id', { ascending: false }).limit(1).maybeSingle()
-            .then(({ data, error }) => {
-                if (error) { console.error('Failed to fetch lab findings:', error); return; }
-                if (data?.findings) setFormData(prev => ({ ...prev, followUpLabResults: data.findings }));
-            });
-    }, [patient?.id]);
+   useEffect(() => {
+    // Wait until both the patient AND the specific consultation record are loaded
+    if (!patient?.id || !consultationId) return;
+
+    supabase
+        .from('lab_result')
+        .select('findings')
+        .eq('patient_id', patient.id)
+        .eq('consultation_id', consultationId) // <--- THE FIX: Scope to the current consultation
+        .order('labresult_id', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data, error }) => {
+            if (error) { 
+                console.error('Failed to fetch lab findings:', error); 
+                return; 
+            }
+            
+            // Update the form data. If there are no findings for THIS consultation yet, 
+            // ensure the field is cleared out so old data doesn't bleed over.
+            setFormData(prev => ({ 
+                ...prev, 
+                followUpLabResults: data?.findings || '' 
+            }));
+        });
+}, [patient?.id, consultationId]); // <--- Update dependency array
 
     useEffect(() => {
         if (!patient?.id) return;
@@ -967,6 +850,7 @@ export function ConsultationPage({
     // ─── UI Variables ─────────────────────────────────────────────────────────
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
+    const isMale = patient?.sex?.toLowerCase() === 'male';
     const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-slate-800";
     const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2";
     const textareaCls = "w-full bg-white border border-slate-200 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-y";
@@ -1038,7 +922,7 @@ export function ConsultationPage({
                     </div>
                 </div>
             </div>
-            <div className="flex justify-end pt-4"><button onClick={() => setActiveTab(2)} className={`w-full md:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>Next: OBGyne &amp; Pregnancy →</button></div>
+            <div className="flex justify-end pt-4"><button onClick={() => setActiveTab(isMale ? 3 : 2)} className={`w-full md:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>{isMale ? 'Next: Assessment →' : 'Next: OBGyne & Pregnancy →'}</button></div>
         </div>
     );
 
@@ -1092,7 +976,7 @@ export function ConsultationPage({
         <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">III. Clinical Assessment</h3>
             <div><label className={labelCls}>Medication and Treatment</label><textarea name="medicationAndTreatment" value={formData.medicationAndTreatment} onChange={handleChange} rows={7} className={textareaCls} /></div>
-            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(2)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button><button onClick={() => setActiveTab(4)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Follow-up →</button></div>
+            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(isMale ? 1 : 2)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button><button onClick={() => setActiveTab(4)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Follow-up →</button></div>
         </div>
     );
 
@@ -1100,9 +984,7 @@ export function ConsultationPage({
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
-                {followUpDone && (
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">✓ Follow-up Completed</span>
-                )}
+                
             </div>
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
@@ -1233,8 +1115,8 @@ export function ConsultationPage({
                         <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">📄 Print Medical Certificate</button>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Draft</button>
-                        <button onClick={() => setActiveTab(6)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next Tab →</button>
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Consultation</button>
+                        <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next Tab →</button>
                     </div>
                 </div>
             </div>
@@ -1343,9 +1225,13 @@ export function ConsultationPage({
     );
 
     const tabs = [
-        { id: 1, label: "1. Histories" }, { id: 2, label: "2. OBGyne" }, { id: 3, label: "3. Assessment" },
-        { id: 4, label: "4. Follow-up" }, { id: 5, label: "5. Clinical Notes" },
-        { id: 7, label: "6. Lab Request" }, { id: 8, label: "7. E-Prescription" },
+        { id: 1, label: "1. Histories" },
+        { id: 2, label: "2. OBGyne", disabled: isMale },
+        { id: 3, label: "3. Assessment" },
+        { id: 4, label: "4. Follow-up" },
+        { id: 5, label: "5. Clinical Notes" },
+        { id: 7, label: "6. Lab Request" },
+        { id: 8, label: "7. E-Prescription" },
     ];
 
     return (
@@ -1372,7 +1258,20 @@ export function ConsultationPage({
                 {/* Tabs Row */}
                 <div className="flex gap-1 mb-8 border-b border-slate-200 overflow-x-auto whitespace-nowrap w-full scrollbar-hide">
                     {tabs.map(tab => (
-                        <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'}`}>{tab.label}</button>
+                        <button
+                            key={tab.id}
+                            onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                            disabled={tab.disabled}
+                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0
+                                ${tab.disabled
+                                    ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through'
+                                    : activeTab === tab.id
+                                        ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]'
+                                        : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
                     ))}
                 </div>
 

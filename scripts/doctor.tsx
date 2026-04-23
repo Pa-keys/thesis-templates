@@ -80,6 +80,14 @@ const DoctorDashboard = () => {
     const [trendFilter, setTrendFilter] = useState<FilterPeriod>('week');
     const [morbFilter, setMorbFilter] = useState<FilterPeriod>('week');
 
+    // ─── Filter Refs (prevents stale closures in realtime callbacks) ───
+    const trendFilterRef = useRef<FilterPeriod>('week');
+    const morbFilterRef = useRef<FilterPeriod>('week');
+
+    // Follow-ups Modal States
+    const [showFollowUpsModal, setShowFollowUpsModal] = useState(false);
+    const [allFollowUps, setAllFollowUps] = useState<any[]>([]);
+
     const trendChartRef = useRef<HTMLCanvasElement>(null);
     const morbChartRef = useRef<HTMLCanvasElement>(null);
     const trendChartInstance = useRef<Chart | null>(null);
@@ -101,11 +109,23 @@ const DoctorDashboard = () => {
         return `${hour}:${minute} ${ampm}`;
     };
 
+    // ─── Load all follow-ups for modal ───
+    const loadAllFollowUps = useCallback(async () => {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+        const { data } = await supabase
+            .from('follow_up')
+            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
+            .neq('follow_up_status', 'done')
+            .gte('visit_date', today)
+            .order('visit_date', { ascending: true });
+        setAllFollowUps(data || []);
+        setShowFollowUpsModal(true);
+    }, []);
+
     // ─── Load trend data — counts COMPLETED consultations (from consultation table) ───
     const loadTrendData = useCallback(async (period: FilterPeriod) => {
         const { from, to } = getDateRange(period);
 
-        // Fetch completed consultations joined with initial_consultation date
         const { data: tData } = await supabase
             .from('consultation')
             .select('initial_consultation!inner(consultation_date)')
@@ -165,7 +185,7 @@ const DoctorDashboard = () => {
         }
     }, []);
 
-    // ─── Load morbidity data — diagnosis from initial_consultation filtered by date ───
+    // ─── Load morbidity data ───
     const loadMorbidityData = useCallback(async (period: FilterPeriod) => {
         const { from, to } = getDateRange(period);
 
@@ -213,7 +233,7 @@ const DoctorDashboard = () => {
                 .eq('initial_consultation.consultation_date', today);
             setVisitsToday(completedToday?.length || 0);
 
-            // 3. Patient Queue — ordered by insertion (first triaged = first in line)
+            // 3. Patient Queue
             const { data: completedConsults } = await supabase
                 .from('consultation')
                 .select('initial_consultation_id')
@@ -240,7 +260,7 @@ const DoctorDashboard = () => {
             console.log("Queue re-fetched successfully. Queue length:", qData?.length);
             setQueue(qData || []);
 
-            // 4. Upcoming Follow-ups
+            // 4. Upcoming Follow-ups (preview — 5 only)
             const { data: fData } = await supabase
                 .from('follow_up')
                 .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
@@ -255,7 +275,7 @@ const DoctorDashboard = () => {
         }
     }, []);
 
-    // Initial load
+    // ─── Initial load + Realtime Subscriptions ───
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
@@ -281,27 +301,37 @@ const DoctorDashboard = () => {
             }
 
             await loadDashboardData();
-            await loadTrendData(trendFilter);
-            await loadMorbidityData(morbFilter);
+            await loadTrendData(trendFilterRef.current);
+            await loadMorbidityData(morbFilterRef.current);
         };
 
         fetchData();
 
-        // ─── ROBUST REALTIME SUBSCRIPTION ───
+        // ─── REALTIME SUBSCRIPTIONS ───
+        // Uses refs instead of state values to avoid stale closures.
+        // All 4 tables that affect the dashboard are subscribed here.
         console.log("Initializing Supabase Realtime...");
+
         const queueSubscription = supabase
             .channel('doctor-dashboard-queue')
+
+            // initial_consultation: affects queue, trend chart, and morbidity chart
             .on('postgres_changes', { event: '*', schema: 'public', table: 'initial_consultation' }, () => {
                 console.log('REALTIME: initial_consultation changed');
                 loadDashboardData();
-                loadTrendData(trendFilter);
-                loadMorbidityData(morbFilter);
+                loadTrendData(trendFilterRef.current);
+                loadMorbidityData(morbFilterRef.current);
             })
+
+            // consultation: affects visits today, trend chart, and morbidity chart
             .on('postgres_changes', { event: '*', schema: 'public', table: 'consultation' }, () => {
                 console.log('REALTIME: consultation changed');
                 loadDashboardData();
-                loadTrendData(trendFilter);
+                loadTrendData(trendFilterRef.current);
+                loadMorbidityData(morbFilterRef.current);
             })
+
+            // patients: affects total patient count and queue names
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patients' }, () => {
                 console.log('REALTIME: patient added');
                 loadDashboardData();
@@ -310,10 +340,14 @@ const DoctorDashboard = () => {
                 console.log('REALTIME: patient updated');
                 loadDashboardData();
             })
+
+            // follow_up: affects upcoming follow-ups list
             .on('postgres_changes', { event: '*', schema: 'public', table: 'follow_up' }, () => {
                 console.log('REALTIME: follow_up changed');
                 loadDashboardData();
+                loadMorbidityData(morbFilterRef.current);
             })
+
             .subscribe((status) => {
                 console.log("Realtime Subscription Status:", status);
             });
@@ -325,15 +359,21 @@ const DoctorDashboard = () => {
         };
     }, []);
 
-    // Re-fetch when filters change
-    useEffect(() => { loadTrendData(trendFilter); }, [trendFilter]);
-    useEffect(() => { loadMorbidityData(morbFilter); }, [morbFilter]);
+    // ─── Keep refs in sync + reload charts when filters change ───
+    useEffect(() => {
+        trendFilterRef.current = trendFilter;
+        loadTrendData(trendFilter);
+    }, [trendFilter]);
+
+    useEffect(() => {
+        morbFilterRef.current = morbFilter;
+        loadMorbidityData(morbFilter);
+    }, [morbFilter]);
 
     // Chart Rendering
     useEffect(() => {
         if (activePage !== 'dashboard') return;
 
-        // Visit Trends Chart
         if (trendChartRef.current && trendData.length > 0) {
             if (trendChartInstance.current) trendChartInstance.current.destroy();
 
@@ -373,7 +413,6 @@ const DoctorDashboard = () => {
             });
         }
 
-        // Morbidity Chart
         if (morbChartRef.current && morbidityData.length > 0) {
             if (morbChartInstance.current) morbChartInstance.current.destroy();
 
@@ -593,7 +632,10 @@ const DoctorDashboard = () => {
                                         )}
                                     </div>
                                     {followUps.length > 0 && (
-                                        <button onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button
+                                            onClick={loadAllFollowUps}
+                                            className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0"
+                                        >
                                             View all follow-ups →
                                         </button>
                                     )}
@@ -617,6 +659,83 @@ const DoctorDashboard = () => {
 
                 </div>
             </main>
+
+            {/* ─── All Follow-ups Modal ─── */}
+            {showFollowUpsModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowFollowUpsModal(false); }}
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
+                            <div>
+                                <h2 className="text-lg font-black text-slate-800">All Upcoming Follow-ups</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">{allFollowUps.length} pending • sorted by date</p>
+                            </div>
+                            <button
+                                onClick={() => setShowFollowUpsModal(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto">
+                            {allFollowUps.length === 0 ? (
+                                <p className="text-center text-slate-400 py-16 text-sm">No upcoming follow-ups</p>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {allFollowUps.map((f, idx) => {
+                                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+                                        const isToday = f.visit_date === today;
+                                        return (
+                                            <div
+                                                key={f.followup_id}
+                                                onClick={() => {
+                                                    setShowFollowUpsModal(false);
+                                                    handleConsultNavigate(f.patient_id);
+                                                }}
+                                                className="cursor-pointer px-6 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-black text-slate-300 w-5 text-center">{idx + 1}</span>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">
+                                                            {f.patients?.lastName}, {f.patients?.firstName}
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-400 font-medium">{f.patients?.sex} • Return Visit</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0 ml-3">
+                                                    <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ${
+                                                        isToday
+                                                            ? 'text-blue-600 bg-blue-50'
+                                                            : 'text-amber-600 bg-amber-50'
+                                                    }`}>
+                                                        {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-slate-100 shrink-0">
+                            <button
+                                onClick={() => setShowFollowUpsModal(false)}
+                                className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
