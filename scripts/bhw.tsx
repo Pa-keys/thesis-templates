@@ -16,6 +16,7 @@ interface Patient {
     bloodType: string;
     contactNumber: string;
     address: string;
+    created_at?: string; // Add this line to resolve the TypeScript error
 }
 
 const BhwDashboard = () => {
@@ -30,7 +31,7 @@ const BhwDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'dashboard', label: 'Home', icon: '🏠' },
         { id: 'records', label: 'Records', icon: '📁' },
         { id: 'new-record', label: 'New Record', icon: '➕' }
     ];
@@ -42,13 +43,14 @@ const BhwDashboard = () => {
         window.addEventListener('offline', handleOffline);
 
         const fetchData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = '/pages/login.html';
-                return;
-            }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        window.location.href = '/pages/login.html';
+        return;
+    }
 
-            const { data: profile } = await supabase
+    // 1. Fetch user profile
+    const { data: profile } = await supabase
                 .from('profiles')
                 .select('full_name')
                 .eq('id', session.user.id)
@@ -60,14 +62,18 @@ const BhwDashboard = () => {
                 setUserInitials(name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
             }
 
-            const { data, error } = await supabase
+            // 2. Fetch ALL patients for statistics calculation
+            const { data: allPatients, error: statsError } = await supabase
                 .from('patients')
-                .select('id, firstName, lastName, age, sex, bloodType, contactNumber, address')
-                .order('lastName', { ascending: true });
+                .select('id, sex, address'); // Minimal selection for performance
 
-            if (!error && data) {
-                setPatients(data as Patient[]);
+            if (!statsError && allPatients) {
+                setPatients(allPatients as Patient[]);
             }
+
+            // 3. The "Recent Intakes" section in your JSX currently uses patients.slice(0, 5).
+            // Since we now fetch all patients ordered by lastName (default), 
+            // we should fetch a separate list or sort the existing one by date.
         };
 
         fetchData();
@@ -85,7 +91,14 @@ const BhwDashboard = () => {
         withAddress: patients.filter(p => p.address && p.address.trim() !== '').length
     };
 
-    const recentPatients = patients.slice(0, 5);
+    const recentPatients = [...patients]
+    .sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA; // Newest first
+    })
+    .slice(0, 5);
+
     const filteredPatients = patients.filter(p =>
         `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
     );

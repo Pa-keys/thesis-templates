@@ -371,12 +371,14 @@ function DetailsPage() {
                                 </div>
 
                                 {/* Consent Trigger Button */}
-                                <button 
-                                    onClick={() => setShowConsent(true)}
-                                    className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-3"
-                                >
-                                    📋 Proceed to Patient Consent →
-                                </button>
+                                {role === 'midwife' && (
+                                    <button 
+                                        onClick={() => setShowConsent(true)}
+                                        className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                                    >
+                                        📋 Proceed to Patient Consent →
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

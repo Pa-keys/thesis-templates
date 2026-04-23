@@ -20,6 +20,7 @@ interface PatientForm {
     philhealthNo: string; philhealthStatus: string;
     category: string; categoryOthers: string;
     relativeName: string; relativeRelation: string; relativeAddress: string;
+    relativeContact: string; // Added field
 }
 
 interface Patient extends Omit<PatientForm, 'age'> {
@@ -39,9 +40,11 @@ const EMPTY_FORM: PatientForm = {
     philhealthNo: '', philhealthStatus: '',
     category: '', categoryOthers: '',
     relativeName: '', relativeRelation: '', relativeAddress: '',
+    relativeContact: '', // Added field
 };
 
-const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as const;
+// Added 'Unknown' option
+const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'Unknown'] as const;
 const CIVIL_STATUSES = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as const;
 const EDUCATION_LEVELS = [
     'No Formal Education', 'Elementary Level', 'Elementary Graduate',
@@ -66,7 +69,6 @@ const OUTSIDE_MALVAR = '__outside__';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Calculates age in years from an ISO date string (YYYY-MM-DD). Returns '' if invalid. */
 function calcAge(birthday: string): string {
     if (!birthday) return '';
     const dob = new Date(birthday);
@@ -78,10 +80,6 @@ function calcAge(birthday: string): string {
     return age >= 0 ? String(age) : '';
 }
 
-/**
- * Formats raw PhilHealth digits into XX-XXXXXXXXX-X pattern.
- * Accepts up to 12 digits, inserts dashes at positions 2 and 11.
- */
 function formatPhilhealth(raw: string): string {
     const digits = raw.replace(/\D/g, '').slice(0, 12);
     if (digits.length <= 2) return digits;
@@ -89,7 +87,6 @@ function formatPhilhealth(raw: string): string {
     return `${digits.slice(0, 2)}-${digits.slice(2, 11)}-${digits.slice(11)}`;
 }
 
-/** Strips all non-digit characters from a PhilHealth formatted string. */
 function philhealthDigits(formatted: string): string {
     return formatted.replace(/\D/g, '');
 }
@@ -150,7 +147,6 @@ function RadioOption({ name, value, label, checked, onChange }: {
     );
 }
 
-// ─── Inline Error Message ─────────────────────────────────────────────────────
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
     return <p className="mt-1.5 text-xs text-red-500 font-semibold flex items-center gap-1"><span>⚠</span>{message}</p>;
@@ -189,24 +185,20 @@ export function TemplatesComponent() {
         setTimeout(() => setToast(null), 4000);
     };
 
-    // ── Generic field change ──
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setForm(f => ({ ...f, [id]: value }));
-        // Clear error on change
         if (errors[id]) setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
     };
 
-    // ── Text-only fields (letters, spaces, hyphens, periods, ñ, accented chars) ──
+    // Updated to allow commas
     const handleTextOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
-        // Allow letters (including accented/Filipino chars), spaces, hyphens, apostrophes, periods
-        const filtered = value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿñÑ\s\-'.]/g, '');
+        const filtered = value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿñÑ\s\-',.]/g, '');
         setForm(f => ({ ...f, [id]: filtered }));
         if (errors[id]) setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
     };
 
-    // ── Birthday change — auto-calculate age ──
     const handleBirthday = (e: React.ChangeEvent<HTMLInputElement>) => {
         const birthday = e.target.value;
         const age = calcAge(birthday);
@@ -214,14 +206,21 @@ export function TemplatesComponent() {
         if (errors['birthday']) setErrors(prev => { const n = { ...prev }; delete n['birthday']; return n; });
     };
 
-    // ── Phone number — digits only, max 11 ──
+    // Generic phone handler for digits
     const handlePhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id } = e.target;
         const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
-        setForm(f => ({ ...f, contactNumber: digits }));
-        if (errors['contactNumber']) setErrors(prev => { const n = { ...prev }; delete n['contactNumber']; return n; });
+        setForm(f => ({ ...f, [id]: digits }));
+        if (errors[id]) setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
     };
 
-    // ── PhilHealth — auto-format with dashes, digits only ──
+    // Auto-fill logic for Nationality
+    const handleNationalityFocus = () => {
+        if (!form.nationality) {
+            setForm(f => ({ ...f, nationality: 'Filipino' }));
+        }
+    };
+
     const handlePhilhealth = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatPhilhealth(e.target.value);
         setForm(f => ({ ...f, philhealthNo: formatted }));
@@ -233,36 +232,26 @@ export function TemplatesComponent() {
         setForm(f => ({ ...f, [name]: value, ...(name === 'category' && value === '4Ps' ? { categoryOthers: '' } : {}) }));
     };
 
-    // ── Validation ──────────────────────────────────────────────────────────────
     const validate = (): boolean => {
         const newErrors: FieldErrors = {};
-
-        // Phone: must be exactly 11 digits if provided
         if (form.contactNumber && form.contactNumber.length !== 11) {
             newErrors['contactNumber'] = 'Contact number must be exactly 11 digits.';
         }
-
-        // PhilHealth: must be exactly 12 digits if provided
         if (form.philhealthNo) {
             const digits = philhealthDigits(form.philhealthNo);
             if (digits.length !== 12) {
                 newErrors['philhealthNo'] = 'PhilHealth number must be 12 digits (XX-XXXXXXXXX-X).';
             }
         }
-
-        // Birthday must not be in the future
         if (form.birthday) {
             const dob = new Date(form.birthday);
             if (dob > new Date()) {
                 newErrors['birthday'] = 'Birthday cannot be a future date.';
             }
         }
-
-        // Age sanity check
         if (form.age && (parseInt(form.age) < 0 || parseInt(form.age) > 150)) {
             newErrors['age'] = 'Please enter a valid age.';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -273,10 +262,8 @@ export function TemplatesComponent() {
             showToast('Please fix the errors before saving.', false);
             return;
         }
-
         setSaving(true);
         const payload = { ...form, age: parseInt(form.age) };
-
         try {
             if (isOnline) {
                 const { error } = await supabase.from('patients').insert([payload]);
@@ -314,7 +301,6 @@ export function TemplatesComponent() {
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">Register a new patient into the system for initial triage.</p>
                 </div>
-
                 <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
                     <span className="text-xs font-bold text-slate-700">Live • Auto-sync enabled</span>
@@ -323,15 +309,12 @@ export function TemplatesComponent() {
 
             <div className="flex flex-col lg:flex-row gap-6 items-start">
                 <form onSubmit={handleSubmit} className="flex-1 w-full min-w-0">
-
-                    {/* Section I: Patient Info */}
                     <fieldset className={fieldsetClasses}>
                         <div className={legendClasses}>
                             <span className="text-blue-600">①</span> Patient's Information Record
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-                                {/* Last Name */}
                                 <div>
                                     <label className={labelClasses}>Last Name</label>
                                     <input
@@ -342,8 +325,6 @@ export function TemplatesComponent() {
                                     />
                                     <FieldError message={errors['lastName']} />
                                 </div>
-
-                                {/* First Name */}
                                 <div>
                                     <label className={labelClasses}>First Name</label>
                                     <input
@@ -354,8 +335,6 @@ export function TemplatesComponent() {
                                     />
                                     <FieldError message={errors['firstName']} />
                                 </div>
-
-                                {/* Middle Name */}
                                 <div>
                                     <label className={labelClasses}>Middle Name</label>
                                     <input
@@ -365,8 +344,6 @@ export function TemplatesComponent() {
                                         placeholder="Santos"
                                     />
                                 </div>
-
-                                {/* Suffix */}
                                 <div>
                                     <label className={labelClasses}>Suffix</label>
                                     <input
@@ -376,12 +353,8 @@ export function TemplatesComponent() {
                                         placeholder="Jr."
                                     />
                                 </div>
-
-                                {/* Age — read-only, auto-calculated */}
                                 <div>
-                                    <label className={labelClasses}>
-                                        Age <span className="text-blue-400 font-normal normal-case tracking-normal">(auto)</span>
-                                    </label>
+                                    <label className={labelClasses}>Age <span className="text-blue-400 font-normal normal-case tracking-normal">(auto)</span></label>
                                     <input
                                         type="text" id="age" value={form.age}
                                         readOnly
@@ -391,8 +364,6 @@ export function TemplatesComponent() {
                                     />
                                     <FieldError message={errors['age']} />
                                 </div>
-
-                                {/* Sex */}
                                 <div>
                                     <label className={labelClasses}>Sex</label>
                                     <select id="sex" value={form.sex} onChange={handleChange} className={inputClasses} required>
@@ -401,8 +372,6 @@ export function TemplatesComponent() {
                                         <option value="Female">Female</option>
                                     </select>
                                 </div>
-
-                                {/* Civil Status */}
                                 <div>
                                     <label className={labelClasses}>Civil Status</label>
                                     <select id="civilStatus" value={form.civilStatus} onChange={handleChange} className={inputClasses} required>
@@ -410,8 +379,6 @@ export function TemplatesComponent() {
                                         {CIVIL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
-
-                                {/* Birthday */}
                                 <div>
                                     <label className={labelClasses}>Birthday</label>
                                     <input
@@ -423,22 +390,14 @@ export function TemplatesComponent() {
                                     />
                                     <FieldError message={errors['birthday']} />
                                 </div>
-
-                                {/* Address */}
                                 <div className="col-span-1 sm:col-span-2 md:col-span-4">
                                     <label className={labelClasses}>Address (Brgy, Malvar)</label>
                                     <AddressField value={form.address} onChange={(val) => setForm(f => ({ ...f, address: val }))} />
                                 </div>
-
-                                {/* Contact Number */}
                                 <div className="col-span-1 sm:col-span-2">
-                                    <label className={labelClasses}>
-                                        Contact # <span className="text-slate-400 font-normal normal-case tracking-normal">(11 digits)</span>
-                                    </label>
+                                    <label className={labelClasses}>Contact # <span className="text-slate-400 font-normal normal-case tracking-normal">(11 digits)</span></label>
                                     <input
-                                        type="text"
-                                        id="contactNumber"
-                                        value={form.contactNumber}
+                                        type="text" id="contactNumber" value={form.contactNumber}
                                         onChange={handlePhone}
                                         inputMode="numeric"
                                         className={errors['contactNumber'] ? inputErrorClasses : inputClasses}
@@ -452,20 +411,17 @@ export function TemplatesComponent() {
                                         </span>
                                     </div>
                                 </div>
-
-                                {/* Nationality */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Nationality</label>
                                     <input
                                         type="text" id="nationality" value={form.nationality}
                                         onChange={handleTextOnly}
+                                        onFocus={handleNationalityFocus}
                                         className={errors['nationality'] ? inputErrorClasses : inputClasses}
                                         placeholder="Filipino" required
                                     />
                                     <FieldError message={errors['nationality']} />
                                 </div>
-
-                                {/* Religion */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Religion</label>
                                     <input
@@ -475,11 +431,9 @@ export function TemplatesComponent() {
                                         placeholder="Catholic"
                                     />
                                 </div>
-
-                                {/* Birth Place */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Birth Place</label>
-                                    <input
+                                    <input 
                                         type="text" id="birthPlace" value={form.birthPlace}
                                         onChange={handleTextOnly}
                                         className={errors['birthPlace'] ? inputErrorClasses : inputClasses}
@@ -487,8 +441,6 @@ export function TemplatesComponent() {
                                     />
                                     <FieldError message={errors['birthPlace']} />
                                 </div>
-
-                                {/* Educational Attainment */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Educational Attainment</label>
                                     <select id="educationalAttain" value={form.educationalAttain} onChange={handleChange} className={inputClasses} required>
@@ -496,8 +448,6 @@ export function TemplatesComponent() {
                                         {EDUCATION_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                                     </select>
                                 </div>
-
-                                {/* Employment Status */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Employment Status</label>
                                     <select id="employmentStatus" value={form.employmentStatus} onChange={handleChange} className={inputClasses} required>
@@ -505,8 +455,6 @@ export function TemplatesComponent() {
                                         {EMPLOYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
-
-                                {/* Blood Type */}
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Blood Type</label>
                                     <select id="bloodType" value={form.bloodType} onChange={handleChange} className={inputClasses} required>
@@ -518,27 +466,21 @@ export function TemplatesComponent() {
                         </div>
                     </fieldset>
 
-                    {/* Section II: PhilHealth */}
                     <fieldset className={fieldsetClasses}>
                         <div className={legendClasses}>
                             <span className="text-pink-600">②</span> PhilHealth & Categorization
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* PhilHealth No */}
                                 <div>
-                                    <label className={labelClasses}>
-                                        PhilHealth No. <span className="text-slate-400 font-normal normal-case tracking-normal">(XX-XXXXXXXXX-X)</span>
-                                    </label>
+                                    <label className={labelClasses}>PhilHealth No. <span className="text-slate-400 font-normal normal-case tracking-normal">(XX-XXXXXXXXX-X)</span></label>
                                     <input
-                                        type="text"
-                                        id="philhealthNo"
-                                        value={form.philhealthNo}
+                                        type="text" id="philhealthNo" value={form.philhealthNo}
                                         onChange={handlePhilhealth}
                                         inputMode="numeric"
                                         className={errors['philhealthNo'] ? inputErrorClasses : inputClasses}
                                         placeholder="XX-XXXXXXXXX-X"
-                                        maxLength={14} // 12 digits + 2 dashes
+                                        maxLength={14}
                                     />
                                     <div className="flex items-center justify-between mt-1">
                                         <FieldError message={errors['philhealthNo']} />
@@ -547,8 +489,6 @@ export function TemplatesComponent() {
                                         </span>
                                     </div>
                                 </div>
-
-                                {/* PhilHealth Status */}
                                 <div>
                                     <label className={labelClasses}>Category</label>
                                     <div className="flex flex-wrap gap-3">
@@ -557,8 +497,6 @@ export function TemplatesComponent() {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Classification */}
                                 <div className="col-span-1 md:col-span-2">
                                     <label className={labelClasses}>Classification</label>
                                     <div className="flex flex-wrap items-center gap-3">
@@ -578,13 +516,12 @@ export function TemplatesComponent() {
                         </div>
                     </fieldset>
 
-                    {/* Section III: Emergency Contact */}
                     <fieldset className={fieldsetClasses}>
                         <div className={legendClasses}>
                             <span className="text-green-600">③</span> Emergency Contact
                         </div>
                         <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                                 <div>
                                     <label className={labelClasses}>Relative's Name</label>
                                     <input
@@ -601,6 +538,16 @@ export function TemplatesComponent() {
                                         onChange={handleTextOnly}
                                         className={inputClasses}
                                         placeholder="e.g. Spouse"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClasses}>Contact Number</label>
+                                    <input
+                                        type="text" id="relativeContact" value={form.relativeContact}
+                                        onChange={handlePhone}
+                                        className={inputClasses}
+                                        placeholder="09XXXXXXXXX"
+                                        maxLength={11}
                                     />
                                 </div>
                                 <div>
@@ -627,7 +574,6 @@ export function TemplatesComponent() {
                     </div>
                 </form>
 
-                {/* ── RIGHT: Recent Patients Sidebar ── */}
                 <div className="w-full lg:w-[350px] shrink-0">
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sticky top-6">
                         <div className="flex justify-between items-center mb-5">
