@@ -39,7 +39,7 @@ const MidwifeApp = () => {
     }, []);
 
     const midwifeNavItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'dashboard', label: 'Home', icon: '🏠' },
         { id: 'records', label: 'Patient Records', icon: '📁' },
         { id: 'census', label: 'Census Entry', icon: '📋' },
         { id: 'reports', label: 'OCR Reports', icon: '📊' }

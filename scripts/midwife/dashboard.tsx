@@ -9,15 +9,38 @@ interface Props {
 const Dashboard = ({ patients, censusRecords }: Props) => {
     const [recentPatients, setRecentPatients] = useState<any[]>([]);
 
-    // Fetch the 5 most recent patients from the database
+    // Fetch ALL patients ordered by newest first, joining with patient_consent
     useEffect(() => {
         const fetchRecentPatients = async () => {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('patients')
-                .select('id, firstName, lastName, sex, age, created_at, consent_signed')
-                .order('created_at', { ascending: false })
-                .limit(5);
-            if (data) setRecentPatients(data);
+                .select(`
+                    id, 
+                    firstName, 
+                    lastName, 
+                    sex, 
+                    age, 
+                    created_at,
+                    patient_consent ( consent_id )
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error("Error fetching patients:", error);
+                return;
+            }
+
+            if (data) {
+                // Process the data to map the joined table into a simple boolean
+                const processedData = data.map((p: any) => ({
+                    ...p,
+                    // If patient_consent has records, consent is signed
+                    consent_signed: Array.isArray(p.patient_consent) 
+                        ? p.patient_consent.length > 0 
+                        : p.patient_consent !== null
+                }));
+                setRecentPatients(processedData);
+            }
         };
         fetchRecentPatients();
     }, []);
@@ -31,7 +54,7 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
     // Get today's entries
     const todayCount = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
-        return censusRecords.filter(r => r.created_at.startsWith(today)).length;
+        return censusRecords.filter(r => r.created_at?.startsWith(today)).length;
     }, [censusRecords]);
 
     return (
@@ -80,7 +103,7 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
             {/* LOWER CONTENT: Responsive Split (1/3 and 2/3 ratio on large screens) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-3 gap-6 sm:gap-8 w-full">
                 
-                {/* COLUMN 1 & 2: Recent Reports Encodes (Takes up 2 parts of the 3-col grid) */}
+                {/* COLUMN 1 & 2: Recent Reports Encodes */}
                 <div className="card shadow-sm border border-slate-200 lg:col-span-2 2xl:col-span-2 flex flex-col bg-white rounded-2xl w-full overflow-hidden">
                     <div className="card-hd border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
                         <div>
@@ -118,16 +141,17 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                     </div>
                 </div>
 
-                {/* COLUMN 3: Newly Registered Patients (Takes up 1 part of the 3-col grid) */}
-                <div className="card shadow-sm border border-slate-200 lg:col-span-1 2xl:col-span-1 flex flex-col bg-white rounded-2xl w-full overflow-hidden">
+                {/* COLUMN 3: Newly Registered Patients */}
+                <div className="card shadow-sm border border-slate-200 lg:col-span-1 2xl:col-span-1 flex flex-col bg-white rounded-2xl w-full overflow-hidden max-h-[600px]">
                     <div className="card-hd border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
                         <div>
-                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">New Patients</h3>
-                            <p className="text-sm text-slate-500 mt-1">Recently registered</p>
+                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Patient Directory</h3>
+                            <p className="text-sm text-slate-500 mt-1">All registered patients</p>
                         </div>
                     </div>
                     
-                    <div className="p-5 sm:p-6 flex-1 w-full bg-white">
+                    {/* Added overflow-y-auto here to allow scrolling through all patients */}
+                    <div className="p-5 sm:p-6 flex-1 w-full bg-white overflow-y-auto scrollbar-thin">
                         <div className="space-y-4 w-full">
                             {recentPatients.length > 0 ? recentPatients.map(p => (
                                 <div
@@ -165,7 +189,7 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                                 </div>
                             )) : (
                                 <div className="text-center py-10 text-sm text-slate-400 font-medium border-2 border-dashed border-slate-100 rounded-xl w-full">
-                                    No recent patients found.
+                                    No patients found.
                                 </div>
                             )}
                         </div>

@@ -312,23 +312,22 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
             const patientSignatureDataUrl = patientSigCanvas.current?.getCanvas().toDataURL('image/png');
             const personnelSignatureDataUrl = personnelSigCanvas.current?.getCanvas().toDataURL('image/png');
 
-            const { data, error } = await supabase
-                .from('patients')
-                .update({
-                    consent_signed: true,
+            // Using standard insert for Option 2
+            const { error } = await supabase
+                .from('patient_consent')
+                .insert([{
+                    patient_id: patientId,
+                    consent_signer: true,
                     consent_signature: patientSignatureDataUrl,
                     consent_personnel: rhuPersonnel,
                     consent_personnel_signature: personnelSignatureDataUrl,
                     consent_date: new Date().toISOString()
-                })
-                .eq('id', patientId)
-                .select();
+                }]);
 
             if (error) {
                 alert("Database Error: " + error.message);
-            } else if (!data || data.length === 0) {
-                alert("Update blocked! Check Row Level Security (RLS) policies in Supabase.");
             } else {
+                // Removed the old !data check since standard insert doesn't return data without .select()
                 alert("Consent successfully recorded!");
                 onConsentSaved();
             }
@@ -338,7 +337,7 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
             setIsSubmitting(false);
         }
     };
-
+    
     return (
         <form onSubmit={handleSubmit} style={styles.page}>
 
