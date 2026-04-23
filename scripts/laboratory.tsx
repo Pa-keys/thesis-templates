@@ -41,13 +41,11 @@ interface PatientRow {
 
 function formatDateTimeLocal(value?: string | null) {
     const date = value ? new Date(value) : new Date();
-
     if (isNaN(date.getTime())) {
         const now = new Date();
         const pad = (n: number) => String(n).padStart(2, '0');
         return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
-
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -112,7 +110,6 @@ function LabRequestDetail({
 
     const statusColor = (s: string | null) => {
         if (s === 'Completed') return 'bg-green-100 text-green-700 border-green-200';
-        if (s === 'In Progress') return 'bg-blue-100 text-blue-700 border-blue-200';
         return 'bg-amber-100 text-amber-700 border-amber-200';
     };
 
@@ -132,37 +129,17 @@ function LabRequestDetail({
     ];
     const activeTests = tests.filter(t => t.value);
 
-    const handleMarkInProgress = async () => {
-        setSaving(true);
-        try {
-            const { error } = await supabase
-                .from('lab_request')
-                .update({ status: 'In Progress' })
-                .eq('labrequest_id', request.labrequest_id);
-
-            if (error) throw error;
-
-            onStatusUpdate(request.labrequest_id, 'In Progress');
-        } catch (err: any) {
-            alert('Failed to update status: ' + err.message);
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleMarkCompleted = async () => {
         if (!results.trim()) {
             alert('Please enter lab results before marking as completed.');
             return;
         }
-
         if (!datePerformed) {
             alert('Please select the date performed.');
             return;
         }
 
         setSaving(true);
-
         try {
             const performedBy =
                 currentUserName && currentUserName !== 'Loading...'
@@ -187,6 +164,8 @@ function LabRequestDetail({
                         performed_by: performedBy,
                         date_performed: datePerformed,
                         patient_id: request.patient_id,
+                        consultation_id: request.consultation_id, // Added this linking field
+                        status: 'Completed',
                     })
                     .eq('labresult_id', existingLabResult.labresult_id);
 
@@ -197,9 +176,11 @@ function LabRequestDetail({
                     .insert({
                         labrequest_id: request.labrequest_id,
                         patient_id: request.patient_id,
+                        consultation_id: request.consultation_id, // Added this linking field
                         findings: results,
                         performed_by: performedBy,
                         date_performed: datePerformed,
+                        status: 'Completed',
                     });
 
                 if (insertLabResultError) throw insertLabResultError;
@@ -207,9 +188,7 @@ function LabRequestDetail({
 
             const { error: updateRequestError } = await supabase
                 .from('lab_request')
-                .update({
-                    status: 'Completed',
-                })
+                .update({ status: 'Completed' })
                 .eq('labrequest_id', request.labrequest_id);
 
             if (updateRequestError) throw updateRequestError;
@@ -270,27 +249,11 @@ function LabRequestDetail({
                             <div className="space-y-2">
                                 {(() => {
                                     const routine = activeTests.filter(t =>
-                                        [
-                                            'Complete Blood Count (CBC)',
-                                            'CBC with Platelet Count',
-                                            'Hemoglobin and Hematocrit',
-                                            'Chest X-Ray (PA View)',
-                                            'Ultrasound',
-                                            'Urinalysis',
-                                            'Fecalysis',
-                                            'Sputum',
-                                        ].includes(t.label)
+                                        ['Complete Blood Count (CBC)', 'CBC with Platelet Count', 'Hemoglobin and Hematocrit', 'Chest X-Ray (PA View)', 'Ultrasound', 'Urinalysis', 'Fecalysis', 'Sputum'].includes(t.label)
                                     );
-
                                     const fasting = activeTests.filter(t =>
-                                        [
-                                            'Random Blood Sugar (RBS)',
-                                            'Fasting Blood Sugar (FBS)',
-                                            'Uric Acid',
-                                            'Cholesterol',
-                                        ].includes(t.label)
+                                        ['Random Blood Sugar (RBS)', 'Fasting Blood Sugar (FBS)', 'Uric Acid', 'Cholesterol'].includes(t.label)
                                     );
-
                                     return (
                                         <>
                                             {routine.length > 0 && (
@@ -310,7 +273,6 @@ function LabRequestDetail({
                                                     </div>
                                                 </div>
                                             )}
-
                                             {fasting.length > 0 && (
                                                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Fasting Tests <span className="font-normal normal-case">(8–10 hrs)</span></div>
@@ -328,7 +290,6 @@ function LabRequestDetail({
                                                     </div>
                                                 </div>
                                             )}
-
                                             {request.others && (
                                                 <div className="bg-white border border-slate-200 rounded-xl p-4">
                                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Others</div>
@@ -344,9 +305,7 @@ function LabRequestDetail({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                                Performed By
-                            </label>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Performed By</label>
                             <input
                                 type="text"
                                 value={currentUserName}
@@ -354,11 +313,8 @@ function LabRequestDetail({
                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700"
                             />
                         </div>
-
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                                Date Performed
-                            </label>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Date Performed</label>
                             <input
                                 type="datetime-local"
                                 value={datePerformed}
@@ -387,21 +343,11 @@ function LabRequestDetail({
                 </div>
 
                 {request.status !== 'Completed' && (
-                    <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0 flex flex-col sm:flex-row gap-3">
-                        {(request.status === 'Pending' || !request.status) && (
-                            <button
-                                onClick={handleMarkInProgress}
-                                disabled={saving}
-                                className="flex-1 font-semibold py-2.5 px-4 rounded-lg border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all active:scale-95 disabled:opacity-50 text-sm"
-                            >
-                                {saving ? 'Updating...' : '🔬 Mark as In Progress'}
-                            </button>
-                        )}
-
+                    <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
                         <button
                             onClick={handleMarkCompleted}
                             disabled={saving}
-                            className="flex-1 font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 text-sm"
+                            className="w-full font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 text-sm"
                         >
                             {saving ? 'Submitting...' : '✓ Submit Results'}
                         </button>
@@ -421,7 +367,7 @@ const LaboratoryDashboard = () => {
     const [requests, setRequests] = useState<LabRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'In Progress' | 'Completed'>('All');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
     const [selectedRequest, setSelectedRequest] = useState<LabRequest | null>(null);
 
     const navItems = [
@@ -452,25 +398,17 @@ const LaboratoryDashboard = () => {
             const name = profile?.full_name || session.user.email || 'Lab User';
             setUserName(name);
             setUserInitials(
-                name
-                    .split(' ')
-                    .map((n: string) => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2)
+                name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
             );
 
-            // True flag forces the initial loading spinner to show
             await loadRequests(true);
         };
 
         fetchData();
 
-        // ADDED: Supabase Realtime Subscription so data flows automatically
         const channel = supabase
             .channel('lab-realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lab_request' }, () => loadRequests(false))
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lab_request' }, () => loadRequests(false))
             .subscribe();
 
         return () => {
@@ -480,7 +418,6 @@ const LaboratoryDashboard = () => {
         };
     }, []);
 
-    // OPTIMIZED: The showSpinner parameter ensures we don't flash a white screen during background real-time updates
     const loadRequests = async (showSpinner = false) => {
         if (showSpinner) setLoading(true);
         try {
@@ -493,9 +430,7 @@ const LaboratoryDashboard = () => {
 
             if (labData && labData.length > 0) {
                 const patientIds = [...new Set(
-                    labData
-                        .map((r: any) => r.patient_id)
-                        .filter((id: any) => id !== null && id !== undefined)
+                    labData.map((r: any) => r.patient_id).filter((id: any) => id !== null && id !== undefined)
                 )];
 
                 let patientMap: Record<number, PatientRow> = {};
@@ -506,19 +441,35 @@ const LaboratoryDashboard = () => {
                         .select('id, firstName, lastName, age, sex')
                         .in('id', patientIds);
 
-                    if (patientError) {
-                        console.error('Failed to fetch patients:', patientError.message);
-                    }
+                    if (patientError) console.error('Failed to fetch patients:', patientError.message);
 
                     (patientData || []).forEach((p: PatientRow) => {
                         patientMap[p.id] = p;
                     });
                 }
 
+                const labrequestIds = labData.map((r: any) => r.labrequest_id);
+                const { data: labResultData } = await supabase
+                    .from('lab_result')
+                    .select('labrequest_id, status')
+                    .in('labrequest_id', labrequestIds);
+
+                const completedSet = new Set<number>(
+                    (labResultData || [])
+                        .filter((lr: any) => lr.status === 'Completed')
+                        .map((lr: any) => lr.labrequest_id)
+                );
+
                 const enriched: LabRequest[] = labData.map((r: any) => {
                     const p = r.patient_id != null ? patientMap[r.patient_id] : null;
+
+                    const resolvedStatus = completedSet.has(r.labrequest_id)
+                        ? 'Completed'
+                        : (r.status ?? null);
+
                     return {
                         ...r,
+                        status: resolvedStatus,
                         patient_firstName: p?.firstName ?? undefined,
                         patient_lastName: p?.lastName ?? undefined,
                         patient_age: p?.age ?? null,
@@ -542,7 +493,6 @@ const LaboratoryDashboard = () => {
         setRequests(prev => prev.map(r =>
             r.labrequest_id === id ? { ...r, status } : r
         ));
-
         if (selectedRequest?.labrequest_id === id) {
             setSelectedRequest(prev => prev ? { ...prev, status } : prev);
         }
@@ -558,44 +508,27 @@ const LaboratoryDashboard = () => {
 
     const statusBadge = (s: string | null) => {
         if (s === 'Completed') return 'bg-green-100 text-green-700';
-        if (s === 'In Progress') return 'bg-blue-100 text-blue-700';
         return 'bg-amber-100 text-amber-700';
     };
 
     const countTests = (r: LabRequest) =>
-        [
-            r.is_cbc,
-            r.is_cbc_platelet,
-            r.is_hgb_hct,
-            r.is_xray,
-            r.is_ultrasound,
-            r.is_urinalysis,
-            r.is_fecalysis,
-            r.is_sputum,
-            r.is_rbs,
-            r.is_fbs,
-            r.is_uric_acid,
-            r.is_cholesterol,
-        ].filter(Boolean).length + (r.others ? 1 : 0);
+        [r.is_cbc, r.is_cbc_platelet, r.is_hgb_hct, r.is_xray, r.is_ultrasound, r.is_urinalysis, r.is_fecalysis, r.is_sputum, r.is_rbs, r.is_fbs, r.is_uric_acid, r.is_cholesterol]
+            .filter(Boolean).length + (r.others ? 1 : 0);
 
-    // FILTER LOGIC: This automatically re-evaluates anytime statusFilter or requests change
     const filtered = requests.filter(r => {
         const name = `${r.patient_firstName ?? ''} ${r.patient_lastName ?? ''}`.toLowerCase();
         const matchSearch =
             name.includes(searchQuery.toLowerCase()) ||
             (r.lab_no ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             (r.chief_complaint ?? '').toLowerCase().includes(searchQuery.toLowerCase());
-
         const effectiveStatus = r.status || 'Pending';
         const matchStatus = statusFilter === 'All' || effectiveStatus === statusFilter;
-
         return matchSearch && matchStatus;
     });
 
     const stats = {
         total: requests.length,
         pending: requests.filter(r => !r.status || r.status === 'Pending').length,
-        inProgress: requests.filter(r => r.status === 'In Progress').length,
         completed: requests.filter(r => r.status === 'Completed').length,
     };
 
@@ -635,14 +568,11 @@ const LaboratoryDashboard = () => {
                                 {isOnline ? 'System Online' : 'System Offline'}
                             </span>
                         </div>
-
                         <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-
                         <div className="text-right hidden sm:block">
                             <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
                             <div className="text-[0.7rem] text-slate-500 font-medium">Laboratory Staff</div>
                         </div>
-
                         <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
                             {userInitials}
                         </div>
@@ -651,7 +581,6 @@ const LaboratoryDashboard = () => {
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
                     <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl">
-                        {/* REMOVED: Refresh button. Just a clean header now. */}
                         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h1 className="text-2xl font-extrabold text-slate-800">Lab Requests 🧪</h1>
@@ -663,7 +592,6 @@ const LaboratoryDashboard = () => {
                             {[
                                 { label: 'Total Requests', value: stats.total, icon: '📋', color: 'bg-blue-50 text-blue-600' },
                                 { label: 'Pending', value: stats.pending, icon: '⏳', color: 'bg-amber-50 text-amber-600' },
-                                { label: 'In Progress', value: stats.inProgress, icon: '🔬', color: 'bg-indigo-50 text-indigo-600' },
                                 { label: 'Completed', value: stats.completed, icon: '✅', color: 'bg-green-50 text-green-600' },
                             ].map(stat => (
                                 <div key={stat.label} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
@@ -684,9 +612,8 @@ const LaboratoryDashboard = () => {
                                     <h2 className="text-lg font-bold text-slate-800">All Lab Requests</h2>
                                     <p className="text-xs text-slate-500">Click a row to view details and submit results</p>
                                 </div>
-
                                 <div className="flex gap-1.5 flex-wrap">
-                                    {(['All', 'Pending', 'In Progress', 'Completed'] as const).map(s => (
+                                    {(['All', 'Pending',  'Completed'] as const).map(s => (
                                         <button
                                             key={s}
                                             onClick={() => setStatusFilter(s)}
@@ -724,7 +651,6 @@ const LaboratoryDashboard = () => {
                                             <th className="px-6 py-4 text-center">Action</th>
                                         </tr>
                                     </thead>
-
                                     <tbody className="divide-y divide-slate-100">
                                         {loading ? (
                                             <tr>
@@ -752,9 +678,7 @@ const LaboratoryDashboard = () => {
                                                 const name = r.patient_firstName
                                                     ? `${r.patient_firstName} ${r.patient_lastName}`
                                                     : `Patient #${r.patient_id ?? '—'}`;
-
                                                 const testCount = countTests(r);
-
                                                 return (
                                                     <tr
                                                         key={r.labrequest_id}
@@ -776,24 +700,19 @@ const LaboratoryDashboard = () => {
                                                                 </div>
                                                             </div>
                                                         </td>
-
                                                         <td className="px-6 py-3 text-slate-600">{formatDate(r.request_date)}</td>
-
                                                         <td className="px-6 py-3">
                                                             <span className="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">
                                                                 {testCount} test{testCount !== 1 ? 's' : ''}
                                                             </span>
                                                         </td>
-
                                                         <td className="px-6 py-3 text-slate-600 max-w-[180px] truncate">{r.chief_complaint || '—'}</td>
                                                         <td className="px-6 py-3 text-slate-600">{r.requested_by || '—'}</td>
-
                                                         <td className="px-6 py-3">
                                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusBadge(r.status)}`}>
                                                                 {r.status || 'Pending'}
                                                             </span>
                                                         </td>
-
                                                         <td className="px-6 py-3 text-center">
                                                             <span className="text-blue-600 font-bold group-hover:translate-x-1 inline-block transition-transform">→</span>
                                                         </td>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import Chart from 'chart.js/auto';
 import { supabase } from '../shared/supabase';
@@ -8,6 +8,54 @@ import { Sidebar } from './sidebar';
 import ConsultationPage from './consultation';
 import { RecordsComponent } from './records';
 import { TemplatesComponent } from './templates';
+
+type FilterPeriod = 'today' | 'week' | 'month' | 'year';
+
+const FILTER_OPTIONS: { label: string; value: FilterPeriod }[] = [
+    { label: 'Today', value: 'today' },
+    { label: 'Week', value: 'week' },
+    { label: 'Month', value: 'month' },
+    { label: 'Year', value: 'year' },
+];
+
+const getDateRange = (period: FilterPeriod): { from: string; to: string } => {
+    const now = new Date();
+    const toDate = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+
+    if (period === 'today') return { from: toDate, to: toDate };
+    if (period === 'week') {
+        const from = new Date(now);
+        from.setDate(from.getDate() - 6);
+        return { from: from.toLocaleDateString('en-CA'), to: toDate };
+    }
+    if (period === 'month') {
+        const from = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: from.toLocaleDateString('en-CA'), to: toDate };
+    }
+    if (period === 'year') {
+        const from = new Date(now.getFullYear(), 0, 1);
+        return { from: from.toLocaleDateString('en-CA'), to: toDate };
+    }
+    return { from: toDate, to: toDate };
+};
+
+const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: FilterPeriod) => void }) => (
+    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+        {FILTER_OPTIONS.map(opt => (
+            <button
+                key={opt.value}
+                onClick={() => onChange(opt.value)}
+                className={`text-[0.7rem] font-bold px-2.5 py-1 rounded-md transition-all ${
+                    value === opt.value
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600'
+                }`}
+            >
+                {opt.label}
+            </button>
+        ))}
+    </div>
+);
 
 const DoctorDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -28,6 +76,18 @@ const DoctorDashboard = () => {
     const [morbidityData, setMorbidityData] = useState<any[]>([]);
     const [trendData, setTrendData] = useState<any[]>([]);
 
+    // Filter States
+    const [trendFilter, setTrendFilter] = useState<FilterPeriod>('week');
+    const [morbFilter, setMorbFilter] = useState<FilterPeriod>('week');
+
+    // ─── Filter Refs (prevents stale closures in realtime callbacks) ───
+    const trendFilterRef = useRef<FilterPeriod>('week');
+    const morbFilterRef = useRef<FilterPeriod>('week');
+
+    // Follow-ups Modal States
+    const [showFollowUpsModal, setShowFollowUpsModal] = useState(false);
+    const [allFollowUps, setAllFollowUps] = useState<any[]>([]);
+
     const trendChartRef = useRef<HTMLCanvasElement>(null);
     const morbChartRef = useRef<HTMLCanvasElement>(null);
     const trendChartInstance = useRef<Chart | null>(null);
@@ -40,7 +100,6 @@ const DoctorDashboard = () => {
         { id: 'consultation', label: 'Consultation Room', icon: '📝' }
     ];
 
-    // Formatter for time (e.g. 12:31 PM)
     const formatTime = (timeString: string | null) => {
         if (!timeString) return '';
         const [hourString, minute] = timeString.split(':');
@@ -50,76 +109,178 @@ const DoctorDashboard = () => {
         return `${hour}:${minute} ${ampm}`;
     };
 
-useEffect(() => {
+    // ─── Load all follow-ups for modal ───
+    const loadAllFollowUps = useCallback(async () => {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+        const { data } = await supabase
+            .from('follow_up')
+            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
+            .neq('follow_up_status', 'done')
+            .gte('visit_date', today)
+            .order('visit_date', { ascending: true });
+        setAllFollowUps(data || []);
+        setShowFollowUpsModal(true);
+    }, []);
+
+    // ─── Load trend data — counts COMPLETED consultations (from consultation table) ───
+    const loadTrendData = useCallback(async (period: FilterPeriod) => {
+        const { from, to } = getDateRange(period);
+
+        const { data: tData } = await supabase
+            .from('consultation')
+            .select('initial_consultation!inner(consultation_date)')
+            .gte('initial_consultation.consultation_date', from)
+            .lte('initial_consultation.consultation_date', to);
+
+        const dates = tData?.map((c: any) => c.initial_consultation?.consultation_date).filter(Boolean) || [];
+
+        if (period === 'today') {
+            setTrendData([{ date: to, count: dates.length }]);
+            return;
+        }
+
+        if (period === 'week') {
+            const dayMap: Record<string, number> = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                dayMap[d.toLocaleDateString('en-CA')] = 0;
+            }
+            dates.forEach(date => { if (dayMap[date] !== undefined) dayMap[date]++; });
+            setTrendData(Object.keys(dayMap).map(k => ({ date: k, count: dayMap[k] })));
+            return;
+        }
+
+        if (period === 'month') {
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const dayMap: Record<string, number> = {};
+            for (let i = 1; i <= daysInMonth; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth(), i);
+                dayMap[d.toLocaleDateString('en-CA')] = 0;
+            }
+            dates.forEach(date => { if (dayMap[date] !== undefined) dayMap[date]++; });
+            const weeks: { date: string; count: number }[] = [];
+            const entries = Object.entries(dayMap);
+            for (let i = 0; i < entries.length; i += 7) {
+                const chunk = entries.slice(i, i + 7);
+                weeks.push({
+                    date: `Week ${Math.floor(i / 7) + 1}`,
+                    count: chunk.reduce((sum, [, count]) => sum + count, 0)
+                });
+            }
+            setTrendData(weeks);
+            return;
+        }
+
+        if (period === 'year') {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthMap: Record<string, number> = {};
+            monthNames.forEach(m => { monthMap[m] = 0; });
+            dates.forEach(date => {
+                const month = monthNames[new Date(date).getMonth()];
+                if (month) monthMap[month]++;
+            });
+            setTrendData(monthNames.map(m => ({ date: m, count: monthMap[m] })));
+            return;
+        }
+    }, []);
+
+    // ─── Load morbidity data ───
+    const loadMorbidityData = useCallback(async (period: FilterPeriod) => {
+        const { from, to } = getDateRange(period);
+
+        const { data: mData } = await supabase
+            .from('initial_consultation')
+            .select('diagnosis')
+            .not('diagnosis', 'is', null)
+            .gte('consultation_date', from)
+            .lte('consultation_date', to);
+
+        const diagnosisMap: Record<string, number> = {};
+        mData?.forEach(({ diagnosis }) => {
+            if (!diagnosis) return;
+            diagnosisMap[diagnosis] = (diagnosisMap[diagnosis] || 0) + 1;
+        });
+
+        const total = Object.values(diagnosisMap).reduce((sum, n) => sum + n, 0);
+        const top7 = Object.entries(diagnosisMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 7)
+            .map(([label, count]) => ({
+                label,
+                count,
+                percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0
+            }));
+
+        setMorbidityData(top7);
+    }, []);
+
+    // ─── Core dashboard data (stats, queue, follow-ups) ───
+    const loadDashboardData = useCallback(async () => {
+        try {
+            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+
+            // 1. Stat: Total Patients
+            const { count: pCount } = await supabase
+                .from('patients')
+                .select('*', { count: 'exact', head: true });
+            setTotalPatients(pCount || 0);
+
+            // 2. Stat: Visits Today — completed consultations only
+            const { data: completedToday } = await supabase
+                .from('consultation')
+                .select('initial_consultation!inner(consultation_date)')
+                .eq('initial_consultation.consultation_date', today);
+            setVisitsToday(completedToday?.length || 0);
+
+            // 3. Patient Queue
+            const { data: completedConsults } = await supabase
+                .from('consultation')
+                .select('initial_consultation_id')
+                .not('initial_consultation_id', 'is', null);
+            const completedIds = completedConsults?.map(c => c.initial_consultation_id).filter(Boolean) || [];
+
+            let queueQuery = supabase
+                .from('initial_consultation')
+                .select(`
+                    initialconsultation_id, 
+                    patient_id, 
+                    consultation_time, 
+                    patients!inner(firstName, lastName, sex, bloodType)
+                `)
+                .eq('consultation_date', today)
+                .order('initialconsultation_id', { ascending: true });
+
+            if (completedIds.length > 0) {
+                queueQuery = queueQuery.not('initialconsultation_id', 'in', `(${completedIds.join(',')})`);
+            }
+
+            const { data: qData, error: qError } = await queueQuery;
+            if (qError) console.error("Queue Fetch Error:", qError);
+            console.log("Queue re-fetched successfully. Queue length:", qData?.length);
+            setQueue(qData || []);
+
+            // 4. Upcoming Follow-ups (preview — 5 only)
+            const { data: fData } = await supabase
+                .from('follow_up')
+                .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
+                .neq('follow_up_status', 'done')
+                .gte('visit_date', today)
+                .order('visit_date', { ascending: true })
+                .limit(5);
+            setFollowUps(fData || []);
+
+        } catch (err) {
+            console.error("Dashboard Load Error:", err);
+        }
+    }, []);
+
+    // ─── Initial load + Realtime Subscriptions ───
+    useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
-
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-
-        const loadDashboardData = async () => {
-            try {
-                const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-
-                // 1. Stat: Total Patients
-                const { count: pCount } = await supabase.from('patients').select('*', { count: 'exact', head: true });
-                setTotalPatients(pCount || 0);
-
-                // 2. Stat: Visits Today
-                const { count: vToday } = await supabase.from('initial_consultation').select('*', { count: 'exact', head: true }).eq('consultation_date', today);
-                setVisitsToday(vToday || 0);
-
-                // 3. Patient Queue
-                const { data: completedConsults } = await supabase.from('consultation').select('initial_consultation_id').not('initial_consultation_id', 'is', null);
-                const completedIds = completedConsults?.map(c => c.initial_consultation_id).filter(Boolean) || [];
-
-                let queueQuery = supabase
-                    .from('initial_consultation')
-                    .select(`
-                        initialconsultation_id, 
-                        patient_id, 
-                        consultation_time, 
-                        patients!inner(firstName, lastName, sex, bloodType)
-                    `)
-                    .eq('consultation_date', today)
-                    .order('consultation_time', { ascending: true });
-
-                // Safely filter out completed IDs
-                if (completedIds.length > 0) {
-                    queueQuery = queueQuery.not('initialconsultation_id', 'in', `(${completedIds.join(',')})`);
-                }
-
-                const { data: qData, error: qError } = await queueQuery;
-                if (qError) console.error("Queue Fetch Error:", qError);
-                
-                console.log("Queue re-fetched successfully. Queue length:", qData?.length);
-                setQueue(qData || []); 
-
-                // 4. Upcoming Follow-ups
-                const { data: fData } = await supabase.from('follow_up').select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`).neq('follow_up_status', 'done').gte('visit_date', today).order('visit_date', { ascending: true }).limit(5);
-                setFollowUps(fData || []);
-
-                // 5. Visit Trends
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-                const { data: tData } = await supabase.from('initial_consultation').select('consultation_date').gte('consultation_date', sevenDaysAgo.toISOString().split('T')[0]);
-                const dayMap: Record<string, number> = {};
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date(); d.setDate(d.getDate() - i);
-                    dayMap[d.toLocaleDateString('en-CA')] = 0;
-                }
-                tData?.forEach(v => { if (dayMap[v.consultation_date] !== undefined) dayMap[v.consultation_date]++; });
-                setTrendData(Object.keys(dayMap).map(k => ({ date: k, count: dayMap[k] })));
-
-                // 6. Morbidity Analytics
-                const targets = ['Common Cold', 'Pneumonia', 'Acid Reflux', 'Asthma', 'High Cholesterol', 'Stroke', 'Arthritis'];
-                const { data: mData } = await supabase.from('initial_consultation').select('diagnosis').in('diagnosis', targets);
-                setMorbidityData(targets.map(t => ({ label: t, count: mData?.filter(d => d.diagnosis === t).length || 0 })));
-                
-            } catch (err) {
-                console.error("Dashboard Load Error:", err);
-            }
-        };
 
         const fetchData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -128,7 +289,11 @@ useEffect(() => {
                 return;
             }
 
-            const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', session.user.id)
+                .single();
             if (profile) {
                 const name = profile.full_name || 'Dr. User';
                 setUserName(name);
@@ -136,23 +301,53 @@ useEffect(() => {
             }
 
             await loadDashboardData();
+            await loadTrendData(trendFilterRef.current);
+            await loadMorbidityData(morbFilterRef.current);
         };
 
         fetchData();
 
-        // ─── ROBUST REALTIME SUBSCRIPTION ───
+        // ─── REALTIME SUBSCRIPTIONS ───
+        // Uses refs instead of state values to avoid stale closures.
+        // All 4 tables that affect the dashboard are subscribed here.
         console.log("Initializing Supabase Realtime...");
+
         const queueSubscription = supabase
             .channel('doctor-dashboard-queue')
-            .on(
-                'postgres_changes',
-                // Using '*' instead of 'INSERT' catches ALL updates, inserts, and deletes
-                { event: '*', schema: 'public', table: 'initial_consultation' },
-                (payload) => {
-                    console.log('REALTIME EVENT FIRED! Nurse updated triage:', payload);
-                    loadDashboardData(); 
-                }
-            )
+
+            // initial_consultation: affects queue, trend chart, and morbidity chart
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'initial_consultation' }, () => {
+                console.log('REALTIME: initial_consultation changed');
+                loadDashboardData();
+                loadTrendData(trendFilterRef.current);
+                loadMorbidityData(morbFilterRef.current);
+            })
+
+            // consultation: affects visits today, trend chart, and morbidity chart
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'consultation' }, () => {
+                console.log('REALTIME: consultation changed');
+                loadDashboardData();
+                loadTrendData(trendFilterRef.current);
+                loadMorbidityData(morbFilterRef.current);
+            })
+
+            // patients: affects total patient count and queue names
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patients' }, () => {
+                console.log('REALTIME: patient added');
+                loadDashboardData();
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patients' }, () => {
+                console.log('REALTIME: patient updated');
+                loadDashboardData();
+            })
+
+            // follow_up: affects upcoming follow-ups list
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'follow_up' }, () => {
+                console.log('REALTIME: follow_up changed');
+                loadDashboardData();
+                loadMorbidityData(morbFilterRef.current);
+            })
+
             .subscribe((status) => {
                 console.log("Realtime Subscription Status:", status);
             });
@@ -164,15 +359,23 @@ useEffect(() => {
         };
     }, []);
 
+    // ─── Keep refs in sync + reload charts when filters change ───
+    useEffect(() => {
+        trendFilterRef.current = trendFilter;
+        loadTrendData(trendFilter);
+    }, [trendFilter]);
+
+    useEffect(() => {
+        morbFilterRef.current = morbFilter;
+        loadMorbidityData(morbFilter);
+    }, [morbFilter]);
+
     // Chart Rendering
     useEffect(() => {
         if (activePage !== 'dashboard') return;
 
-        // Visit Trends Chart (Line with fill)
         if (trendChartRef.current && trendData.length > 0) {
-            if (trendChartInstance.current) {
-                trendChartInstance.current.destroy();
-            }
+            if (trendChartInstance.current) trendChartInstance.current.destroy();
 
             trendChartInstance.current = new Chart(trendChartRef.current, {
                 type: 'line',
@@ -181,11 +384,11 @@ useEffect(() => {
                     datasets: [{
                         label: 'Visits',
                         data: trendData.map(d => d.count),
-                        borderColor: '#3b82f6', // blue-500
+                        borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.4, // Smooth curve
+                        tension: 0.4,
                         pointBackgroundColor: '#3b82f6',
                         pointRadius: 4,
                         pointHoverRadius: 6,
@@ -196,25 +399,22 @@ useEffect(() => {
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { 
+                        x: {
                             grid: { display: false },
                             ticks: { color: '#94a3b8', font: { size: 10 } }
                         },
-                        y: { 
+                        y: {
                             grid: { color: '#f1f5f9' },
                             ticks: { stepSize: 1, precision: 0, color: '#94a3b8', font: { size: 10 } },
-                            beginAtZero: true 
+                            beginAtZero: true
                         }
                     }
                 }
             });
         }
 
-        // Morbidity Chart (Horizontal Bar)
         if (morbChartRef.current && morbidityData.length > 0) {
-            if (morbChartInstance.current) {
-                morbChartInstance.current.destroy();
-            }
+            if (morbChartInstance.current) morbChartInstance.current.destroy();
 
             morbChartInstance.current = new Chart(morbChartRef.current, {
                 type: 'bar',
@@ -222,24 +422,39 @@ useEffect(() => {
                     labels: morbidityData.map(m => m.label),
                     datasets: [{
                         label: 'Cases',
-                        data: morbidityData.map(m => m.count),
-                        backgroundColor: '#93c5fd', // blue-300
+                        data: morbidityData.map(m => m.percentage),
+                        backgroundColor: '#93c5fd',
                         borderRadius: 2,
                         barThickness: 16,
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // Makes it horizontal
+                    indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const item = morbidityData[ctx.dataIndex];
+                                    return ` ${item.percentage}%  (${item.count} cases)`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        x: { 
+                        x: {
                             grid: { color: '#f1f5f9' },
-                            ticks: { stepSize: 1, precision: 0, color: '#94a3b8', font: { size: 10 } },
-                            beginAtZero: true 
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 10 },
+                                callback: (value) => `${value}%`
+                            },
+                            beginAtZero: true,
+                            max: 100
                         },
-                        y: { 
+                        y: {
                             grid: { display: false },
                             ticks: { color: '#64748b', font: { size: 11 } }
                         }
@@ -303,7 +518,7 @@ useEffect(() => {
                 </header>
 
                 <div className="p-6 md:p-8 max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
-                    
+
                     {activePage === 'dashboard' && (
                         <>
                             {/* Dashboard Welcome Header */}
@@ -325,7 +540,7 @@ useEffect(() => {
 
                             {/* Row 2: Queue & Trends */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                
+
                                 {/* Patient Queue (Left) */}
                                 <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
                                     <div className="p-5 border-b border-slate-100 shrink-0">
@@ -336,13 +551,16 @@ useEffect(() => {
                                             <p className="text-center text-slate-400 py-16 text-sm">No patients in queue</p>
                                         ) : (
                                             <div className="divide-y divide-slate-100">
-                                                {queue.map(q => (
-                                                    <div key={q.initialconsultation_id} 
+                                                {queue.map((q, index) => (
+                                                    <div key={q.initialconsultation_id}
                                                         onClick={() => handleConsultNavigate(q.patient_id, q.initialconsultation_id.toString())}
                                                         className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">{q.patients?.lastName}, {q.patients?.firstName}</p>
-                                                            <p className="text-xs text-slate-500 font-medium">{q.patients?.sex} • {q.patients?.bloodType || '—'}</p>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-black text-slate-300 w-5 text-center">{index + 1}</span>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">{q.patients?.lastName}, {q.patients?.firstName}</p>
+                                                                <p className="text-xs text-slate-500 font-medium">{q.patients?.sex} • {q.patients?.bloodType || '—'}</p>
+                                                            </div>
                                                         </div>
                                                         <div className="text-right">
                                                             <p className="text-xs font-bold text-blue-600">{formatTime(q.consultation_time)}</p>
@@ -363,7 +581,7 @@ useEffect(() => {
                                 <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px]">
                                     <div className="flex justify-between items-center mb-4 shrink-0">
                                         <h3 className="font-bold text-slate-800 text-[0.95rem]">Visit Trends</h3>
-                                        <span className="text-xs text-slate-400">Last 7 days</span>
+                                        <FilterTabs value={trendFilter} onChange={setTrendFilter} />
                                     </div>
                                     <div className="flex-1 relative w-full h-full">
                                         <canvas ref={trendChartRef}></canvas>
@@ -373,12 +591,12 @@ useEffect(() => {
 
                             {/* Row 3: Morbidity Analytics & Upcoming Follow-ups */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                
+
                                 {/* Morbidity Analytics */}
                                 <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px]">
                                     <div className="flex justify-between items-center mb-2 shrink-0">
                                         <h3 className="font-bold text-slate-800 text-[0.95rem]">Morbidity Analytics</h3>
-                                        <span className="text-xs text-slate-400">Top conditions this week</span>
+                                        <FilterTabs value={morbFilter} onChange={setMorbFilter} />
                                     </div>
                                     <div className="flex-1 relative w-full h-full">
                                         <canvas ref={morbChartRef}></canvas>
@@ -396,7 +614,7 @@ useEffect(() => {
                                         ) : (
                                             <div className="divide-y divide-slate-100">
                                                 {followUps.map(f => (
-                                                    <div key={f.followup_id} 
+                                                    <div key={f.followup_id}
                                                         onClick={() => handleConsultNavigate(f.patient_id)}
                                                         className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
                                                         <div className="flex flex-col gap-0.5">
@@ -414,7 +632,10 @@ useEffect(() => {
                                         )}
                                     </div>
                                     {followUps.length > 0 && (
-                                        <button onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button
+                                            onClick={loadAllFollowUps}
+                                            className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0"
+                                        >
                                             View all follow-ups →
                                         </button>
                                     )}
@@ -438,6 +659,83 @@ useEffect(() => {
 
                 </div>
             </main>
+
+            {/* ─── All Follow-ups Modal ─── */}
+            {showFollowUpsModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowFollowUpsModal(false); }}
+                >
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
+                            <div>
+                                <h2 className="text-lg font-black text-slate-800">All Upcoming Follow-ups</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">{allFollowUps.length} pending • sorted by date</p>
+                            </div>
+                            <button
+                                onClick={() => setShowFollowUpsModal(false)}
+                                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto">
+                            {allFollowUps.length === 0 ? (
+                                <p className="text-center text-slate-400 py-16 text-sm">No upcoming follow-ups</p>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {allFollowUps.map((f, idx) => {
+                                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+                                        const isToday = f.visit_date === today;
+                                        return (
+                                            <div
+                                                key={f.followup_id}
+                                                onClick={() => {
+                                                    setShowFollowUpsModal(false);
+                                                    handleConsultNavigate(f.patient_id);
+                                                }}
+                                                className="cursor-pointer px-6 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-black text-slate-300 w-5 text-center">{idx + 1}</span>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">
+                                                            {f.patients?.lastName}, {f.patients?.firstName}
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-400 font-medium">{f.patients?.sex} • Return Visit</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0 ml-3">
+                                                    <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ${
+                                                        isToday
+                                                            ? 'text-blue-600 bg-blue-50'
+                                                            : 'text-amber-600 bg-amber-50'
+                                                    }`}>
+                                                        {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-slate-100 shrink-0">
+                            <button
+                                onClick={() => setShowFollowUpsModal(false)}
+                                className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
