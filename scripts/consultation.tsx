@@ -20,14 +20,72 @@ interface PatientData {
 interface Medication { name: string; dosage: string; frequency: string; duration: string; quantity: string; }
 
 interface ConsultationRecord {
-    consultation_id: number; chief_complaints?: string; diagnosis?: string;
-    hpi?: string; family_history?: string; medication_treatment?: string; attending_provider?: string;
+    consultation_id: number;
+    chief_complaints?: string;
+    diagnosis?: string;
+    hpi?: string;
+    assessment?: string;
+    plan?: string;
+    family_history?: string;
+    immunization_history?: string;
+    smoking_status?: string;
+    smoking_sticks_per_day?: number | null;
+    smoking_years?: number | null;
+    drinking_status?: string;
+    drinking_frequency?: string;
+    drinking_years?: number | null;
+    menarche_age?: number | null;
+    sexual_onset_age?: number | null;
+    is_menopause?: string;
+    menopause_age?: number | null;
+    lmp?: string;
+    interval_cycle?: string;
+    period_duration?: string;
+    pads_per_day?: number | null;
+    birth_control_method?: string;
+    gravidity?: number | null;
+    parity?: number | null;
+    delivery_type?: string;
+    full_term_count?: number | null;
+    premature_count?: number | null;
+    abortion_count?: number | null;
+    living_children_count?: number | null;
+    pre_eclampsia?: string;
+    medication_treatment?: string;
+    management_treatment?: string;
+    past_med_surge_history?: string;
+    attending_provider?: string;
+    initial_consultation_id?: number | null;
+}
+
+interface VitalSignRecord {
+    vitals_id: number;
+    bp?: string;
+    heart_rate?: number | null;
+    respiratory_rate?: number | null;
+    temperature?: number | null;
+    o2_saturation?: number | null;
+    weight?: number | null;
+    height?: number | null;
+    muac?: number | null;
+    nutritional_status?: string;
+    bmi?: number | null;
+    visual_acuity_left?: string;
+    visual_acuity_right?: string;
+    general_survey?: string;
+    initial_consultation_id?: number | null;
 }
 
 interface InitialConsultationRecord {
-    initialconsultation_id: number; consultation_date?: string; consultation_time?: string;
-    mode_of_transaction?: string; referred_by?: string; mode_of_transfer?: string;
-    chief_complaint?: string; diagnosis?: string;
+    initialconsultation_id: number;
+    consultation_date?: string;
+    consultation_time?: string;
+    mode_of_transaction?: string;
+    referred_by?: string;
+    mode_of_transfer?: string;
+    chief_complaint?: string;
+    diagnosis?: string;
+    vitals?: VitalSignRecord | null;
 }
 
 const toNumberOrNull = (val: string | undefined | null): number | null => {
@@ -50,13 +108,110 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
             const parsedId = parseInt(patientId);
             const numericId = isNaN(parsedId) ? patientId : parsedId;
 
-            const [cRes, iRes] = await Promise.all([
-                supabase.from('consultation').select('consultation_id, chief_complaints, diagnosis, hpi, family_history, medication_treatment, attending_provider').eq('patient_id', numericId).order('consultation_id', { ascending: false }),
-                supabase.from('initial_consultation').select('initialconsultation_id, consultation_date, consultation_time, mode_of_transaction, referred_by, mode_of_transfer, chief_complaint, diagnosis').eq('patient_id', numericId).order('initialconsultation_id', { ascending: false }),
+            const [cRes, iRes, vRes] = await Promise.all([
+                // Fetch ALL consultation columns
+                supabase
+                    .from('consultation')
+                    .select(`
+                        consultation_id,
+                        chief_complaints,
+                        diagnosis,
+                        hpi,
+                        assessment,
+                        plan,
+                        family_history,
+                        immunization_history,
+                        smoking_status,
+                        smoking_sticks_per_day,
+                        smoking_years,
+                        drinking_status,
+                        drinking_frequency,
+                        drinking_years,
+                        menarche_age,
+                        sexual_onset_age,
+                        is_menopause,
+                        menopause_age,
+                        lmp,
+                        interval_cycle,
+                        period_duration,
+                        pads_per_day,
+                        birth_control_method,
+                        gravidity,
+                        parity,
+                        delivery_type,
+                        full_term_count,
+                        premature_count,
+                        abortion_count,
+                        living_children_count,
+                        pre_eclampsia,
+                        medication_treatment,
+                        management_treatment,
+                        past_med_surge_history,
+                        attending_provider,
+                        initial_consultation_id
+                    `)
+                    .eq('patient_id', numericId)
+                    .order('consultation_id', { ascending: false }),
+
+                // Fetch ALL initial_consultation columns
+                supabase
+                    .from('initial_consultation')
+                    .select(`
+                        initialconsultation_id,
+                        consultation_date,
+                        consultation_time,
+                        mode_of_transaction,
+                        referred_by,
+                        mode_of_transfer,
+                        chief_complaint,
+                        diagnosis
+                    `)
+                    .eq('patient_id', numericId)
+                    .order('initialconsultation_id', { ascending: false }),
+
+                // Fetch ALL vital_sign columns (linked via initial_consultation_id)
+                supabase
+                    .from('vital_sign')
+                    .select(`
+                        vitals_id,
+                        bp,
+                        heart_rate,
+                        respiratory_rate,
+                        temperature,
+                        o2_saturation,
+                        weight,
+                        height,
+                        muac,
+                        nutritional_status,
+                        bmi,
+                        visual_acuity_left,
+                        visual_acuity_right,
+                        general_survey,
+                        initial_consultation_id
+                    `)
+                    .eq('patient_id', numericId)
+                    .order('vitals_id', { ascending: false }),
             ]);
 
-            if (cRes.data) setConsultations(cRes.data);
-            if (iRes.data) setInitialConsults(iRes.data as InitialConsultationRecord[]);
+            if (cRes.data) setConsultations(cRes.data as ConsultationRecord[]);
+
+            // Join vitals into each initial consultation record by initial_consultation_id
+            if (iRes.data) {
+                const vitalsMap = new Map<number, VitalSignRecord>();
+                if (vRes.data) {
+                    for (const v of vRes.data as VitalSignRecord[]) {
+                        if (v.initial_consultation_id != null) {
+                            vitalsMap.set(v.initial_consultation_id, v);
+                        }
+                    }
+                }
+                const enriched = (iRes.data as InitialConsultationRecord[]).map((ic) => ({
+                    ...ic,
+                    vitals: vitalsMap.get(ic.initialconsultation_id) ?? null,
+                }));
+                setInitialConsults(enriched);
+            }
+
             setLoading(false);
         }
         fetchHistory();
@@ -71,15 +226,29 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
     const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
     const sectionBtn = (label: string, key: typeof activeSection, count: number) => (
-        <button onClick={() => setActiveSection(key)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-            {label} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
+        <button
+            onClick={() => setActiveSection(key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+        >
+            {label}{' '}
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>
+                {count}
+            </span>
         </button>
     );
 
-    const RecordCard = ({ id, badge, badgeColor, date, title, subtitle, children }: any) => (
+    const RecordCard = ({ id, badge, badgeColor, date, title, subtitle, children }: {
+        id: string; badge: string; badgeColor: string;
+        date: string; title: string; subtitle?: string; children: React.ReactNode;
+    }) => (
         <div className="border border-slate-200 rounded-xl overflow-hidden mb-2">
-            <button onClick={() => toggle(id)} className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left">
-                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>{badge}</span>
+            <button
+                onClick={() => toggle(id)}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+            >
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>
+                    {badge}
+                </span>
                 <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-slate-800 truncate">{title}</div>
                     {subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
@@ -87,12 +256,28 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
                 <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
             </button>
-            {expandedId === id && <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-3">{children}</div>}
+            {expandedId === id && (
+                <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">
+                    {children}
+                </div>
+            )}
         </div>
     );
 
-    const Field = ({ label, value }: { label: string; value?: string | number | null }) => (
-        value ? <div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{label}</div><div className="text-sm text-slate-700">{value}</div></div> : null
+    // Only renders when value is truthy
+    const Field = ({ label, value }: { label: string; value?: string | number | null }) =>
+        value ? (
+            <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{label}</div>
+                <div className="text-sm text-slate-700">{value}</div>
+            </div>
+        ) : null;
+
+    // Sub-section divider inside expanded cards
+    const SectionHeader = ({ label }: { label: string }) => (
+        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 pb-1 border-t border-slate-200">
+            {label}
+        </div>
     );
 
     const totalCount = consultations.length + initialConsults.length;
@@ -101,6 +286,8 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
         <>
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
+
+                {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
                     <div>
                         <div className="font-bold text-slate-900 text-base">Patient History</div>
@@ -108,34 +295,178 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                     </div>
                     <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 font-bold text-lg transition-colors">✕</button>
                 </div>
+
+                {/* Section Filter Tabs */}
                 <div className="flex gap-2 px-5 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
                     {sectionBtn('All', 'all', totalCount)}
                     {sectionBtn('Consultations', 'consultation', consultations.length)}
                     {sectionBtn('Initial', 'initial', initialConsults.length)}
                 </div>
+
+                {/* Scrollable Records List */}
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-3"><span className="text-sm text-slate-400">Loading records...</span></div>
+                        <div className="flex flex-col items-center justify-center h-40 gap-3">
+                            <span className="text-sm text-slate-400">Loading records...</span>
+                        </div>
                     ) : totalCount === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-2"><span className="text-3xl">📭</span><span className="text-sm text-slate-400">No history records found.</span></div>
+                        <div className="flex flex-col items-center justify-center h-40 gap-2">
+                            <span className="text-3xl">📭</span>
+                            <span className="text-sm text-slate-400">No history records found.</span>
+                        </div>
                     ) : (
                         <>
+                            {/* ── INITIAL CONSULTATIONS with joined Vital Signs ── */}
                             {(activeSection === 'all' || activeSection === 'initial') && initialConsults.map((rec) => (
-                                <RecordCard key={`initial-${rec.initialconsultation_id}`} id={`initial-${rec.initialconsultation_id}`} badge="Initial" badgeColor="bg-purple-100 text-purple-700" date={formatDate(rec.consultation_date)} title={rec.chief_complaint || 'Initial Consultation'} subtitle={rec.diagnosis}>
+                                <RecordCard
+                                    key={`initial-${rec.initialconsultation_id}`}
+                                    id={`initial-${rec.initialconsultation_id}`}
+                                    badge="Initial"
+                                    badgeColor="bg-purple-100 text-purple-700"
+                                    date={formatDate(rec.consultation_date)}
+                                    title={rec.chief_complaint || 'Initial Consultation'}
+                                    subtitle={rec.diagnosis}
+                                >
+                                    {/* Visit Info */}
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <Field label="Date" value={formatDate(rec.consultation_date)} /><Field label="Time" value={rec.consultation_time} />
-                                        <Field label="Chief Complaint" value={rec.chief_complaint} /><Field label="Diagnosis" value={rec.diagnosis} />
-                                        <Field label="Mode of Transaction" value={rec.mode_of_transaction} /><Field label="Mode of Transfer" value={rec.mode_of_transfer} />
+                                        <Field label="Date" value={formatDate(rec.consultation_date)} />
+                                        <Field label="Time" value={rec.consultation_time} />
+                                        <Field label="Chief Complaint" value={rec.chief_complaint} />
+                                        <Field label="Diagnosis" value={rec.diagnosis} />
+                                        <Field label="Mode of Transaction" value={rec.mode_of_transaction} />
+                                        <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
                                         <Field label="Referred By" value={rec.referred_by} />
                                     </div>
+
+                                    {/* Vital Signs — only shown if a vitals record was joined */}
+                                    {rec.vitals && (
+                                        <>
+                                            <SectionHeader label="Vital Signs" />
+                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                <Field label="BP" value={rec.vitals.bp} />
+                                                <Field label="Heart Rate" value={rec.vitals.heart_rate != null ? `${rec.vitals.heart_rate} bpm` : null} />
+                                                <Field label="Resp. Rate" value={rec.vitals.respiratory_rate != null ? `${rec.vitals.respiratory_rate} cpm` : null} />
+                                                <Field label="Temperature" value={rec.vitals.temperature != null ? `${rec.vitals.temperature} °C` : null} />
+                                                <Field label="O₂ Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
+                                                <Field label="MUAC" value={rec.vitals.muac != null ? `${rec.vitals.muac} cm` : null} />
+                                            </div>
+
+                                            <SectionHeader label="Anthropometrics" />
+                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                <Field label="Weight" value={rec.vitals.weight != null ? `${rec.vitals.weight} kg` : null} />
+                                                <Field label="Height" value={rec.vitals.height != null ? `${rec.vitals.height} cm` : null} />
+                                                <Field label="BMI" value={rec.vitals.bmi != null ? rec.vitals.bmi.toString() : null} />
+                                                <Field label="Nutritional Status" value={rec.vitals.nutritional_status} />
+                                                <Field label="VA Left" value={rec.vitals.visual_acuity_left} />
+                                                <Field label="VA Right" value={rec.vitals.visual_acuity_right} />
+                                            </div>
+
+                                            {rec.vitals.general_survey && (
+                                                <Field label="General Survey" value={rec.vitals.general_survey} />
+                                            )}
+                                        </>
+                                    )}
                                 </RecordCard>
                             ))}
+
+                            {/* ── FOLLOW-UP CONSULTATIONS — all fields ── */}
                             {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
-                                <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
+                                <RecordCard
+                                    key={`consult-${rec.consultation_id}`}
+                                    id={`consult-${rec.consultation_id}`}
+                                    badge="Consult"
+                                    badgeColor="bg-blue-100 text-blue-700"
+                                    date={`#${rec.consultation_id}`}
+                                    title={rec.chief_complaints || `Consultation #${rec.consultation_id}`}
+                                    subtitle={rec.diagnosis}
+                                >
+                                    {/* Clinical */}
+                                    <SectionHeader label="Clinical" />
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <Field label="Chief Complaints" value={rec.chief_complaints} /><Field label="Diagnosis" value={rec.diagnosis} />
-                                        <Field label="HPI" value={rec.hpi} /><Field label="Attending Provider" value={rec.attending_provider} />
+                                        <Field label="Chief Complaints" value={rec.chief_complaints} />
+                                        <Field label="Diagnosis" value={rec.diagnosis} />
+                                        <Field label="HPI" value={rec.hpi} />
+                                        <Field label="Assessment" value={rec.assessment} />
+                                        <Field label="Plan" value={rec.plan} />
+                                        <Field label="Attending Provider" value={rec.attending_provider} />
                                     </div>
+
+                                    {/* Treatment */}
+                                    {(rec.medication_treatment || rec.management_treatment || rec.past_med_surge_history) && (
+                                        <>
+                                            <SectionHeader label="Treatment & History" />
+                                            <div className="grid grid-cols-1 gap-y-2">
+                                                <Field label="Medication / Treatment" value={rec.medication_treatment} />
+                                                <Field label="Management / Treatment" value={rec.management_treatment} />
+                                                <Field label="Past Medical / Surgical History" value={rec.past_med_surge_history} />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Social History */}
+                                    {(rec.family_history || rec.immunization_history || rec.smoking_status || rec.drinking_status) && (
+                                        <>
+                                            <SectionHeader label="Social & Family History" />
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <Field label="Family History" value={rec.family_history} />
+                                                <Field label="Immunization History" value={rec.immunization_history} />
+                                                <Field
+                                                    label="Smoking"
+                                                    value={
+                                                        rec.smoking_status === 'Yes'
+                                                            ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs`
+                                                            : rec.smoking_status
+                                                    }
+                                                />
+                                                <Field
+                                                    label="Drinking"
+                                                    value={
+                                                        rec.drinking_status === 'Yes'
+                                                            ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs`
+                                                            : rec.drinking_status
+                                                    }
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* OBGyne */}
+                                    {(rec.menarche_age != null || rec.gravidity != null || rec.parity != null || rec.lmp || rec.birth_control_method) && (
+                                        <>
+                                            <SectionHeader label="OBGyne & Pregnancy" />
+                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                <Field label="Menarche (y/o)" value={rec.menarche_age} />
+                                                <Field label="Sexual Onset (y/o)" value={rec.sexual_onset_age} />
+                                                <Field
+                                                    label="Menopause"
+                                                    value={
+                                                        rec.is_menopause === 'Yes'
+                                                            ? `Yes — age ${rec.menopause_age ?? '?'}`
+                                                            : rec.is_menopause
+                                                    }
+                                                />
+                                                <Field label="LMP" value={rec.lmp ? formatDate(rec.lmp) : null} />
+                                                <Field label="Interval Cycle" value={rec.interval_cycle ? `${rec.interval_cycle} days` : null} />
+                                                <Field label="Period Duration" value={rec.period_duration ? `${rec.period_duration} days` : null} />
+                                                <Field label="Pads / Day" value={rec.pads_per_day} />
+                                                <Field label="Birth Control" value={rec.birth_control_method} />
+                                                <Field
+                                                    label="G / P"
+                                                    value={
+                                                        rec.gravidity != null || rec.parity != null
+                                                            ? `G${rec.gravidity ?? '?'} P${rec.parity ?? '?'}`
+                                                            : null
+                                                    }
+                                                />
+                                                <Field label="Delivery Type" value={rec.delivery_type} />
+                                                <Field label="Full Term" value={rec.full_term_count} />
+                                                <Field label="Premature" value={rec.premature_count} />
+                                                <Field label="Abortion" value={rec.abortion_count} />
+                                                <Field label="Living Children" value={rec.living_children_count} />
+                                                <Field label="Pre-eclampsia" value={rec.pre_eclampsia} />
+                                            </div>
+                                        </>
+                                    )}
                                 </RecordCard>
                             ))}
                         </>
@@ -147,16 +478,14 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
 }
 
 // ─── Exported Pure Component ──────────────────────────────────────────────────
-// Notice the named export matches the expected structure.
-export function ConsultationPage({ 
-    doctorName, 
-    doctorInitials = 'D', 
-    patientIdProp, 
-    icidProp, 
-    onBack 
+export function ConsultationPage({
+    doctorName,
+    doctorInitials = 'D',
+    patientIdProp,
+    icidProp,
+    onBack
 }: ConsultationPageProps) {
-    
-    // Support SPA props or fallback to direct URL params
+
     const urlParams = new URLSearchParams(window.location.search);
     const patientId = patientIdProp || urlParams.get('id');
     const icidFromUrl = icidProp || urlParams.get('icid');
@@ -167,19 +496,19 @@ export function ConsultationPage({
         menopause: '', menopauseAge: '', lmp: '', intervalCycle: '', periodDuration: '', padsPerDay: '',
         birthControlMethod: '', gravidity: '', parity: '', typeOfDelivery: '', fullTerm: '', premature: '',
         abortion: '', livingChildren: '', preEclampsia: '', medicationAndTreatment: '',
-        
+
         followUpDate: new Date().toISOString().split('T')[0], followUpTime: '', followUpModeOfTx: 'Walk-in',
         followUpModeOfTransfer: 'Ambulatory', followUpChiefComplaint: '', followUpDiagnosis: '', followUpHpi: '',
         followUpBp: '', followUpHr: '', followUpRr: '', followUpTemp: '', followUpO2: '', followUpWeight: '',
         followUpHeight: '', followUpMuac: '', followUpNutritionalStatus: '', followUpBmi: '', followUpVaL: '',
         followUpVaR: '', followUpBloodType: '', followUpGenSurvey: '', managementTreatment: '', followUpLabResults: '',
         attendingProvider: '', chiefComplaints: '', diagnosis: '', hpi: '',
-        
+
         bp: '', hr: '', rr: '', temp: '', weight: '', height: '', o2Saturation: '', muac: '',
         nutritionalStatus: '', bmi: '', visualAcuityLeft: '', visualAcuityRight: '',
-        
+
         labTests: {
-            cbc: false, cbcPlatelet: false, hgbHct: false, chestXray: false, ultrasound: false, urinalysis: false, 
+            cbc: false, cbcPlatelet: false, hgbHct: false, chestXray: false, ultrasound: false, urinalysis: false,
             fecalysis: false, sputum: false, rbs: false, fbs: false, uricAcid: false, cholesterol: false,
             hba1c: false, bloodTyping: false, creatinine: false, sgpt: false, lipidProfile: false, ecg: false, others: false,
         },
@@ -235,33 +564,26 @@ export function ConsultationPage({
 
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
-
-        // Dynamically set attending provider from the Prop passed by Doctor.tsx
-        setFormData(prev => ({ 
-            ...prev, 
-            attendingProvider: doctorName, 
-            labRequestedBy: doctorName 
+        setFormData(prev => ({
+            ...prev,
+            attendingProvider: doctorName,
+            labRequestedBy: doctorName
         }));
 
         const loadPatient = async () => {
             if (!patientId) { setPatientLoading(false); return; }
-
             const { data, error } = await supabase
                 .from('patients')
                 .select('id, firstName, lastName, middleName, age, sex, bloodType, address, contactNumber')
                 .eq('id', patientId)
                 .single();
-
             if (error) console.error('Failed to fetch patient:', error);
             else if (data) setPatient(data as PatientData);
-            
             setPatientLoading(false);
         };
-        
         loadPatient();
     }, [patientId, doctorName]);
 
-    // Data population effects
     useEffect(() => {
         if (!patient?.id) return;
         supabase.from('vital_sign').select('*').eq('patient_id', patient.id).order('vitals_id', { ascending: false }).limit(1).single().then(({ data }) => {
@@ -289,13 +611,11 @@ export function ConsultationPage({
     useEffect(() => {
         if (!patient?.id) return;
         const query = supabase.from('consultation').select('*').eq('patient_id', patient.id);
-        
         if (icidFromUrl) {
             query.eq('initial_consultation_id', parseInt(icidFromUrl as string));
         } else {
             query.order('consultation_id', { ascending: false }).limit(1);
         }
-
         query.single().then(({ data }) => {
             if (!data) return;
             setConsultationId(data.consultation_id);
@@ -310,22 +630,18 @@ export function ConsultationPage({
 
     useEffect(() => {
         if (!patient?.id) return;
-
         const buildFollowUpQuery = async () => {
             let resolvedConsultationId = consultationId;
             if (!resolvedConsultationId && icidFromUrl) {
                 const { data } = await supabase.from('consultation').select('consultation_id').eq('initial_consultation_id', parseInt(icidFromUrl as string)).single();
                 if (data) resolvedConsultationId = data.consultation_id;
             }
-
             const query = supabase.from('follow_up').select('*').eq('patient_id', patient.id);
             if (resolvedConsultationId) query.eq('consultation_id', resolvedConsultationId);
             else query.order('consultation_id', { ascending: false }).limit(1);
-
             const { data } = await query.single();
             if (!data) return;
             if (data.follow_up_status === 'done') setFollowUpDone(true);
-
             setFormData(prev => ({
                 ...prev, followUpDate: data.visit_date ?? prev.followUpDate, followUpTime: data.visit_time ?? '',
                 followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx, followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
@@ -337,7 +653,6 @@ export function ConsultationPage({
                 followUpBloodType: data.blood_type ?? '', followUpGenSurvey: data.general_survey ?? '', managementTreatment: data.medication_treatment ?? prev.managementTreatment, followUpLabResults: prev.followUpLabResults,
             }));
         };
-
         buildFollowUpQuery();
     }, [patient?.id, consultationId, icidFromUrl]);
 
@@ -378,8 +693,7 @@ export function ConsultationPage({
     const handleMedChange = (index: number, field: keyof Medication, value: string) => { const newMeds = [...medications]; newMeds[index][field] = value; setMedications(newMeds); };
     const handleAddMed = () => setMedications(prev => [...prev, { name: '', dosage: '', frequency: '', duration: '', quantity: '' }]);
     const handleRemoveMed = (index: number) => { if (medications.length === 1) return; setMedications(prev => prev.filter((_, i) => i !== index)); };
-    
-    // Use the onBack prop injected by doctor.tsx, otherwise fallback
+
     const goBack = () => { if (onBack) onBack(); else window.location.href = '/pages/doctor.html'; };
 
     const ensureConsultationExists = async (): Promise<number | null> => {
@@ -408,11 +722,9 @@ export function ConsultationPage({
                     resolvedConsultationId = data.consultation_id;
                     setConsultationId(data.consultation_id);
                 }
-
                 const followUpPayload = buildFollowUpPayload(resolvedConsultationId, 'pending');
                 const { data: existingFollowUp, error: followUpCheckError } = await supabase.from('follow_up').select('consultation_id').eq('consultation_id', resolvedConsultationId).maybeSingle();
                 if (followUpCheckError) throw followUpCheckError;
-
                 if (existingFollowUp) {
                     const { error } = await supabase.from('follow_up').update(followUpPayload).eq('consultation_id', resolvedConsultationId);
                     if (error) throw error;
@@ -430,390 +742,181 @@ export function ConsultationPage({
         } catch (err: any) { alert('Failed to save consultation: ' + err.message); } finally { setLoading(false); }
     };
 
- const handleMarkFollowUpDone = async () => {
+    const handleMarkFollowUpDone = async () => {
         if (!patient?.id) return;
         setLoading(true);
-
         try {
             const resolvedConsultationId = await ensureConsultationExists();
             if (!resolvedConsultationId) throw new Error('Could not resolve consultation record.');
-
-            const sigUrl = followUpSigCanvas.current?.isEmpty()
-                ? null
-                : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
-
+            const sigUrl = followUpSigCanvas.current?.isEmpty() ? null : followUpSigCanvas.current?.getCanvas().toDataURL('image/png');
             const donePayload = {
-                patient_id: patient.id,
-                consultation_id: resolvedConsultationId,
-                follow_up_status: 'done',
-                visit_date: formData.followUpDate || null,
-                visit_time: formData.followUpTime || null,
-                mode_of_transaction: formData.followUpModeOfTx || null,
-                mode_of_transfer: formData.followUpModeOfTransfer || null,
-                chief_complaint: formData.followUpChiefComplaint || null,
-                diagnosis: formData.followUpDiagnosis || null,
-                history_of_present_illness: formData.followUpHpi || null,
-                bp: formData.followUpBp || null,
-                heart_rate: toNumberOrNull(formData.followUpHr),
-                respiratory_rate: toNumberOrNull(formData.followUpRr),
-                temperature: toNumberOrNull(formData.followUpTemp),
-                o2_saturation: toNumberOrNull(formData.followUpO2),
-                weight: toNumberOrNull(formData.followUpWeight),
-                height: toNumberOrNull(formData.followUpHeight),
+                patient_id: patient.id, consultation_id: resolvedConsultationId, follow_up_status: 'done',
+                visit_date: formData.followUpDate || null, visit_time: formData.followUpTime || null,
+                mode_of_transaction: formData.followUpModeOfTx || null, mode_of_transfer: formData.followUpModeOfTransfer || null,
+                chief_complaint: formData.followUpChiefComplaint || null, diagnosis: formData.followUpDiagnosis || null,
+                history_of_present_illness: formData.followUpHpi || null, bp: formData.followUpBp || null,
+                heart_rate: toNumberOrNull(formData.followUpHr), respiratory_rate: toNumberOrNull(formData.followUpRr),
+                temperature: toNumberOrNull(formData.followUpTemp), o2_saturation: toNumberOrNull(formData.followUpO2),
+                weight: toNumberOrNull(formData.followUpWeight), height: toNumberOrNull(formData.followUpHeight),
                 muac: toNumberOrNull(formData.followUpMuac),
                 nutritional_status: followUpBmiInfo?.status || formData.followUpNutritionalStatus || null,
                 bmi: followUpBmiInfo ? parseFloat(followUpBmiInfo.value) : toNumberOrNull(formData.followUpBmi),
-                visual_acuity_left: formData.followUpVaL || null,
-                visual_acuity_right: formData.followUpVaR || null,
+                visual_acuity_left: formData.followUpVaL || null, visual_acuity_right: formData.followUpVaR || null,
                 blood_type: formData.followUpBloodType || patient?.bloodType || null,
-                general_survey: formData.followUpGenSurvey || null,
-                medication_treatment: formData.managementTreatment || null,
-                lab_results: formData.followUpLabResults || null,
-                signature_url: sigUrl || null,
+                general_survey: formData.followUpGenSurvey || null, medication_treatment: formData.managementTreatment || null,
+                lab_results: formData.followUpLabResults || null, signature_url: sigUrl || null,
             };
-
             const { data: existing, error: checkError } = await supabase
-                .from('follow_up')
-                .select('followup_id, consultation_id')
-                .eq('patient_id', patient.id)
-                .order('followup_id', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
+                .from('follow_up').select('followup_id, consultation_id')
+                .eq('patient_id', patient.id).order('followup_id', { ascending: false }).limit(1).maybeSingle();
             if (checkError) throw checkError;
-
             if (existing) {
-                const { error: updateError } = await supabase
-                    .from('follow_up')
-                    .update(donePayload)
-                    .eq('followup_id', existing.followup_id);
-
+                const { error: updateError } = await supabase.from('follow_up').update(donePayload).eq('followup_id', existing.followup_id);
                 if (updateError) throw updateError;
             } else {
-                const { error: insertError } = await supabase
-                    .from('follow_up')
-                    .insert([donePayload]);
-
+                const { error: insertError } = await supabase.from('follow_up').insert([donePayload]);
                 if (insertError) throw insertError;
             }
-
             setFollowUpDone(true);
             alert('Follow-up marked as done!');
         } catch (err: any) {
             console.error('Full error:', err);
             alert('Failed to mark follow-up as done: ' + err.message);
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
-
-const handlePrintPrescription = () => {
+    const handlePrintPrescription = () => {
         const validMeds = medications.filter(m => m.name.trim() !== '');
-        if (validMeds.length === 0) {
-            alert('Please add at least one medication before printing.');
-            return;
-        }
-
-        // 1. Perfectly isolated HTML for the Rx Pad matching the provided format
+        if (validMeds.length === 0) { alert('Please add at least one medication before printing.'); return; }
         const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Prescription - ${patientFullName}</title>
-                <style>
-                    /* Forces 1 Page A5 format, removes browser headers/footers */
-                    @page { size: A5 portrait; margin: 10mm; }
-                    body { 
-                        font-family: 'Times New Roman', Times, serif; 
-                        color: #000; 
-                        line-height: 1.2; 
-                        padding: 10px 15px; 
-                        margin: 0;
-                    }
-                    
-                    /* Header Formatting */
-                    .header { text-align: center; margin-bottom: 12px; }
-                    .header p { margin: 2px 0; font-size: 13px; }
-                    .header h3 { margin: 5px 0 0 0; font-weight: bold; font-size: 16px; letter-spacing: 0.5px; }
-                    
-                    /* Dividers */
-                    .divider { border-bottom: 1.5px solid #000; margin: 12px 0; }
-                    
-                    /* Patient Info Form Layout */
-                    .patient-info { font-size: 14px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px; }
-                    .row { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
-                    .field { display: flex; align-items: flex-end; }
-                    .field span { margin-right: 5px; white-space: nowrap; }
-                    .value { 
-                        border-bottom: 1px solid #000; 
-                        flex-grow: 1; 
-                        padding: 0 5px; 
-                        text-align: center;
-                        font-weight: bold;
-                    }
-                    
-                    /* Rx Symbol */
-                    .rx-symbol { font-size: 48px; font-weight: bold; margin: 15px 0 5px 10px; line-height: 1; font-style: italic; }
-                    
-                    /* Medication List */
-                    .med-list { min-height: 280px; padding: 0 20px 0 45px; }
-                    .med-item { margin-bottom: 15px; font-size: 14px; }
-                    .med-name { font-weight: bold; font-size: 15px; margin-bottom: 3px; }
-                    .med-sig { margin-left: 20px; }
-                    
-                    /* Footer Formatting */
-                    .footer { display: flex; justify-content: space-between; align-items: flex-end; font-size: 13px; page-break-inside: avoid; }
-                    .next-visit { display: flex; align-items: flex-end; }
-                    
-                    .doctor-block { text-align: center; width: 220px; }
-                    .sig-line { border-bottom: 1px solid #000; margin-bottom: 5px; height: 40px; }
-                    .doc-name { font-weight: bold; font-size: 15px; text-transform: uppercase; }
-                    .doc-creds { font-size: 12px; display: flex; flex-direction: column; align-items: center; margin-top: 3px; }
-                </style>
-            </head>
-            <body>
+            <!DOCTYPE html><html><head>
+            <title>Prescription - ${patientFullName}</title>
+            <style>
+                @page { size: A5 portrait; margin: 10mm; }
+                body { font-family: 'Times New Roman', Times, serif; color: #000; line-height: 1.2; padding: 10px 15px; margin: 0; }
+                .header { text-align: center; margin-bottom: 12px; }
+                .header p { margin: 2px 0; font-size: 13px; }
+                .header h3 { margin: 5px 0 0 0; font-weight: bold; font-size: 16px; letter-spacing: 0.5px; }
+                .divider { border-bottom: 1.5px solid #000; margin: 12px 0; }
+                .patient-info { font-size: 14px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px; }
+                .row { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
+                .field { display: flex; align-items: flex-end; }
+                .field span { margin-right: 5px; white-space: nowrap; }
+                .value { border-bottom: 1px solid #000; flex-grow: 1; padding: 0 5px; text-align: center; font-weight: bold; }
+                .rx-symbol { font-size: 48px; font-weight: bold; margin: 15px 0 5px 10px; line-height: 1; font-style: italic; }
+                .med-list { min-height: 280px; padding: 0 20px 0 45px; }
+                .med-item { margin-bottom: 15px; font-size: 14px; }
+                .med-name { font-weight: bold; font-size: 15px; margin-bottom: 3px; }
+                .med-sig { margin-left: 20px; }
+                .footer { display: flex; justify-content: space-between; align-items: flex-end; font-size: 13px; page-break-inside: avoid; }
+                .next-visit { display: flex; align-items: flex-end; }
+                .doctor-block { text-align: center; width: 220px; }
+                .sig-line { border-bottom: 1px solid #000; margin-bottom: 5px; height: 40px; }
+                .doc-name { font-weight: bold; font-size: 15px; text-transform: uppercase; }
+                .doc-creds { font-size: 12px; display: flex; flex-direction: column; align-items: center; margin-top: 3px; }
+            </style></head><body>
                 <div class="header">
-                    <p>Republic of the Philippines</p>
-                    <p>Province of Batangas</p>
-                    <p>Municipality of Malvar</p>
+                    <p>Republic of the Philippines</p><p>Province of Batangas</p><p>Municipality of Malvar</p>
                     <h3>MUNICIPAL HEALTH OFFICE</h3>
                 </div>
-                
                 <div class="divider"></div>
-
                 <div class="patient-info">
                     <div class="row">
-                        <div class="field" style="width: 68%;">
-                            <span>Name:</span> 
-                            <div class="value" style="text-align: left;">${patientFullName}</div>
-                        </div>
-                        <div class="field" style="width: 30%;">
-                            <span>Date:</span> 
-                            <div class="value">${new Date().toLocaleDateString('en-US')}</div>
-                        </div>
+                        <div class="field" style="width:68%;"><span>Name:</span><div class="value" style="text-align:left;">${patientFullName}</div></div>
+                        <div class="field" style="width:30%;"><span>Date:</span><div class="value">${new Date().toLocaleDateString('en-US')}</div></div>
                     </div>
                     <div class="row">
-                        <div class="field" style="width: 18%;">
-                            <span>Age:</span> 
-                            <div class="value">${patient?.age || '&nbsp;'}</div>
-                        </div>
-                        <div class="field" style="width: 18%;">
-                            <span>Sex:</span> 
-                            <div class="value">${patient?.sex || '&nbsp;'}</div>
-                        </div>
-                        <div class="field" style="width: 60%;">
-                            <span>Address:</span> 
-                            <div class="value" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                ${patient?.address ? patient.address.split(',')[0] : '&nbsp;'}
-                            </div>
-                        </div>
+                        <div class="field" style="width:18%;"><span>Age:</span><div class="value">${patient?.age || '&nbsp;'}</div></div>
+                        <div class="field" style="width:18%;"><span>Sex:</span><div class="value">${patient?.sex || '&nbsp;'}</div></div>
+                        <div class="field" style="width:60%;"><span>Address:</span><div class="value" style="text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${patient?.address ? patient.address.split(',')[0] : '&nbsp;'}</div></div>
                     </div>
                 </div>
-
                 <div class="divider"></div>
-
                 <div class="rx-symbol">&#8478;</div>
-
                 <div class="med-list">
-                    ${validMeds.map(m => `
-                        <div class="med-item">
-                            <div class="med-name">${m.quantity ? `${m.quantity} ` : ''}${m.name}</div>
-                            <div class="med-sig">Sig: ${m.dosage} ${m.frequency || ''} ${m.duration ? `for ${m.duration}` : ''}</div>
-                        </div>
-                    `).join('')}
+                    ${validMeds.map(m => `<div class="med-item"><div class="med-name">${m.quantity ? `${m.quantity} ` : ''}${m.name}</div><div class="med-sig">Sig: ${m.dosage} ${m.frequency || ''} ${m.duration ? `for ${m.duration}` : ''}</div></div>`).join('')}
                 </div>
-
                 <div class="footer">
-                    <div class="next-visit">
-                        <span>Next Visit:</span>
-                        <div class="value" style="width: 100px;">
-                            ${formData.followUpDate ? new Date(formData.followUpDate).toLocaleDateString('en-US') : '&nbsp;'}
-                        </div>
-                    </div>
-                    <div class="doctor-block">
-                        <div class="sig-line"></div>
-                        <div class="doc-name">${doctorName}, MD</div>
-                        <div class="doc-creds">
-                            <span>Lic No: ${formData.rxLicNo || '________________'}</span>
-                            <span>PTR No: ${formData.rxPtrNo || '________________'}</span>
-                        </div>
-                    </div>
+                    <div class="next-visit"><span>Next Visit:</span><div class="value" style="width:100px;">${formData.followUpDate ? new Date(formData.followUpDate).toLocaleDateString('en-US') : '&nbsp;'}</div></div>
+                    <div class="doctor-block"><div class="sig-line"></div><div class="doc-name">${doctorName}, MD</div>
+                    <div class="doc-creds"><span>Lic No: ${formData.rxLicNo || '________________'}</span><span>PTR No: ${formData.rxPtrNo || '________________'}</span></div></div>
                 </div>
-            </body>
-            </html>
-        `;
-
-        // 2. Create a hidden iframe to prevent the React dashboard from printing
+            </body></html>`;
         const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
+        iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
         document.body.appendChild(iframe);
-
         const iframeDoc = iframe.contentWindow?.document;
         if (!iframeDoc) return;
-
-        iframeDoc.open();
-        iframeDoc.write(html);
-        iframeDoc.close();
-
-        // 3. Focus the iframe and trigger print
+        iframeDoc.open(); iframeDoc.write(html); iframeDoc.close();
         setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            
-            // Clean up the iframe after the print dialog is closed
-            setTimeout(() => {
-                if (document.body.contains(iframe)) {
-                    document.body.removeChild(iframe);
-                }
-            }, 1000);
+            iframe.contentWindow?.focus(); iframe.contentWindow?.print();
+            setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
         }, 500);
     };
 
-const handlePrintMedCert = () => {
-        if (!formData.diagnosis || formData.diagnosis.trim() === '') {
-            alert('Please enter a Diagnosis before printing.');
-            return;
-        }
-
+    const handlePrintMedCert = () => {
+        if (!formData.diagnosis || formData.diagnosis.trim() === '') { alert('Please enter a Diagnosis before printing.'); return; }
         const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Medical Certificate - ${patientFullName}</title>
-                <style>
-                    /* Force A4 and remove browser headers/footers */
-                    @page { 
-                        size: A4 portrait; 
-                        margin: 15mm 20mm; 
-                    }
-                    * { box-sizing: border-box; }
-                    html, body { height: 100%; margin: 0; padding: 0; }
-                    
-                    body { 
-                        font-family: 'Times New Roman', Times, serif; 
-                        color: #000; 
-                        font-size: 15px;
-                        line-height: 1.5;
-                    }
-
-                    /* Wrapper to force footer to bottom */
-                    .page-container {
-                        display: flex;
-                        flex-direction: column;
-                        min-height: 260mm; /* Fixed height for A4 printable area */
-                        position: relative;
-                    }
-
-                    .header { text-align: center; margin-bottom: 20px; }
-                    .header p { margin: 1px 0; font-size: 14px; }
-                    .header h3 { margin: 4px 0 0 0; font-weight: bold; font-size: 17px; text-transform: uppercase; }
-                    
-                    .title { text-align: center; font-weight: bold; font-size: 22px; margin: 25px 0; text-decoration: underline; letter-spacing: 2px; }
-                    
-                    .date-block { text-align: right; margin-bottom: 30px; }
-                    
-                    .salutation { font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
-                    
-                    .body-text { text-align: justify; margin-bottom: 25px; text-indent: 40px; line-height: 1.8; }
-                    .field-value { border-bottom: 1px solid #000; font-weight: bold; padding: 0 4px; display: inline-block; text-align: center; }
-                    
-                    .section { margin-bottom: 20px; }
-                    .section-label { font-weight: bold; font-size: 16px; display: block; margin-bottom: 4px; }
-                    .section-content { 
-                        min-height: 40px; 
-                        border-bottom: 1px solid #000; 
-                        font-weight: bold; 
-                        padding-left: 10px; 
-                        font-style: italic;
-                        line-height: 1.3;
-                    }
-                    
-                    /* ─── PINS FOOTER TO BOTTOM ─── */
-                    .footer { 
-                        margin-top: auto; /* This pushes the block to the very bottom */
-                        display: flex; 
-                        justify-content: flex-end; 
-                        padding-bottom: 10mm; /* Gap from the bottom edge */
-                    }
-                    
-                    .doctor-block { text-align: center; width: 300px; }
-                    .sig-line { border-bottom: 1.5px solid #000; margin-bottom: 5px; height: 40px; }
-                    .doc-name { font-weight: bold; font-size: 16px; text-transform: uppercase; }
-                    .doc-creds { font-size: 13px; margin-top: 2px; text-align: center; line-height: 1.4; }
-                </style>
-            </head>
-            <body>
+            <!DOCTYPE html><html><head>
+            <title>Medical Certificate - ${patientFullName}</title>
+            <style>
+                @page { size: A4 portrait; margin: 15mm 20mm; }
+                * { box-sizing: border-box; } html, body { height: 100%; margin: 0; padding: 0; }
+                body { font-family: 'Times New Roman', Times, serif; color: #000; font-size: 15px; line-height: 1.5; }
+                .page-container { display: flex; flex-direction: column; min-height: 260mm; position: relative; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header p { margin: 1px 0; font-size: 14px; }
+                .header h3 { margin: 4px 0 0 0; font-weight: bold; font-size: 17px; text-transform: uppercase; }
+                .title { text-align: center; font-weight: bold; font-size: 22px; margin: 25px 0; text-decoration: underline; letter-spacing: 2px; }
+                .date-block { text-align: right; margin-bottom: 30px; }
+                .salutation { font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+                .body-text { text-align: justify; margin-bottom: 25px; text-indent: 40px; line-height: 1.8; }
+                .field-value { border-bottom: 1px solid #000; font-weight: bold; padding: 0 4px; display: inline-block; text-align: center; }
+                .section { margin-bottom: 20px; }
+                .section-label { font-weight: bold; font-size: 16px; display: block; margin-bottom: 4px; }
+                .section-content { min-height: 40px; border-bottom: 1px solid #000; font-weight: bold; padding-left: 10px; font-style: italic; line-height: 1.3; }
+                .footer { margin-top: auto; display: flex; justify-content: flex-end; padding-bottom: 10mm; }
+                .doctor-block { text-align: center; width: 300px; }
+                .sig-line { border-bottom: 1.5px solid #000; margin-bottom: 5px; height: 40px; }
+                .doc-name { font-weight: bold; font-size: 16px; text-transform: uppercase; }
+                .doc-creds { font-size: 13px; margin-top: 2px; text-align: center; line-height: 1.4; }
+            </style></head><body>
                 <div class="page-container">
                     <div class="header">
-                        <p>Republic of the Philippines</p>
-                        <p>Province of Batangas</p>
-                        <p>Municipality of Malvar</p>
+                        <p>Republic of the Philippines</p><p>Province of Batangas</p><p>Municipality of Malvar</p>
                         <h3>MUNICIPAL HEALTH OFFICE</h3>
                     </div>
-                    
                     <div class="title">MEDICAL CERTIFICATE</div>
-                    
-                    <div class="date-block">
-                        Malvar, Batangas<br>
-                        <strong>${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>
-                    </div>
-
+                    <div class="date-block">Malvar, Batangas<br><strong>${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong></div>
                     <div class="salutation">TO WHOM IT MAY CONCERN:</div>
-
                     <div class="body-text">
-                        This is to certify that <span class="field-value" style="min-width: 180px;">${patientFullName}</span>, 
-                        <span class="field-value" style="min-width: 40px;">${patient?.age || '___'}</span> years old, 
-                        <span class="field-value" style="min-width: 60px;">${patient?.sex || '___'}</span>, a resident of 
-                        <span class="field-value" style="min-width: 220px;">${patient?.address || '___________________________'}</span>, 
-                        was examined and treated at the Municipal Health Office on 
-                        <span class="field-value">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span> 
+                        This is to certify that <span class="field-value" style="min-width:180px;">${patientFullName}</span>,
+                        <span class="field-value" style="min-width:40px;">${patient?.age || '___'}</span> years old,
+                        <span class="field-value" style="min-width:60px;">${patient?.sex || '___'}</span>, a resident of
+                        <span class="field-value" style="min-width:220px;">${patient?.address || '___________________________'}</span>,
+                        was examined and treated at the Municipal Health Office on
+                        <span class="field-value">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                         with the following diagnosis:
                     </div>
-
-                    <div class="section">
-                        <span class="section-label">Diagnosis:</span>
-                        <div class="section-content">${formData.diagnosis || ''}</div>
-                    </div>
-
-                    <div class="section">
-                        <span class="section-label">Remarks / Recommendation:</span>
-                        <div class="section-content">${formData.medicationAndTreatment || ''}</div>
-                    </div>
-
+                    <div class="section"><span class="section-label">Diagnosis:</span><div class="section-content">${formData.diagnosis || ''}</div></div>
+                    <div class="section"><span class="section-label">Remarks / Recommendation:</span><div class="section-content">${formData.medicationAndTreatment || ''}</div></div>
                     <div class="footer">
                         <div class="doctor-block">
                             <div class="sig-line"></div>
                             <div class="doc-name">${doctorName}, MD</div>
-                            <div class="doc-creds">
-                                License No: ${formData.rxLicNo || '________________'}<br>
-                                PTR No: ${formData.rxPtrNo || '________________'}
-                            </div>
+                            <div class="doc-creds">License No: ${formData.rxLicNo || '________________'}<br>PTR No: ${formData.rxPtrNo || '________________'}</div>
                         </div>
                     </div>
                 </div>
-            </body>
-            </html>
-        `;
-
+            </body></html>`;
         const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.visibility = 'hidden';
+        iframe.style.cssText = 'position:fixed;visibility:hidden;';
         document.body.appendChild(iframe);
         const iframeDoc = iframe.contentWindow?.document;
         if (!iframeDoc) return;
-        iframeDoc.open();
-        iframeDoc.write(html);
-        iframeDoc.close();
-
+        iframeDoc.open(); iframeDoc.write(html); iframeDoc.close();
         setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
+            iframe.contentWindow?.focus(); iframe.contentWindow?.print();
             setTimeout(() => document.body.removeChild(iframe), 1000);
         }, 500);
     };
@@ -843,7 +946,6 @@ const handlePrintMedCert = () => {
         if (sigCanvas.current?.isEmpty()) { alert('Doctor signature is required before saving.'); return; }
         const validMedications = medications.filter(m => m.name.trim() !== '');
         if (validMedications.length === 0) { alert('Please add at least one medication before saving.'); return; }
-        
         setLoading(true);
         try {
             if (isOnline) {
@@ -862,7 +964,7 @@ const handlePrintMedCert = () => {
         } catch (error: any) { console.error('Error:', error); alert('Failed to save prescription: ' + error.message); } finally { setLoading(false); }
     };
 
-    // ─── UI Variables ────────────────────────────────────────────────────────────
+    // ─── UI Variables ─────────────────────────────────────────────────────────
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
     const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-slate-800";
@@ -900,9 +1002,7 @@ const handlePrintMedCert = () => {
                 <div className="text-4xl mb-4">🩺</div>
                 <h2 className="text-xl font-bold mb-2">No Patient Selected</h2>
                 <p className="text-sm font-semibold mb-6">Please go back to the dashboard and select a patient from the queue.</p>
-                <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors">
-                    ← Return to Dashboard
-                </button>
+                <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors">← Return to Dashboard</button>
             </div>
         );
     }
@@ -1001,75 +1101,44 @@ const handlePrintMedCert = () => {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
                 {followUpDone && (
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">
-                        ✓ Follow-up Completed
-                    </span>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">✓ Follow-up Completed</span>
                 )}
             </div>
-
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
                     <span className="text-lg leading-none">ℹ️</span>
                     <span>No consultation saved yet — follow-up details will be saved when you save the consultation on Tab 5.</span>
                 </div>
             )}
-
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Visit Information</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                        <label className={labelCls}>Visit Date</label>
-                        <input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} />
-                    </div>
-                    <div>
-                        <label className={labelCls}>Visit Time</label>
-                        <input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} />
-                    </div>
+                    <div><label className={labelCls}>Visit Date</label><input type="date" name="followUpDate" value={formData.followUpDate} onChange={handleChange} className={inputCls} /></div>
+                    <div><label className={labelCls}>Visit Time</label><input type="time" name="followUpTime" value={formData.followUpTime} onChange={handleChange} className={inputCls} /></div>
                     <div>
                         <label className={labelCls}>Mode of Transaction</label>
                         <select name="followUpModeOfTx" value={formData.followUpModeOfTx} onChange={handleChange} className={inputCls}>
-                            <option value="Walk-in">Walk-in</option>
-                            <option value="Teleconsult">Teleconsult</option>
-                            <option value="Referral">Referral</option>
+                            <option value="Walk-in">Walk-in</option><option value="Teleconsult">Teleconsult</option><option value="Referral">Referral</option>
                         </select>
                     </div>
                     <div>
                         <label className={labelCls}>Mode of Transfer</label>
                         <select name="followUpModeOfTransfer" value={formData.followUpModeOfTransfer} onChange={handleChange} className={inputCls}>
-                            <option value="Ambulatory">Ambulatory</option>
-                            <option value="Wheelchair">Wheelchair</option>
-                            <option value="Stretcher">Stretcher</option>
+                            <option value="Ambulatory">Ambulatory</option><option value="Wheelchair">Wheelchair</option><option value="Stretcher">Stretcher</option>
                         </select>
                     </div>
-                    <div>
-                        <label className={labelCls}>Blood Type</label>
-                        <input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} />
-                    </div>
-                    <div>
-                        <label className={labelCls}>General Survey</label>
-                        <input type="text" name="followUpGenSurvey" value={formData.followUpGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious, coherent..." />
-                    </div>
+                    <div><label className={labelCls}>Blood Type</label><input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} /></div>
+                    <div><label className={labelCls}>General Survey</label><input type="text" name="followUpGenSurvey" value={formData.followUpGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious, coherent..." /></div>
                 </div>
             </div>
-
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Clinical</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className={labelCls}>Chief Complaint</label>
-                        <textarea name="followUpChiefComplaint" value={formData.followUpChiefComplaint} onChange={handleChange} rows={3} className={textareaCls} placeholder="Primary reason for visit..." />
-                    </div>
-                    <div>
-                        <label className={labelCls}>Diagnosis</label>
-                        <textarea name="followUpDiagnosis" value={formData.followUpDiagnosis} onChange={handleChange} rows={3} className={textareaCls} />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className={labelCls}>History of Present Illness <span className="text-slate-400 font-normal normal-case ml-1">(Optional)</span></label>
-                        <textarea name="followUpHpi" value={formData.followUpHpi} onChange={handleChange} rows={3} className={textareaCls} />
-                    </div>
+                    <div><label className={labelCls}>Chief Complaint</label><textarea name="followUpChiefComplaint" value={formData.followUpChiefComplaint} onChange={handleChange} rows={3} className={textareaCls} placeholder="Primary reason for visit..." /></div>
+                    <div><label className={labelCls}>Diagnosis</label><textarea name="followUpDiagnosis" value={formData.followUpDiagnosis} onChange={handleChange} rows={3} className={textareaCls} /></div>
+                    <div className="md:col-span-2"><label className={labelCls}>History of Present Illness <span className="text-slate-400 font-normal normal-case ml-1">(Optional)</span></label><textarea name="followUpHpi" value={formData.followUpHpi} onChange={handleChange} rows={3} className={textareaCls} /></div>
                 </div>
             </div>
-
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1081,7 +1150,6 @@ const handlePrintMedCert = () => {
                     <div><label className={labelCls}>MUAC (cm)</label><input type="text" name="followUpMuac" value={formData.followUpMuac} onChange={handleChange} className={inputCls} placeholder="28.5" /></div>
                 </div>
             </div>
-
             <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Anthropometrics</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -1096,7 +1164,6 @@ const handlePrintMedCert = () => {
                     <div><label className={labelCls}>Visual Acuity — Right</label><input type="text" name="followUpVaR" value={formData.followUpVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
                 </div>
             </div>
-
             <div className="border-t border-slate-100 pt-6">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Treatment &amp; Results</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1111,7 +1178,6 @@ const handlePrintMedCert = () => {
                     </div>
                 </div>
             </div>
-
             <div className="flex justify-end">
                 <div className="w-full md:w-80">
                     <label className={labelCls}>Provider Signature</label>
@@ -1122,102 +1188,53 @@ const handlePrintMedCert = () => {
                     <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
                 </div>
             </div>
-
-            {/* ─── ACTION BUTTONS (Contained Layout) ─── */}
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">
-                    ← Back
-                </button>
-                
-                {/* Right side wrapper: Distinct Action Container Box */}
+                <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm">
                     <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">Follow-up Actions</p>
-                    
-                    {/* The Follow-up Done button is permanently visible and styled cleanly */}
                     {!followUpDone ? (
                         <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full bg-white hover:bg-green-50 text-green-700 py-3 px-6 rounded-xl font-bold transition-colors border border-green-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
                             {loading ? 'Processing...' : '✓ Mark Follow-up as Done'}
                         </button>
                     ) : (
-                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default">
-                            ✓ Follow-up Completed
-                        </div>
+                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default">✓ Follow-up Completed</div>
                     )}
-                    
-                    <button onClick={() => setActiveTab(5)} className={`w-full text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
-                        Next: Clinical Notes →
-                    </button>
+                    <button onClick={() => setActiveTab(5)} className={`w-full text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Clinical Notes →</button>
                 </div>
             </div>
         </div>
     );
 
-
-const renderTab5 = () => (
+    const renderTab5 = () => (
         <div className={cardCls}>
             <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-            <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Clinical Notes & Certification</h3>            </div>
-            
+                <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">V. Clinical Notes &amp; Certification</h3>
+            </div>
             <div className="space-y-6">
-                {/* Updated to focus only on Certification requirements */}
                 <div>
                     <label className={labelCls}>Diagnosis: <span className="text-rose-500">*</span></label>
-                    <textarea 
-                        name="diagnosis" 
-                        value={formData.diagnosis} 
-                        onChange={handleChange} 
-                        className={`${textareaCls} min-h-[120px] border-l-4 border-l-blue-500`} 
-                        placeholder="Enter final diagnosis for the Medical Certificate..." 
-                    />
+                    <textarea name="diagnosis" value={formData.diagnosis} onChange={handleChange} className={`${textareaCls} min-h-[120px] border-l-4 border-l-blue-500`} placeholder="Enter final diagnosis for the Medical Certificate..." />
                 </div>
                 <div>
                     <label className={labelCls}>Remarks / Recommendation:</label>
-                    <textarea 
-                        name="medicationAndTreatment" 
-                        value={formData.medicationAndTreatment} 
-                        onChange={handleChange} 
-                        className={`${textareaCls} min-h-[120px]`} 
-                        placeholder="Enter instructions, rest period, or follow-up recommendations..." 
-                    />
+                    <textarea name="medicationAndTreatment" value={formData.medicationAndTreatment} onChange={handleChange} className={`${textareaCls} min-h-[120px]`} placeholder="Enter instructions, rest period, or follow-up recommendations..." />
                 </div>
             </div>
-
-            {/* Doctor License field - Needed for the Certificate footer */}
             <div className="pt-6 mt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                     <label className={labelCls}>Doctor License No. (PRC)</label>
-                    <input 
-                        type="text" 
-                        name="rxLicNo" 
-                        value={formData.rxLicNo} 
-                        onChange={handleChange} 
-                        className={inputCls} 
-                        placeholder="Required for signature block" 
-                    />
+                    <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="Required for signature block" />
                 </div>
             </div>
-            
-            {/* ─── ACTION BUTTONS ─── */}
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">
-                    ← Back
-                </button>
-                
+                <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto">
-                    {/* Action Container for Printing */}
                     <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">
-                            📄 Print Medical Certificate
-                        </button>
+                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">📄 Print Medical Certificate</button>
                     </div>
-
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">
-                            💾 Save Draft
-                        </button>
-                        <button onClick={() => setActiveTab(6)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
-                            Next Tab →
-                        </button>
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Draft</button>
+                        <button onClick={() => setActiveTab(6)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next Tab →</button>
                     </div>
                 </div>
             </div>
@@ -1229,11 +1246,8 @@ const renderTab5 = () => (
             <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
                 <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VI. Laboratory Request</h3>
             </div>
-            
             <div className="space-y-2">
-
                 <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-6 space-y-6">
-                    {/* Routine Tests */}
                     <div>
                         <div className="inline-block px-3 py-1 bg-white border border-slate-200 shadow-sm text-slate-600 text-xs font-black uppercase tracking-widest rounded-md mb-4">Routine Tests</div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-8">
@@ -1249,8 +1263,6 @@ const renderTab5 = () => (
                             {renderCheckbox('ecg', 'ECG')}
                         </div>
                     </div>
-
-                    {/* Fasting Tests */}
                     <div className="pt-6 border-t border-slate-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="inline-block px-3 py-1 bg-white border border-slate-200 shadow-sm text-slate-600 text-xs font-black uppercase tracking-widest rounded-md">Fasting Tests</div>
@@ -1267,32 +1279,17 @@ const renderTab5 = () => (
                             {renderCheckbox('sgpt', 'SGPT')}
                         </div>
                     </div>
-
-                    {/* Others */}
                     <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="shrink-0">
-                            {renderCheckbox('others', 'Others:')}
-                        </div>
-                        <input
-                            type="text"
-                            name="labTestsOther"
-                            value={formData.labTestsOther}
-                            onChange={handleChange}
-                            disabled={!formData.labTests.others}
+                        <div className="shrink-0">{renderCheckbox('others', 'Others:')}</div>
+                        <input type="text" name="labTestsOther" value={formData.labTestsOther} onChange={handleChange} disabled={!formData.labTests.others}
                             className={`flex-1 bg-white border-2 ${formData.labTests.others ? 'border-blue-400 focus:border-blue-500 shadow-sm' : 'border-slate-100'} rounded-xl outline-none px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50 disabled:bg-slate-50 transition-all`}
-                            placeholder={formData.labTests.others ? 'Specify other tests here...' : ''}
-                        />
+                            placeholder={formData.labTests.others ? 'Specify other tests here...' : ''} />
                     </div>
                 </div>
-
-                <div>
-                    <label className={labelCls}>Requested By</label>
-                    <input type="text" name="labRequestedBy" value={formData.labRequestedBy} onChange={handleChange} className={inputCls} />
-                </div>
+                <div><label className={labelCls}>Requested By</label><input type="text" name="labRequestedBy" value={formData.labRequestedBy} onChange={handleChange} className={inputCls} /></div>
             </div>
-
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-8 mt-6 border-t border-slate-100">
-                <button onClick={() => setActiveTab(6)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors">← Back</button>
+                <button onClick={() => setActiveTab(5)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors">← Back</button>
                 <div className="flex flex-col sm:flex-row gap-4 order-1 sm:order-2">
                     <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto py-3.5 px-6 rounded-xl font-extrabold transition-colors shadow-sm border-2 disabled:opacity-50 ${isOnline ? 'bg-white border-blue-500 text-blue-600 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
                         {loading ? 'Sending...' : '📋 Send to Laboratory'}
@@ -1303,12 +1300,11 @@ const renderTab5 = () => (
         </div>
     );
 
-const renderTab7 = () => (
+    const renderTab7 = () => (
         <div className={cardCls}>
             <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
                 <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">VII. E-Prescription</h3>
             </div>
-            
             <div className="space-y-4 mb-6">
                 {medications.map((med, i) => (
                     <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all hover:border-blue-200">
@@ -1321,56 +1317,26 @@ const renderTab7 = () => (
                                 <label className={labelCls}>Medication Name</label>
                                 <input type="text" value={med.name} onChange={e => handleMedChange(i, 'name', e.target.value)} className={inputCls} placeholder="e.g. Amoxicillin 500mg" />
                             </div>
-                            <div>
-                                <label className={labelCls}>Sig / Dosage</label>
-                                <input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 1 tab 3x a day" />
-                            </div>
-                            <div>
-                                <label className={labelCls}>Quantity</label>
-                                <input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" />
-                            </div>
+                            <div><label className={labelCls}>Sig / Dosage</label><input type="text" value={med.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} className={inputCls} placeholder="e.g. 1 tab 3x a day" /></div>
+                            <div><label className={labelCls}>Quantity</label><input type="text" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputCls} placeholder="e.g. #21" /></div>
                         </div>
                     </div>
                 ))}
             </div>
-            
             <button onClick={handleAddMed} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-sm font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all mb-8">
                 + Add Another Medication
             </button>
-
-            {/* Doctor Info Fields (Required for legal printout) */}
             <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <label className={labelCls}>License No. (PRC)</label>
-                    <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="e.g. 0123456" />
-                </div>
-                <div>
-                    <label className={labelCls}>PTR No.</label>
-                    <input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="e.g. 1234567" />
-                </div>
+                <div><label className={labelCls}>License No. (PRC)</label><input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="e.g. 0123456" /></div>
+                <div><label className={labelCls}>PTR No.</label><input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="e.g. 1234567" /></div>
             </div>
-
-            {/* ─── ACTION BUTTONS (Stacked & Separated Layout) ─── */}
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">
-                    ← Back
-                </button>
-                
-                {/* Right side wrapper */}
+                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
-                    
-                    {/* Print Button in its own subtle container */}
                     <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">
-                            🖨️ Print Physical Copy
-                        </button>
+                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">🖨️ Print Physical Copy</button>
                     </div>
-                    
-                    {/* Primary Submit Button standing alone */}
-                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>
-                        💊 Authorize & Send to Pharmacy
-                    </button>
-
+                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>💊 Authorize &amp; Send to Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1385,8 +1351,8 @@ const renderTab7 = () => (
     return (
         <div className="w-full flex justify-center pb-12">
             <div className="w-full max-w-5xl">
-                
-                {/* Embedded Patient Info Card */}
+
+                {/* Patient Info Card */}
                 <div className="w-full bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-md">{patientInitials}</div>
                     <div className="flex-1 min-w-0">
@@ -1422,8 +1388,13 @@ const renderTab7 = () => (
                 </div>
             </div>
 
+            {/* ─── Enhanced History Panel ─── */}
             {showHistory && patient && (
-                <HistoryPanel patientId={patient.id} patientName={patientFullName} onClose={() => setShowHistory(false)} />
+                <HistoryPanel
+                    patientId={patient.id}
+                    patientName={patientFullName}
+                    onClose={() => setShowHistory(false)}
+                />
             )}
         </div>
     );
