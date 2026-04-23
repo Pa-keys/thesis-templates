@@ -1,3 +1,4 @@
+// thesis-templates/scripts/details.tsx
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../shared/supabase';
@@ -14,16 +15,15 @@ interface Patient {
     suffix: string; address: string; contactNumber: string; educationalAttain: string; 
     employmentStatus: string; philhealthNo: string; philhealthStatus: string; 
     category: string; categoryOthers: string; relativeName: string; 
-    relativeRelation: string; relativeAddress: string; consent_signed: boolean;
+    relativeRelation: string; relativeAddress: string;
+    consent_signed: boolean;
 }
 
 interface EditForm extends Omit<Patient, 'id' | 'age' | 'consent_signed'> { age: string; }
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as const;
 const EDUCATION_LEVELS = [
-    'No Formal Education', 'Elementary Level', 'Elementary Graduate',
-    'High School Level', 'High School Graduate', 'Vocational',
-    'College Level', 'College Graduate', 'Post-Graduate'
+    'No Formal Education', 'Elementary Level', 'Elementary Graduate', 'High School Level', 'High School Graduate', 'Vocational', 'College Level', 'College Graduate', 'Post-Graduate'
 ] as const;
 const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student', 'Retired'] as const;
 
@@ -62,7 +62,11 @@ function DetailsPage() {
     const [saving, setSaving] = useState(false);
     const [showConsent, setShowConsent] = useState(false);
     
-    // System Integration States
+    // NEW STATES FOR HISTORY MODAL
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [consultRecords, setConsultRecords] = useState<any[]>([]);
+
     const [role, setRole] = useState<string | null>(null);
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('');
@@ -74,7 +78,6 @@ function DetailsPage() {
     });
 
     useEffect(() => {
-        // Fetch current user for Sidebar integration
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user) {
                 const { data } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
@@ -86,19 +89,50 @@ function DetailsPage() {
             }
         });
 
-        // Fetch Patient Data
         if (!patientId) { setError('No patient ID provided in URL.'); return; }
         loadPatient();
     }, []);
 
     async function loadPatient() {
-        const { data, error } = await supabase.from('patients').select('*').eq('id', patientId).single();
-        if (error || !data) { setError('Patient not found. They may have been deleted.'); return; }
-        setPatient(data as Patient);
+        const { data: patientData, error: pError } = await supabase.from('patients').select('*').eq('id', patientId).single();
+        if (pError || !patientData) { setError('Patient not found.'); return; }
+
+        const { data: consentData } = await supabase.from('patient_consent').select('consent_id').eq('patient_id', patientId).maybeSingle();
+
+        const fullPatient = {
+            ...patientData,
+            consent_signed: !!consentData
+        };
+
+        setPatient(fullPatient as Patient);
         setEditForm({
-            firstName: data.firstName || '', middleName: data.middleName || '', lastName: data.lastName || '', age: data.age?.toString() ?? '', sex: data.sex || '', nationality: data.nationality || '', bloodType: data.bloodType || 'O+', religion: data.religion || '', birthday: data.birthday || '', birthPlace: data.birthPlace || '', suffix: data.suffix || '', civilStatus: data.civilStatus || '', address: data.address || '', contactNumber: data.contactNumber || '', educationalAttain: data.educationalAttain || '', employmentStatus: data.employmentStatus || '', philhealthNo: data.philhealthNo || '', philhealthStatus: data.philhealthStatus || '', category: data.category || '', categoryOthers: data.categoryOthers || '', relativeName: data.relativeName || '', relativeRelation: data.relativeRelation || '', relativeAddress: data.relativeAddress || ''
+            firstName: patientData.firstName || '', middleName: patientData.middleName || '', lastName: patientData.lastName || '', age: patientData.age?.toString() ?? '', sex: patientData.sex || '', nationality: patientData.nationality || '', bloodType: patientData.bloodType || 'O+', religion: patientData.religion || '', birthday: patientData.birthday || '', birthPlace: patientData.birthPlace || '', suffix: patientData.suffix || '', civilStatus: patientData.civilStatus || '', address: patientData.address || '', contactNumber: patientData.contactNumber || '', educationalAttain: patientData.educationalAttain || '', employmentStatus: patientData.employmentStatus || '', philhealthNo: patientData.philhealthNo || '', philhealthStatus: patientData.philhealthStatus || '', category: patientData.category || '', categoryOthers: patientData.categoryOthers || '', relativeName: patientData.relativeName || '', relativeRelation: patientData.relativeRelation || '', relativeAddress: patientData.relativeAddress || ''
         });
     }
+
+    const handleOpenHistory = async () => {
+        setHistoryModalOpen(true);
+        setHistoryLoading(true);
+
+        const { data, error } = await supabase
+            .from('initial_consultation')
+            .select('*')
+            .eq('patient_id', patientId);
+
+        if (error) {
+            console.error("Error fetching consultation history:", error);
+            setConsultRecords([]);
+        } else if (data) {
+            const sortedRecords = data.sort((a, b) => {
+                const dateA = new Date(a.consultation_date || a.created_at || 0).getTime();
+                const dateB = new Date(b.consultation_date || b.created_at || 0).getTime();
+                return dateB - dateA;
+            });
+            setConsultRecords(sortedRecords);
+        }
+        
+        setHistoryLoading(false);
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
@@ -116,7 +150,7 @@ function DetailsPage() {
         const parsed = parseInt(editForm.age);
         const updates = { ...editForm, age: isNaN(parsed) ? null : parsed };
         
-        const { data, error } = await supabase.from('patients').update(updates).eq('id', patientId).select();
+        const { error } = await supabase.from('patients').update(updates).eq('id', patientId);
         setSaving(false);
         
         if (error) { alert('Error updating record: ' + error.message); return; }
@@ -131,10 +165,9 @@ function DetailsPage() {
 
     if (!role) return null;
 
-    // Dynamically set Sidebar navigation based on who is viewing the profile
     let navItems: any[] = [];
     if (role === 'doctor') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'consultation', label: 'Consultation', icon: '📋' } ];
-    else if (role === 'nurse') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Consultation', icon: '📋' } ];
+    else if (role === 'nurse') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Initial Consultation', icon: '📝' } ];
     else if (role === 'midwife') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Census', icon: '📁' }, { id: 'reports', label: 'Generate Reports', icon: '📊' } ];
     else if (role === 'bhw') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' } ];
 
@@ -152,18 +185,12 @@ function DetailsPage() {
     const labelCls = "block text-[0.68rem] font-bold uppercase tracking-widest text-slate-500 mb-1.5";
 
     return (
-        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden">
+        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
             {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
 
-            <Sidebar 
-                activePage="records" userName={userName} userInitials={userInitials} userRole={role.toUpperCase()}
-                navItems={navItems} onNavigate={handleNavigate}
-                isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} 
-            />
+            <Sidebar activePage="records" userName={userName} userInitials={userInitials} userRole={role.toUpperCase()} navItems={navItems} onNavigate={handleNavigate} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} />
 
             <div className="flex-1 flex flex-col min-h-screen w-full md:pl-[240px]">
-                
-                {/* System Topbar */}
                 <header className="h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
@@ -176,7 +203,6 @@ function DetailsPage() {
 
                 <main className="w-full flex-1 p-4 md:p-8 flex justify-center">
                     <div className="w-full max-w-4xl">
-                        
                         {error ? (
                             <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 font-semibold text-center">⚠️ {error}</div>
                         ) : !patient ? (
@@ -184,31 +210,20 @@ function DetailsPage() {
                         ) : showConsent ? (
                             <div className="animate-in fade-in duration-300">
                                 <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">← Back to Details</button>
-                                {/* ← CHANGED: rhuPersonnel prop added, passes logged-in user's full_name */}
-                                <PatientConsent 
-                                    patientId={patient.id} 
-                                    patientName={`${patient.firstName} ${patient.lastName}`}
-                                    rhuPersonnel={userName}
-                                    onConsentSaved={() => { setShowConsent(false); loadPatient(); }} 
-                                />
+                                <PatientConsent patientId={patient.id} patientName={`${patient.firstName} ${patient.lastName}`} rhuPersonnel={userName} onConsentSaved={() => { setShowConsent(false); loadPatient(); }} />
                             </div>
                         ) : editing ? (
-                            // ─── EDIT MODE ────────────────────────────────────────────────────────
+                            // Edit Mode Form...
                             <form onSubmit={handleEditSubmit} className="animate-in fade-in duration-300">
                                 <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative ring-1 ring-blue-500/10">
-                                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
-                                        {patient.firstName?.[0]}{patient.lastName?.[0]}
-                                    </div>
+                                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">{patient.firstName?.[0]}{patient.lastName?.[0]}</div>
                                     <div className="flex-1 min-w-0">
                                         <div className="font-black text-blue-900 text-xl leading-tight truncate">Editing: {patient.firstName} {patient.lastName}</div>
                                         <div className="text-sm text-blue-700 mt-1 font-medium">Update the necessary fields below and save your changes.</div>
                                     </div>
-                                    
                                     <div className="shrink-0 flex gap-2 w-full md:w-auto mt-4 md:mt-0">
                                         <button type="button" onClick={() => setEditing(false)} className="px-5 py-2.5 bg-white text-slate-600 border border-slate-300 hover:bg-slate-50 text-sm font-bold rounded-lg transition-colors flex-1 md:flex-none text-center">Cancel</button>
-                                        <button type="submit" disabled={saving} className={`px-5 py-2.5 text-white text-sm font-bold rounded-lg transition-all flex-1 md:flex-none text-center shadow-md ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30'}`}>
-                                            {saving ? '⏳ Saving...' : '💾 Save Changes'}
-                                        </button>
+                                        <button type="submit" disabled={saving} className={`px-5 py-2.5 text-white text-sm font-bold rounded-lg transition-all flex-1 md:flex-none text-center shadow-md ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30'}`}>{saving ? '⏳ Saving...' : '💾 Save Changes'}</button>
                                     </div>
                                 </div>
 
@@ -291,12 +306,9 @@ function DetailsPage() {
                                     </div>
                                 </div>
                             </form>
-
                         ) : (
-                            // ─── READ-ONLY MODE ────────────────────────────────────────────────────────
+                            // Read-Only Mode
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                
-                                {/* Patient Hero Card */}
                                 <div className="w-full bg-white border border-slate-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative">
                                     <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
                                         {patient.firstName?.[0]}{patient.lastName?.[0]}
@@ -313,7 +325,6 @@ function DetailsPage() {
                                     
                                     <div className="shrink-0 flex flex-col md:items-end gap-2 w-full md:w-auto mt-4 md:mt-0">
                                         <div className="flex gap-2 w-full md:w-auto">
-                                            {/* Edit Button */}
                                             <button onClick={() => setEditing(true)} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 flex-1 md:flex-none">
                                                 <span>✏️</span> Edit Profile
                                             </button>
@@ -327,7 +338,6 @@ function DetailsPage() {
                                     </div>
                                 </div>
 
-                                {/* Section I */}
                                 <div className={sectionCls}>
                                     <div className={headerCls}><span>👤</span> I. Patient's Information Record</div>
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -350,7 +360,6 @@ function DetailsPage() {
                                     </div>
                                 </div>
 
-                                {/* Section II */}
                                 <div className={sectionCls}>
                                     <div className={headerCls}><span>🏥</span> II. PhilHealth & Categorization</div>
                                     <div className="grid grid-cols-2 gap-6">
@@ -360,7 +369,6 @@ function DetailsPage() {
                                     </div>
                                 </div>
 
-                                {/* Section III */}
                                 <div className={sectionCls}>
                                     <div className={headerCls}><span>🆘</span> III. Emergency Contact</div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -370,23 +378,114 @@ function DetailsPage() {
                                     </div>
                                 </div>
 
-                                {/* Consent Trigger Button */}
-                                <button 
-                                    onClick={() => setShowConsent(true)}
-                                    className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-3"
-                                >
-                                    📋 Proceed to Patient Consent →
-                                </button>
+                                <div className="flex flex-col gap-3">
+                                    {/* Midwife action */}
+                                    {role === 'midwife' && !patient.consent_signed && (
+                                        <button onClick={() => setShowConsent(true)} className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                            📋 Proceed to Patient Consent →
+                                        </button>
+                                    )}
+
+                                    {/* Nurse action */}
+                                    {role === 'nurse' && (
+                                        <button onClick={handleOpenHistory} className="w-full bg-teal-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-teal-700 hover:shadow-teal-600/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                            📋 View Initial Consultation History
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
                 </main>
             </div>
+
+            {/* ─── HISTORY MODAL POPUP ─── */}
+            {historyModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        
+                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <div>
+                                <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                                    <span>📋</span> Consultation History
+                                </h3>
+                                <p className="text-sm text-slate-500 font-medium mt-0.5">
+                                    {patient?.lastName}, {patient?.firstName}
+                                </p>
+                            </div>
+                            <button onClick={() => setHistoryModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold">
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto bg-[#F8FAFC] flex-1 scrollbar-thin">
+                            {historyLoading ? (
+                                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
+                                    <svg className="animate-spin w-8 h-8 text-teal-500 mb-3" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                    </svg>
+                                    <span className="font-bold text-sm tracking-wide">Fetching Records...</span>
+                                </div>
+                            ) : consultRecords.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500 font-medium">No initial consultation records found for this patient.</div>
+                            ) : (
+                                <div className="flex flex-col gap-4">
+                                    {consultRecords.map((record, index) => {
+                                        let displayDate = record.consultation_date;
+                                        if (!displayDate && record.created_at) {
+                                            displayDate = new Date(record.created_at).toLocaleDateString();
+                                        }
+
+                                        return (
+                                            <div key={record.initialconsultation_id || index} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-teal-300 transition-colors">
+                                                
+                                                <div className="flex flex-wrap justify-between items-start mb-4 border-b border-slate-100 pb-4 gap-4">
+                                                    <div>
+                                                        <div className="font-extrabold text-teal-700 text-sm">
+                                                            📅 {displayDate || 'Date unspecified'}
+                                                        </div>
+                                                        <div className="text-xs font-semibold text-slate-500 mt-1">
+                                                            ⌚ {record.consultation_time || 'Time unspecified'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <span className="bg-teal-50 text-teal-700 border border-teal-100 px-2.5 py-1 rounded-md text-[0.65rem] font-bold uppercase tracking-wider">
+                                                            {record.mode_of_transaction || 'Walk In'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                                                    <div className="sm:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                        <div className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest mb-1">Chief Complaint</div>
+                                                        <div className="text-sm font-semibold text-slate-800">{record.chief_complaint || 'None recorded'}</div>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
+                                                        <div className="text-sm font-medium text-slate-800">{record.diagnosis || 'N/A'}</div>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Referred By</div>
+                                                        <div className="text-sm font-medium text-slate-800">{record.referred_by || 'N/A'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
 
-// Ensure proper mounting for Vite Fast Refresh
 const rootElement = document.getElementById('root');
 if (rootElement) {
     ReactDOM.createRoot(rootElement).render(

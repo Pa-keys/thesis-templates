@@ -32,7 +32,7 @@ interface Patient {
     age: number | null; 
     sex: string; 
     bloodType: string;
-    address?: string; 
+    address?: string;
 }
 
 // ─── Exported Pure Component ──────────────────────────────────────────────────
@@ -141,7 +141,6 @@ export function RecordsComponent() {
                                 </svg>
                             </div>
 
-                            {/* Clear filter badge */}
                             {selectedBarangay && (
                                 <button
                                     onClick={() => setSelectedBarangay('')}
@@ -153,7 +152,6 @@ export function RecordsComponent() {
                         </div>
                     </div>
 
-                    {/* ─── Active filter label ───────────────────────────── */}
                     {selectedBarangay && (
                         <div className="px-1 pb-4 text-xs text-slate-500">
                             Showing patients from{' '}
@@ -185,24 +183,26 @@ export function RecordsComponent() {
                                 {patients.map(p => (
                                     <div
                                         key={p.id}
-                                        className="patient-row flex items-center gap-4 p-4 hover:bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-slate-200 transition-all group"
                                         onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}
+                                        className="patient-row flex items-center justify-between gap-4 p-4 hover:bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-slate-200 transition-all group"
                                     >
-                                        <div className="patient-av w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
-                                            {(p.firstName?.[0] || '?').toUpperCase()}
-                                        </div>
-                                        <div className="patient-info flex-1 min-w-0">
-                                            <div className="patient-name font-bold text-slate-800 text-base group-hover:text-blue-600 transition-colors truncate">
-                                                {p.lastName}, {p.firstName} {p.middleName || ''} {p.suffix || ''}
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className="patient-av w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                                                {(p.firstName?.[0] || '?').toUpperCase()}
                                             </div>
-                                            <div className="patient-meta text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
-                                                {p.sex || '—'} &middot; {p.age ?? '—'} yrs &middot; {p.bloodType || '—'}
-                                                {p.address && (
-                                                    <> &middot; <span className="text-slate-400 truncate max-w-[200px]">{p.address.split(',')[0]}</span></>
-                                                )}
+                                            <div className="patient-info flex-1 min-w-0">
+                                                <div className="patient-name font-bold text-slate-800 text-base group-hover:text-blue-600 transition-colors truncate">
+                                                    {p.lastName}, {p.firstName} {p.middleName || ''} {p.suffix || ''}
+                                                </div>
+                                                <div className="patient-meta text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
+                                                    {p.sex || '—'} &middot; {p.age ?? '—'} yrs &middot; {p.bloodType || '—'}
+                                                    {p.address && (
+                                                        <> &middot; <span className="text-slate-400 truncate max-w-[200px]">{p.address.split(',')[0]}</span></>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className="patient-arrow text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all font-bold text-xl">&rarr;</span>
+                                        <span className="patient-arrow text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all font-bold text-xl hidden sm:block">&rarr;</span>
                                     </div>
                                 ))}
                             </div>

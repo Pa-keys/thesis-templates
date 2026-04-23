@@ -37,7 +37,7 @@ const NurseDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'dashboard', label: 'Home', icon: '🏠' },
         { id: 'records', label: 'Patient Records', icon: '📁' },
         { id: 'new-record', label: 'New Record', icon: '➕' },
         { id: 'consultation', label: 'Initial Consultation', icon: '📝' }
@@ -72,42 +72,40 @@ const NurseDashboard = () => {
         };
 
         const loadPatients = async () => {
+            // 1. Get total patient count
             const { count: totalCount } = await supabase
                 .from('patients')
                 .select('id', { count: 'exact', head: true });
             
             setTotalPatientsCount(totalCount || 0);
 
-            const { data: consents, error: consentError } = await supabase
-                .from('patients')
-                .select('id')
-                .not('consent_signature', 'is', null)
-                .neq('consent_signature', '');
-
-            if (consentError || !consents || consents.length === 0) {
-                setConsentedPatients([]);
-                return;
-            }
-
-            const signedIds = consents.map((c: any) => c.id);
-
+            // 2. Fetch patients joined with patient_consent
             const { data, error } = await supabase
                 .from('patients')
-                .select('id, firstName, middleName, lastName, age, sex, bloodType, address, philhealthStatus, category, categoryOthers, createdAt:created_at')
-                .in('id', signedIds)
+                .select(`
+                    id, firstName, middleName, lastName, age, sex, bloodType, address, philhealthStatus, category, categoryOthers, createdAt:created_at,
+                    patient_consent ( consent_id )
+                `)
                 .order('created_at', { ascending: false });
 
             if (!error && data) {
-                setConsentedPatients(data as Patient[]);
+                // 3. Filter in Javascript to only keep patients who have a consent record
+                const consentedOnly = data.filter((p: any) => 
+                    Array.isArray(p.patient_consent) ? p.patient_consent.length > 0 : p.patient_consent !== null
+                );
+                
+                setConsentedPatients(consentedOnly as Patient[]);
             }
         };
 
         fetchData();
 
+        // 4. Update realtime listener to listen for new consents!
         const channel = supabase
             .channel('nurse-realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patients' }, loadPatients)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patients' }, loadPatients)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patient_consent' }, loadPatients) // Added this!
             .subscribe();
 
         return () => {
