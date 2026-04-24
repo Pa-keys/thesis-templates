@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../shared/supabase';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const MALVAR_BARANGAYS = [
     'Bagong Pook, Malvar, Batangas',
     'Bilucao, Malvar, Batangas',
@@ -22,28 +21,40 @@ const MALVAR_BARANGAYS = [
 
 const OUTSIDE_MALVAR = '__outside__';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface Patient {
     id: string;
-    firstName: string; 
-    middleName: string; 
-    lastName: string; 
+    firstName: string;
+    middleName: string;
+    lastName: string;
     suffix: string;
-    age: number | null; 
-    sex: string; 
+    age: number | null;
+    sex: string;
     bloodType: string;
     address?: string;
+    contactNumber?: string;
+    birthday?: string;
+    civilStatus?: string;
+    nationality?: string;
+    religion?: string;
+    educationalAttain?: string;
+    employmentStatus?: string;
+    philhealthNo?: string;
+    philhealthStatus?: string;
+    category?: string;
+    categoryOthers?: string;
+    relativeName?: string;
+    relativeRelation?: string;
+    relativeAddress?: string;
 }
 
-// ─── Exported Pure Component ──────────────────────────────────────────────────
-export function RecordsComponent() {
+// ─── Accepts optional onPatientClick — if provided, opens modal; otherwise navigates ───
+export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient: Patient) => void } = {}) {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [allPatients, setAllPatients] = useState<Patient[]>([]);
     const [search, setSearch] = useState('');
     const [selectedBarangay, setSelectedBarangay] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
-    // ─── Fetch Patients ───────────────────────────────────────────────────────
     const fetchPatients = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
@@ -65,32 +76,35 @@ export function RecordsComponent() {
         fetchPatients();
     }, [fetchPatients]);
 
-    // ─── Apply Filters (Search + Barangay) ───────────────────────────────────
     useEffect(() => {
         const lower = search.toLowerCase();
-
         const filtered = allPatients.filter(p => {
             const nameMatch = `${p.firstName} ${p.middleName} ${p.lastName}`
                 .toLowerCase().includes(lower);
-
             const barangayMatch =
                 selectedBarangay === ''
                     ? true
                     : selectedBarangay === OUTSIDE_MALVAR
                         ? !MALVAR_BARANGAYS.some(b => p.address?.toLowerCase().includes(b.toLowerCase()))
                         : p.address?.toLowerCase().includes(selectedBarangay.toLowerCase());
-
             return nameMatch && barangayMatch;
         });
-
         setPatients(filtered);
     }, [search, selectedBarangay, allPatients]);
+
+    const handleRowClick = (p: Patient) => {
+        if (onPatientClick) {
+            onPatientClick(p);
+        } else {
+            window.location.href = `/pages/details.html?id=${p.id}`;
+        }
+    };
 
     return (
         <div className="w-full">
             <div className="page-container w-full max-w-7xl mx-auto">
                 <div className="list-card bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                    
+
                     <div className="list-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <div className="list-header-title text-xl font-bold text-slate-800">Patient Records Database</div>
                         <span className="list-count bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold w-fit">
@@ -98,7 +112,6 @@ export function RecordsComponent() {
                         </span>
                     </div>
 
-                    {/* ─── Search + Barangay Filter Row ─────────────────── */}
                     <div className="search-wrap flex flex-col sm:flex-row gap-3 mb-6">
                         <div className="relative flex-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
@@ -127,16 +140,11 @@ export function RecordsComponent() {
                                 >
                                     <option value="">All Barangays</option>
                                     {MALVAR_BARANGAYS.map(b => (
-                                        <option key={b} value={b}>
-                                            {b.split(',')[0]}
-                                        </option>
+                                        <option key={b} value={b}>{b.split(',')[0]}</option>
                                     ))}
                                     <option value={OUTSIDE_MALVAR}>Outside Malvar</option>
                                 </select>
-                                <svg
-                                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                >
+                                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </div>
@@ -156,9 +164,7 @@ export function RecordsComponent() {
                         <div className="px-1 pb-4 text-xs text-slate-500">
                             Showing patients from{' '}
                             <span className="font-semibold text-blue-600">
-                                {selectedBarangay === OUTSIDE_MALVAR
-                                    ? 'Outside Malvar'
-                                    : selectedBarangay.split(',')[0]}
+                                {selectedBarangay === OUTSIDE_MALVAR ? 'Outside Malvar' : selectedBarangay.split(',')[0]}
                             </span>
                             {' '}· {patients.length} result{patients.length !== 1 ? 's' : ''}
                         </div>
@@ -183,7 +189,7 @@ export function RecordsComponent() {
                                 {patients.map(p => (
                                     <div
                                         key={p.id}
-                                        onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}
+                                        onClick={() => handleRowClick(p)}
                                         className="patient-row flex items-center justify-between gap-4 p-4 hover:bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-slate-200 transition-all group"
                                     >
                                         <div className="flex items-center gap-4 flex-1 min-w-0">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../shared/supabase';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
@@ -109,30 +109,21 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
             const numericId = isNaN(parsedId) ? patientId : parsedId;
 
             const [cRes, iRes, vRes] = await Promise.all([
-                // Fetch ALL consultation columns
                 supabase
                     .from('consultation')
-                    .select(`
-                        consultation_id, chief_complaints, diagnosis, hpi, assessment, plan, family_history, immunization_history, smoking_status, smoking_sticks_per_day, smoking_years, drinking_status, drinking_frequency, drinking_years, menarche_age, sexual_onset_age, is_menopause, menopause_age, lmp, interval_cycle, period_duration, pads_per_day, birth_control_method, gravidity, parity, delivery_type, full_term_count, premature_count, abortion_count, living_children_count, pre_eclampsia, medication_treatment, management_treatment, past_med_surge_history, attending_provider, initial_consultation_id
-                    `)
+                    .select(`consultation_id, chief_complaints, diagnosis, hpi, assessment, plan, family_history, immunization_history, smoking_status, smoking_sticks_per_day, smoking_years, drinking_status, drinking_frequency, drinking_years, menarche_age, sexual_onset_age, is_menopause, menopause_age, lmp, interval_cycle, period_duration, pads_per_day, birth_control_method, gravidity, parity, delivery_type, full_term_count, premature_count, abortion_count, living_children_count, pre_eclampsia, medication_treatment, management_treatment, past_med_surge_history, attending_provider, initial_consultation_id`)
                     .eq('patient_id', numericId)
                     .order('consultation_id', { ascending: false }),
 
-                // Fetch ALL initial_consultation columns
                 supabase
                     .from('initial_consultation')
-                    .select(`
-                        initialconsultation_id, consultation_date, consultation_time, mode_of_transaction, referred_by, mode_of_transfer, chief_complaint, diagnosis
-                    `)
+                    .select(`initialconsultation_id, consultation_date, consultation_time, mode_of_transaction, referred_by, mode_of_transfer, chief_complaint, diagnosis`)
                     .eq('patient_id', numericId)
                     .order('initialconsultation_id', { ascending: false }),
 
-                // Fetch ALL vital_sign columns
                 supabase
                     .from('vital_sign')
-                    .select(`
-                        vitals_id, bp, heart_rate, respiratory_rate, temperature, o2_saturation, weight, height, muac, nutritional_status, bmi, visual_acuity_left, visual_acuity_right, general_survey, initial_consultation_id
-                    `)
+                    .select(`vitals_id, bp, heart_rate, respiratory_rate, temperature, o2_saturation, weight, height, muac, nutritional_status, bmi, visual_acuity_left, visual_acuity_right, general_survey, initial_consultation_id`)
                     .eq('patient_id', numericId)
                     .order('vitals_id', { ascending: false }),
             ]);
@@ -194,7 +185,9 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                 <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
                 <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
             </button>
-            {expandedId === id && <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">{children}</div>}
+            {expandedId === id && (
+                <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">{children}</div>
+            )}
         </div>
     );
 
@@ -214,128 +207,140 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
 
     return (
         <>
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
-            <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-white shrink-0">
-                    <div>
-                        <div className="font-bold text-slate-900 text-base">Patient History</div>
-                        <div className="text-xs text-slate-500">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]" onClick={onClose} />
+            <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                {patientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </div>
+                            <div>
+                                <div className="font-extrabold text-slate-900 text-base leading-tight">Patient History</div>
+                                <div className="text-xs text-slate-500 mt-0.5">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm">✕</button>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 font-bold text-lg transition-colors">✕</button>
-                </div>
-
-                {/* Section Filter Tabs */}
-                <div className="flex gap-2 px-5 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
-                    {sectionBtn('All', 'all', totalCount)}
-                    {sectionBtn('Consultations', 'consultation', consultations.length)}
-                    {sectionBtn('Initial', 'initial', initialConsults.length)}
-                </div>
-
-                {/* Scrollable Records List */}
-                <div className="flex-1 overflow-y-auto px-5 py-4">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-3"><span className="text-sm text-slate-400">Loading records...</span></div>
-                    ) : totalCount === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 gap-2"><span className="text-3xl">📭</span><span className="text-sm text-slate-400">No history records found.</span></div>
-                    ) : (
-                        <>
-                            {/* Initial Consultations */}
-                            {(activeSection === 'all' || activeSection === 'initial') && initialConsults.map((rec) => (
-                                <RecordCard key={`initial-${rec.initialconsultation_id}`} id={`initial-${rec.initialconsultation_id}`} badge="Initial" badgeColor="bg-purple-100 text-purple-700" date={formatDate(rec.consultation_date)} title={rec.chief_complaint || 'Initial Consultation'} subtitle={rec.diagnosis}>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <Field label="Date" value={formatDate(rec.consultation_date)} />
-                                        <Field label="Time" value={rec.consultation_time} />
-                                        <Field label="Chief Complaint" value={rec.chief_complaint} />
-                                        <Field label="Diagnosis" value={rec.diagnosis} />
-                                        <Field label="Mode of Transaction" value={rec.mode_of_transaction} />
-                                        <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
-                                        <Field label="Referred By" value={rec.referred_by} />
-                                    </div>
-                                    {rec.vitals && (
-                                        <>
-                                            <SectionHeader label="Vital Signs" />
-                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                                                <Field label="BP" value={rec.vitals.bp} />
-                                                <Field label="Heart Rate" value={rec.vitals.heart_rate != null ? `${rec.vitals.heart_rate} bpm` : null} />
-                                                <Field label="Resp. Rate" value={rec.vitals.respiratory_rate != null ? `${rec.vitals.respiratory_rate} cpm` : null} />
-                                                <Field label="Temperature" value={rec.vitals.temperature != null ? `${rec.vitals.temperature} °C` : null} />
-                                                <Field label="O₂ Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
-                                                <Field label="MUAC" value={rec.vitals.muac != null ? `${rec.vitals.muac} cm` : null} />
-                                            </div>
-                                            <SectionHeader label="Anthropometrics" />
-                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                                                <Field label="Weight" value={rec.vitals.weight != null ? `${rec.vitals.weight} kg` : null} />
-                                                <Field label="Height" value={rec.vitals.height != null ? `${rec.vitals.height} cm` : null} />
-                                                <Field label="BMI" value={rec.vitals.bmi != null ? rec.vitals.bmi.toString() : null} />
-                                                <Field label="Nutritional Status" value={rec.vitals.nutritional_status} />
-                                                <Field label="VA Left" value={rec.vitals.visual_acuity_left} />
-                                                <Field label="VA Right" value={rec.vitals.visual_acuity_right} />
-                                            </div>
-                                            {rec.vitals.general_survey && <Field label="General Survey" value={rec.vitals.general_survey} />}
-                                        </>
-                                    )}
-                                </RecordCard>
-                            ))}
-                            {/* Follow-up Consultations */}
-                            {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
-                                <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
-                                    <SectionHeader label="Clinical" />
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                        <Field label="Chief Complaints" value={rec.chief_complaints} />
-                                        <Field label="Diagnosis" value={rec.diagnosis} />
-                                        <Field label="HPI" value={rec.hpi} />
-                                        <Field label="Assessment" value={rec.assessment} />
-                                        <Field label="Plan" value={rec.plan} />
-                                        <Field label="Attending Provider" value={rec.attending_provider} />
-                                    </div>
-                                    {(rec.medication_treatment || rec.management_treatment || rec.past_med_surge_history) && (
-                                        <>
-                                            <SectionHeader label="Treatment & History" />
-                                            <div className="grid grid-cols-1 gap-y-2">
-                                                <Field label="Medication / Treatment" value={rec.medication_treatment} />
-                                                <Field label="Management / Treatment" value={rec.management_treatment} />
-                                                <Field label="Past Medical / Surgical History" value={rec.past_med_surge_history} />
-                                            </div>
-                                        </>
-                                    )}
-                                    {(rec.family_history || rec.immunization_history || rec.smoking_status || rec.drinking_status) && (
-                                        <>
-                                            <SectionHeader label="Social & Family History" />
-                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                                <Field label="Family History" value={rec.family_history} />
-                                                <Field label="Immunization History" value={rec.immunization_history} />
-                                                <Field label="Smoking" value={rec.smoking_status === 'Yes' ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs` : rec.smoking_status} />
-                                                <Field label="Drinking" value={rec.drinking_status === 'Yes' ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs` : rec.drinking_status} />
-                                            </div>
-                                        </>
-                                    )}
-                                    {(rec.menarche_age != null || rec.gravidity != null || rec.parity != null || rec.lmp || rec.birth_control_method) && (
-                                        <>
-                                            <SectionHeader label="OBGyne & Pregnancy" />
-                                            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                                                <Field label="Menarche (y/o)" value={rec.menarche_age} />
-                                                <Field label="Sexual Onset (y/o)" value={rec.sexual_onset_age} />
-                                                <Field label="Menopause" value={rec.is_menopause === 'Yes' ? `Yes — age ${rec.menopause_age ?? '?'}` : rec.is_menopause} />
-                                                <Field label="LMP" value={rec.lmp ? formatDate(rec.lmp) : null} />
-                                                <Field label="Interval Cycle" value={rec.interval_cycle ? `${rec.interval_cycle} days` : null} />
-                                                <Field label="Period Duration" value={rec.period_duration ? `${rec.period_duration} days` : null} />
-                                                <Field label="Pads / Day" value={rec.pads_per_day} />
-                                                <Field label="Birth Control" value={rec.birth_control_method} />
-                                                <Field label="G / P" value={rec.gravidity != null || rec.parity != null ? `G${rec.gravidity ?? '?'} P${rec.parity ?? '?'}` : null} />
-                                                <Field label="Delivery Type" value={rec.delivery_type} />
-                                                <Field label="Full Term" value={rec.full_term_count} />
-                                                <Field label="Premature" value={rec.premature_count} />
-                                                <Field label="Abortion" value={rec.abortion_count} />
-                                                <Field label="Living Children" value={rec.living_children_count} />
-                                                <Field label="Pre-eclampsia" value={rec.pre_eclampsia} />
-                                            </div>
-                                        </>
-                                    )}
-                                </RecordCard>
-                            ))}
-                        </>
-                    )}
+                    <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
+                        {sectionBtn('All', 'all', totalCount)}
+                        {sectionBtn('Consultations', 'consultation', consultations.length)}
+                        {sectionBtn('Initial', 'initial', initialConsults.length)}
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-6 py-4 bg-[#F8FAFC]">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center h-40 gap-3">
+                                <svg className="animate-spin w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                </svg>
+                                <span className="text-sm text-slate-400 font-medium">Loading records...</span>
+                            </div>
+                        ) : totalCount === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-40 gap-2">
+                                <span className="text-3xl">📭</span>
+                                <span className="text-sm text-slate-400">No history records found.</span>
+                            </div>
+                        ) : (
+                            <>
+                                {(activeSection === 'all' || activeSection === 'initial') && initialConsults.map((rec) => (
+                                    <RecordCard key={`initial-${rec.initialconsultation_id}`} id={`initial-${rec.initialconsultation_id}`} badge="Initial" badgeColor="bg-purple-100 text-purple-700" date={formatDate(rec.consultation_date)} title={rec.chief_complaint || 'Initial Consultation'} subtitle={rec.diagnosis}>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                            <Field label="Date" value={formatDate(rec.consultation_date)} />
+                                            <Field label="Time" value={rec.consultation_time} />
+                                            <Field label="Chief Complaint" value={rec.chief_complaint} />
+                                            <Field label="Diagnosis" value={rec.diagnosis} />
+                                            <Field label="Mode of Transaction" value={rec.mode_of_transaction} />
+                                            <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
+                                            <Field label="Referred By" value={rec.referred_by} />
+                                        </div>
+                                        {rec.vitals && (
+                                            <>
+                                                <SectionHeader label="Vital Signs" />
+                                                <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                    <Field label="BP" value={rec.vitals.bp} />
+                                                    <Field label="Heart Rate" value={rec.vitals.heart_rate != null ? `${rec.vitals.heart_rate} bpm` : null} />
+                                                    <Field label="Resp. Rate" value={rec.vitals.respiratory_rate != null ? `${rec.vitals.respiratory_rate} cpm` : null} />
+                                                    <Field label="Temperature" value={rec.vitals.temperature != null ? `${rec.vitals.temperature} °C` : null} />
+                                                    <Field label="O₂ Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
+                                                    <Field label="MUAC" value={rec.vitals.muac != null ? `${rec.vitals.muac} cm` : null} />
+                                                </div>
+                                                <SectionHeader label="Anthropometrics" />
+                                                <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                    <Field label="Weight" value={rec.vitals.weight != null ? `${rec.vitals.weight} kg` : null} />
+                                                    <Field label="Height" value={rec.vitals.height != null ? `${rec.vitals.height} cm` : null} />
+                                                    <Field label="BMI" value={rec.vitals.bmi != null ? rec.vitals.bmi.toString() : null} />
+                                                    <Field label="Nutritional Status" value={rec.vitals.nutritional_status} />
+                                                    <Field label="VA Left" value={rec.vitals.visual_acuity_left} />
+                                                    <Field label="VA Right" value={rec.vitals.visual_acuity_right} />
+                                                </div>
+                                                {rec.vitals.general_survey && <Field label="General Survey" value={rec.vitals.general_survey} />}
+                                            </>
+                                        )}
+                                    </RecordCard>
+                                ))}
+                                {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
+                                    <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
+                                        <SectionHeader label="Clinical" />
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                            <Field label="Chief Complaints" value={rec.chief_complaints} />
+                                            <Field label="Diagnosis" value={rec.diagnosis} />
+                                            <Field label="HPI" value={rec.hpi} />
+                                            <Field label="Assessment" value={rec.assessment} />
+                                            <Field label="Plan" value={rec.plan} />
+                                            <Field label="Attending Provider" value={rec.attending_provider} />
+                                        </div>
+                                        {(rec.medication_treatment || rec.management_treatment || rec.past_med_surge_history) && (
+                                            <>
+                                                <SectionHeader label="Treatment & History" />
+                                                <div className="grid grid-cols-1 gap-y-2">
+                                                    <Field label="Medication / Treatment" value={rec.medication_treatment} />
+                                                    <Field label="Management / Treatment" value={rec.management_treatment} />
+                                                    <Field label="Past Medical / Surgical History" value={rec.past_med_surge_history} />
+                                                </div>
+                                            </>
+                                        )}
+                                        {(rec.family_history || rec.immunization_history || rec.smoking_status || rec.drinking_status) && (
+                                            <>
+                                                <SectionHeader label="Social & Family History" />
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                    <Field label="Family History" value={rec.family_history} />
+                                                    <Field label="Immunization History" value={rec.immunization_history} />
+                                                    <Field label="Smoking" value={rec.smoking_status === 'Yes' ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs` : rec.smoking_status} />
+                                                    <Field label="Drinking" value={rec.drinking_status === 'Yes' ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs` : rec.drinking_status} />
+                                                </div>
+                                            </>
+                                        )}
+                                        {(rec.menarche_age != null || rec.gravidity != null || rec.parity != null || rec.lmp || rec.birth_control_method) && (
+                                            <>
+                                                <SectionHeader label="OBGyne & Pregnancy" />
+                                                <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                                                    <Field label="Menarche (y/o)" value={rec.menarche_age} />
+                                                    <Field label="Sexual Onset (y/o)" value={rec.sexual_onset_age} />
+                                                    <Field label="Menopause" value={rec.is_menopause === 'Yes' ? `Yes — age ${rec.menopause_age ?? '?'}` : rec.is_menopause} />
+                                                    <Field label="LMP" value={rec.lmp ? formatDate(rec.lmp) : null} />
+                                                    <Field label="Interval Cycle" value={rec.interval_cycle ? `${rec.interval_cycle} days` : null} />
+                                                    <Field label="Period Duration" value={rec.period_duration ? `${rec.period_duration} days` : null} />
+                                                    <Field label="Pads / Day" value={rec.pads_per_day} />
+                                                    <Field label="Birth Control" value={rec.birth_control_method} />
+                                                    <Field label="G / P" value={rec.gravidity != null || rec.parity != null ? `G${rec.gravidity ?? '?'} P${rec.parity ?? '?'}` : null} />
+                                                    <Field label="Delivery Type" value={rec.delivery_type} />
+                                                    <Field label="Full Term" value={rec.full_term_count} />
+                                                    <Field label="Premature" value={rec.premature_count} />
+                                                    <Field label="Abortion" value={rec.abortion_count} />
+                                                    <Field label="Living Children" value={rec.living_children_count} />
+                                                    <Field label="Pre-eclampsia" value={rec.pre_eclampsia} />
+                                                </div>
+                                            </>
+                                        )}
+                                    </RecordCard>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                    <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white">
+                        <button onClick={onClose} className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
+                    </div>
                 </div>
             </div>
         </>
@@ -421,12 +426,78 @@ export function ConsultationPage({
     const [consultationId, setConsultationId] = useState<number | null>(null);
     const [showHistory, setShowHistory] = useState(false);
 
+    // ── real-time live indicator ──────────────────────────────────────────────
+    const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
+
     const { isOnline, isSyncing } = useNetworkSync();
     const primaryBtnBg = isOnline ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
 
     const [vitalsId, setVitalsId] = useState<number | null>(null);
     const [vitalsLoading, setVitalsLoading] = useState(false);
 
+    // ── stable ref so subscriptions always see the latest consultationId ──────
+    const consultationIdRef = useRef<number | null>(null);
+    useEffect(() => { consultationIdRef.current = consultationId; }, [consultationId]);
+
+    // ── stable ref for patientId ──────────────────────────────────────────────
+    const patientIdRef = useRef<string | null>(patientId ?? null);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // fetchLabResults — pulled out so the real-time handler can call it too
+    // ─────────────────────────────────────────────────────────────────────────
+    const fetchLabResults = useCallback(async (pid: string, cid: number) => {
+        const { data, error } = await supabase
+            .from('lab_result')
+            .select('findings')
+            .eq('patient_id', pid)
+            .eq('consultation_id', cid)
+            .order('labresult_id', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (error) { console.error('Failed to fetch lab findings:', error); return; }
+        setFormData(prev => ({ ...prev, followUpLabResults: data?.findings || prev.followUpLabResults }));
+    }, []);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // fetchFollowUp — pulled out so the real-time handler can call it too
+    // ─────────────────────────────────────────────────────────────────────────
+    const fetchFollowUp = useCallback(async (pid: string, cid: number | null) => {
+        const query = supabase.from('follow_up').select('*').eq('patient_id', pid);
+        if (cid) query.eq('consultation_id', cid);
+        else query.order('consultation_id', { ascending: false }).limit(1);
+        const { data } = await query.single();
+        if (!data) return;
+        if (data.follow_up_status === 'done') setFollowUpDone(true);
+        setFormData(prev => ({
+            ...prev,
+            followUpDate: data.visit_date ?? prev.followUpDate,
+            followUpTime: data.visit_time ?? '',
+            followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx,
+            followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
+            followUpChiefComplaint: data.chief_complaint ?? '',
+            followUpDiagnosis: data.diagnosis ?? '',
+            followUpHpi: data.history_of_present_illness ?? '',
+            followUpBp: data.bp ?? '',
+            followUpHr: data.heart_rate?.toString() ?? '',
+            followUpRr: data.respiratory_rate?.toString() ?? '',
+            followUpTemp: data.temperature?.toString() ?? '',
+            followUpO2: data.o2_saturation?.toString() ?? '',
+            followUpWeight: data.weight?.toString() ?? '',
+            followUpHeight: data.height?.toString() ?? '',
+            followUpMuac: data.muac?.toString() ?? '',
+            followUpNutritionalStatus: data.nutritional_status ?? '',
+            followUpBmi: data.bmi?.toString() ?? '',
+            followUpVaL: data.visual_acuity_left ?? '',
+            followUpVaR: data.visual_acuity_right ?? '',
+            followUpBloodType: data.blood_type ?? '',
+            followUpGenSurvey: data.general_survey ?? '',
+            managementTreatment: data.medication_treatment ?? prev.managementTreatment,
+        }));
+    }, []);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Init + load patient
+    // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
         setFormData(prev => ({
@@ -449,6 +520,9 @@ export function ConsultationPage({
         loadPatient();
     }, [patientId, doctorName]);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Load latest vitals
+    // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
         supabase.from('vital_sign').select('*').eq('patient_id', patient.id).order('vitals_id', { ascending: false }).limit(1).single().then(({ data }) => {
@@ -464,33 +538,17 @@ export function ConsultationPage({
         });
     }, [patient?.id]);
 
-   useEffect(() => {
-    // Wait until both the patient AND the specific consultation record are loaded
-    if (!patient?.id || !consultationId) return;
+    // ─────────────────────────────────────────────────────────────────────────
+    // Load lab results
+    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!patient?.id || !consultationId) return;
+        fetchLabResults(patient.id, consultationId);
+    }, [patient?.id, consultationId, fetchLabResults]);
 
-    supabase
-        .from('lab_result')
-        .select('findings')
-        .eq('patient_id', patient.id)
-        .eq('consultation_id', consultationId) // <--- THE FIX: Scope to the current consultation
-        .order('labresult_id', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data, error }) => {
-            if (error) { 
-                console.error('Failed to fetch lab findings:', error); 
-                return; 
-            }
-            
-            // Update the form data. If there are no findings for THIS consultation yet, 
-            // ensure the field is cleared out so old data doesn't bleed over.
-            setFormData(prev => ({ 
-                ...prev, 
-                followUpLabResults: data?.findings || '' 
-            }));
-        });
-}, [patient?.id, consultationId]); // <--- Update dependency array
-
+    // ─────────────────────────────────────────────────────────────────────────
+    // Load consultation
+    // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
         const query = supabase.from('consultation').select('*').eq('patient_id', patient.id);
@@ -511,34 +569,136 @@ export function ConsultationPage({
         });
     }, [patient?.id, icidFromUrl]);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Load follow-up
+    // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!patient?.id) return;
-        const buildFollowUpQuery = async () => {
+        const run = async () => {
             let resolvedConsultationId = consultationId;
             if (!resolvedConsultationId && icidFromUrl) {
                 const { data } = await supabase.from('consultation').select('consultation_id').eq('initial_consultation_id', parseInt(icidFromUrl as string)).single();
                 if (data) resolvedConsultationId = data.consultation_id;
             }
-            const query = supabase.from('follow_up').select('*').eq('patient_id', patient.id);
-            if (resolvedConsultationId) query.eq('consultation_id', resolvedConsultationId);
-            else query.order('consultation_id', { ascending: false }).limit(1);
-            const { data } = await query.single();
-            if (!data) return;
-            if (data.follow_up_status === 'done') setFollowUpDone(true);
-            setFormData(prev => ({
-                ...prev, followUpDate: data.visit_date ?? prev.followUpDate, followUpTime: data.visit_time ?? '',
-                followUpModeOfTx: data.mode_of_transaction ?? prev.followUpModeOfTx, followUpModeOfTransfer: data.mode_of_transfer ?? prev.followUpModeOfTransfer,
-                followUpChiefComplaint: data.chief_complaint ?? '', followUpDiagnosis: data.diagnosis ?? '', followUpHpi: data.history_of_present_illness ?? '',
-                followUpBp: data.bp ?? '', followUpHr: data.heart_rate?.toString() ?? '', followUpRr: data.respiratory_rate?.toString() ?? '',
-                followUpTemp: data.temperature?.toString() ?? '', followUpO2: data.o2_saturation?.toString() ?? '', followUpWeight: data.weight?.toString() ?? '',
-                followUpHeight: data.height?.toString() ?? '', followUpMuac: data.muac?.toString() ?? '', followUpNutritionalStatus: data.nutritional_status ?? '',
-                followUpBmi: data.bmi?.toString() ?? '', followUpVaL: data.visual_acuity_left ?? '', followUpVaR: data.visual_acuity_right ?? '',
-                followUpBloodType: data.blood_type ?? '', followUpGenSurvey: data.general_survey ?? '', managementTreatment: data.medication_treatment ?? prev.managementTreatment, followUpLabResults: prev.followUpLabResults,
-            }));
+            await fetchFollowUp(patient.id, resolvedConsultationId);
         };
-        buildFollowUpQuery();
-    }, [patient?.id, consultationId, icidFromUrl]);
+        run();
+    }, [patient?.id, consultationId, icidFromUrl, fetchFollowUp]);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // ★ REAL-TIME SUBSCRIPTIONS
+    //   Subscribes once patient is loaded. Cleans up on unmount or patient change.
+    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!patient?.id) return;
+
+        const pid = patient.id;
+
+        const channel = supabase
+            .channel(`consultation-realtime-${pid}`)
+
+            // ── 1. lab_result → auto-fill Lab Results field ──────────────────
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'lab_result',
+                    filter: `patient_id=eq.${pid}`,
+                },
+                (payload) => {
+                    console.log('[RT] lab_result change:', payload);
+                    const cid = consultationIdRef.current;
+                    if (cid) fetchLabResults(pid, cid);
+                }
+            )
+
+            // ── 2. follow_up → sync follow-up fields & done status ───────────
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'follow_up',
+                    filter: `patient_id=eq.${pid}`,
+                },
+                (payload) => {
+                    console.log('[RT] follow_up change:', payload);
+                    fetchFollowUp(pid, consultationIdRef.current);
+                }
+            )
+
+            // ── 3. consultation → sync chief complaints / diagnosis / hpi ────
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'consultation',
+                    filter: `patient_id=eq.${pid}`,
+                },
+                (payload) => {
+                    console.log('[RT] consultation update:', payload);
+                    const data = payload.new as any;
+                    // Only update fields the user hasn't actively changed
+                    setFormData(prev => ({
+                        ...prev,
+                        chiefComplaints: data.chief_complaints ?? prev.chiefComplaints,
+                        diagnosis: data.diagnosis ?? prev.diagnosis,
+                        hpi: data.hpi ?? prev.hpi,
+                        attendingProvider: data.attending_provider ?? prev.attendingProvider,
+                        medicationAndTreatment: data.medication_treatment ?? prev.medicationAndTreatment,
+                    }));
+                    if (data.follow_up_status === 'done') setFollowUpDone(true);
+                }
+            )
+
+            // ── 4. vital_sign → keep vitals panel fresh ──────────────────────
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'vital_sign',
+                    filter: `patient_id=eq.${pid}`,
+                },
+                (payload) => {
+                    console.log('[RT] vital_sign change:', payload);
+                    const data = payload.new as any;
+                    if (!data) return;
+                    setFormData(prev => ({
+                        ...prev,
+                        bp: data.bp ?? prev.bp,
+                        hr: data.heart_rate?.toString() ?? prev.hr,
+                        rr: data.respiratory_rate?.toString() ?? prev.rr,
+                        temp: data.temperature?.toString() ?? prev.temp,
+                        weight: data.weight?.toString() ?? prev.weight,
+                        height: data.height?.toString() ?? prev.height,
+                        o2Saturation: data.o2_saturation?.toString() ?? prev.o2Saturation,
+                        muac: data.muac?.toString() ?? prev.muac,
+                        nutritionalStatus: data.nutritional_status ?? prev.nutritionalStatus,
+                        bmi: data.bmi?.toString() ?? prev.bmi,
+                        visualAcuityLeft: data.visual_acuity_left ?? prev.visualAcuityLeft,
+                        visualAcuityRight: data.visual_acuity_right ?? prev.visualAcuityRight,
+                    }));
+                }
+            )
+
+            .subscribe((status) => {
+                console.log('[RT] channel status:', status);
+                if (status === 'SUBSCRIBED') setRealtimeStatus('live');
+                else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error');
+                else setRealtimeStatus('connecting');
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [patient?.id, fetchLabResults, fetchFollowUp]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────
     const buildConsultationPayload = () => ({
         patient_id: patient?.id, ...(icidFromUrl ? { initial_consultation_id: parseInt(icidFromUrl as string) } : {}),
         family_history: formData.familyHistory || null, immunization_history: formData.immunizationHistory || null,
@@ -847,7 +1007,6 @@ export function ConsultationPage({
         } catch (error: any) { console.error('Error:', error); alert('Failed to save prescription: ' + error.message); } finally { setLoading(false); }
     };
 
-    // ─── UI Variables ─────────────────────────────────────────────────────────
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
     const isMale = patient?.sex?.toLowerCase() === 'male';
@@ -984,7 +1143,6 @@ export function ConsultationPage({
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
-                
             </div>
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
@@ -1054,7 +1212,20 @@ export function ConsultationPage({
                         <textarea rows={5} name="managementTreatment" value={formData.managementTreatment} onChange={handleChange} className={textareaCls} placeholder="Medications prescribed, treatment plan..." />
                     </div>
                     <div>
-                        <label className={labelCls}>Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span></label>
+                        <label className={labelCls}>
+                            Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span>
+                            {/* ── live indicator dot next to Lab Results ── */}
+                            <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                                ${realtimeStatus === 'live' ? 'bg-green-100 text-green-700' :
+                                  realtimeStatus === 'error' ? 'bg-red-100 text-red-600' :
+                                  'bg-slate-100 text-slate-400'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full inline-block
+                                    ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' :
+                                      realtimeStatus === 'error' ? 'bg-red-500' :
+                                      'bg-slate-300 animate-pulse'}`} />
+                                {realtimeStatus === 'live' ? 'LIVE' : realtimeStatus === 'error' ? 'OFFLINE' : 'CONNECTING'}
+                            </span>
+                        </label>
                         <textarea rows={5} name="followUpLabResults" value={formData.followUpLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
                         {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
                     </div>
@@ -1250,6 +1421,17 @@ export function ConsultationPage({
                         </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                        {/* ── realtime pill in patient header ── */}
+                        <span className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border
+                            ${realtimeStatus === 'live' ? 'bg-green-50 border-green-200 text-green-700' :
+                              realtimeStatus === 'error' ? 'bg-red-50 border-red-200 text-red-600' :
+                              'bg-slate-100 border-slate-200 text-slate-400'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full
+                                ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' :
+                                  realtimeStatus === 'error' ? 'bg-red-500' :
+                                  'bg-slate-300 animate-pulse'}`} />
+                            {realtimeStatus === 'live' ? 'Live Updates' : realtimeStatus === 'error' ? 'Realtime Off' : 'Connecting…'}
+                        </span>
                         <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">🕐 View History</button>
                         <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
                     </div>
@@ -1287,7 +1469,7 @@ export function ConsultationPage({
                 </div>
             </div>
 
-            {/* ─── Enhanced History Panel ─── */}
+            {/* History Modal */}
             {showHistory && patient && (
                 <HistoryPanel
                     patientId={patient.id}

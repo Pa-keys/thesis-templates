@@ -18,14 +18,23 @@ interface InitialConsultationData {
     generalSurvey: string;
 }
 
-const EMPTY_FORM: InitialConsultationData = {
-    dateOfConsultation: '', consultationTime: '', referredBy: '',
+// ─── Helper: get current date (YYYY-MM-DD) and time (HH:MM) ─────────────────
+const getCurrentDate = () => new Date().toISOString().split('T')[0];
+const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+};
+
+const makeEmptyForm = (): InitialConsultationData => ({
+    dateOfConsultation: getCurrentDate(),
+    consultationTime: getCurrentTime(),
+    referredBy: '',
     modeOfTransaction: '', modeOfTransfer: '', chiefComplaints: '',
     diagnosis: '', diagnosisOther: '', historyOfPresentIllness: '',
     bp: '', hr: '', rr: '', temp: '', weight: '', height: '',
     o2Sat: '', muac: '', nutritionalStatus: '', bmi: '',
     visualAcuityLeft: '', visualAcuityRight: '', bloodType: '', generalSurvey: '',
-};
+});
 
 const DIAGNOSIS_OPTIONS = [
     'Common Cold', 'Pneumonia', 'High Blood Pressure', 'Diabetes', 'Asthma',
@@ -77,7 +86,7 @@ const getNutritionalStatus = (bmi: string) => {
 };
 
 export function ConsultationComponent() {
-    const [formData, setFormData] = useState<InitialConsultationData>(EMPTY_FORM);
+    const [formData, setFormData] = useState<InitialConsultationData>(makeEmptyForm());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
@@ -231,7 +240,8 @@ export function ConsultationComponent() {
             }
 
             showToast('Consultation record saved successfully!', true);
-            setFormData({ ...EMPTY_FORM, bloodType: formData.bloodType });
+            // Reset form but keep blood type and refresh date/time for next entry
+            setFormData({ ...makeEmptyForm(), bloodType: formData.bloodType });
 
             redirectTimerRef.current = setTimeout(() => {
                 window.location.href = '/pages/nurse.html';

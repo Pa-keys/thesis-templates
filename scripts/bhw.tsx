@@ -16,7 +16,7 @@ interface Patient {
     bloodType: string;
     contactNumber: string;
     address: string;
-    created_at?: string; // Add this line to resolve the TypeScript error
+    created_at?: string;
 }
 
 const BhwDashboard = () => {
@@ -43,14 +43,14 @@ const BhwDashboard = () => {
         window.addEventListener('offline', handleOffline);
 
         const fetchData = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        window.location.href = '/pages/login.html';
-        return;
-    }
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/pages/login.html';
+                return;
+            }
 
-    // 1. Fetch user profile
-    const { data: profile } = await supabase
+            // 1. Fetch user profile
+            const { data: profile } = await supabase
                 .from('profiles')
                 .select('full_name')
                 .eq('id', session.user.id)
@@ -62,18 +62,15 @@ const BhwDashboard = () => {
                 setUserInitials(name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
             }
 
-            // 2. Fetch ALL patients for statistics calculation
+            // 2. Fetch ALL patients with all needed fields for stats + recent intakes
             const { data: allPatients, error: statsError } = await supabase
                 .from('patients')
-                .select('id, sex, address'); // Minimal selection for performance
+                .select('id, firstName, lastName, age, sex, bloodType, contactNumber, address, created_at')
+                .order('created_at', { ascending: false });
 
             if (!statsError && allPatients) {
                 setPatients(allPatients as Patient[]);
             }
-
-            // 3. The "Recent Intakes" section in your JSX currently uses patients.slice(0, 5).
-            // Since we now fetch all patients ordered by lastName (default), 
-            // we should fetch a separate list or sort the existing one by date.
         };
 
         fetchData();
@@ -91,13 +88,8 @@ const BhwDashboard = () => {
         withAddress: patients.filter(p => p.address && p.address.trim() !== '').length
     };
 
-    const recentPatients = [...patients]
-    .sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA; // Newest first
-    })
-    .slice(0, 5);
+    // Already sorted by created_at desc from Supabase — just take the first 5
+    const recentPatients = patients.slice(0, 5);
 
     const filteredPatients = patients.filter(p =>
         `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
@@ -113,7 +105,6 @@ const BhwDashboard = () => {
                 userRole="Barangay Health Worker"
                 navItems={navItems}
                 onNavigate={(id) => {
-                    // Uses React state to instantly swap pages without reloading
                     setActivePage(id);
                 }}
                 isMobileMenuOpen={isMobileMenuOpen}
@@ -206,7 +197,7 @@ const BhwDashboard = () => {
                                         <div className="p-5 border-b border-slate-100 flex justify-between items-center">
                                             <div>
                                                 <h2 className="text-lg font-bold text-slate-800">Recent Intakes</h2>
-                                                <p className="text-xs text-slate-500">Waiting for registration</p>
+                                                <p className="text-xs text-slate-500">5 latest registered patients</p>
                                             </div>
                                             <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">{recentPatients.length}</span>
                                         </div>
@@ -216,10 +207,15 @@ const BhwDashboard = () => {
                                             ) : (
                                                 recentPatients.map(p => (
                                                     <div key={p.id} onClick={() => window.location.href=`/pages/details.html?id=${p.id}`} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                                                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">{(p.firstName?.[0] || '?').toUpperCase()}</div>
-                                                        <div>
-                                                            <div className="font-bold text-slate-800 text-sm">{p.firstName} {p.lastName}</div>
+                                                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                                                            {(p.firstName?.[0] || '?').toUpperCase()}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-bold text-slate-800 text-sm truncate">{p.firstName} {p.lastName}</div>
                                                             <div className="text-xs text-slate-500 mt-0.5">{p.sex || '—'} &bull; {p.bloodType || '—'}</div>
+                                                        </div>
+                                                        <div className="text-[0.65rem] text-slate-400 font-semibold shrink-0">
+                                                            {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                                                         </div>
                                                     </div>
                                                 ))
@@ -247,7 +243,7 @@ const BhwDashboard = () => {
                             </>
                         )}
 
-                        {/* ─── MODULAR COMPONENT TABS (With Safety Wrappers) ─── */}
+                        {/* ─── MODULAR COMPONENT TABS ─── */}
                         {activePage === 'records' && (
                             <div className="w-full bg-white rounded-2xl shadow-sm p-4 min-h-[500px]">
                                 <RecordsComponent />

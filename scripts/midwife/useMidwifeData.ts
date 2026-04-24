@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../shared/supabase';
 import { midwifeAPI } from './api';
 
 export const useMidwifeData = () => {
@@ -11,11 +12,23 @@ export const useMidwifeData = () => {
         setIsLoading(true);
         const currentMonth = new Date().toISOString().substring(0, 7);
 
-        // 1. Fetch Patients Independently
+        // 1. Fetch Patients with patient_consent joined so Dashboard can show consent status
         try {
-            const pats = await midwifeAPI.getPatients();
-            console.log("✅ Patients fetched successfully:", pats);
-            setPatients(pats || []);
+            const { data, error } = await supabase
+                .from('patients')
+                .select(`
+                    id,
+                    firstName,
+                    lastName,
+                    sex,
+                    age,
+                    created_at,
+                    patient_consent ( consent_id )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setPatients(data || []);
         } catch (err) {
             console.error("❌ Error fetching patients:", err);
             setPatients([]);
@@ -26,7 +39,7 @@ export const useMidwifeData = () => {
             const recs = await midwifeAPI.getFHSISLogs(currentMonth);
             setRecords(recs || []);
         } catch (err) {
-            console.error("❌ Error fetching census records (Check if table exists!):", err);
+            console.error("❌ Error fetching census records:", err);
             setRecords([]);
         }
 
