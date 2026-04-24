@@ -154,7 +154,7 @@ const ReportGenerator = ({ records }: Props) => {
     };
 
     return (
-        <div className="max-w-[1200px] mx-auto animate-in fade-in duration-500 pb-10">
+        <div className="w-full mx-auto animate-in fade-in duration-500 pb-10 px-4">
             {/* CONTROLS */}
             <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:hidden">
                 <div className="flex-1">
@@ -180,9 +180,9 @@ const ReportGenerator = ({ records }: Props) => {
             </div>
 
             {/* DOH DOCUMENT RENDER AREA */}
-                <div className="overflow-x-auto bg-slate-200 p-8 rounded-xl shadow-inner flex justify-center">  
+                <div className="overflow-x-auto bg-slate-200 p-4 md:p-8 rounded-xl shadow-inner flex flex-col items-start">  
             {/* Added w-max and h-fit so the paper strictly hugs the table dimensions */}
-                <div ref={reportRef} className={`bg-white p-10 shadow-2xl font-sans text-black w-max h-fit ${selectedReport === 'fp' ? 'min-w-[1500px]' : 'min-w-[1100px]'}`}>
+                <div ref={reportRef} className={`bg-white p-10 shadow-2xl font-sans text-black w-max h-fit ${selectedReport === 'fp' ? 'min-w-[1550px] pl-20 ml-0' : 'min-w-[1100px] mx-auto'}`}>
                     
                     {/* DOH Header */}
                     <div className="text-center mb-6">

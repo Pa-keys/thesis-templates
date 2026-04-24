@@ -7,6 +7,7 @@ import { Sidebar } from './sidebar';
 import ConsultationPage from './consultation';
 import { RecordsComponent } from './records';
 import { TemplatesComponent } from './templates';
+import { PatientDetailModal, Patient } from './components/PatientDetailModal';
 
 type FilterPeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -70,6 +71,7 @@ const DoctorDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [selectedIcid, setSelectedIcid] = useState<string | null>(null);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     const [totalPatients, setTotalPatients] = useState(0);
     const [visitsToday, setVisitsToday] = useState(0);
@@ -636,7 +638,7 @@ const DoctorDashboard = () => {
                     )}
 
                     {activePage === 'records' && (
-                        <RecordsComponent onPatientClick={(p) => handleConsultNavigate(p.id)} />
+                        <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
                     )}
                     {activePage === 'new-record' && <TemplatesComponent />}
                     {activePage === 'consultation' && (
@@ -701,6 +703,13 @@ const DoctorDashboard = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {selectedPatient && (
+                <PatientDetailModal
+                    patient={selectedPatient}
+                    onClose={() => setSelectedPatient(null)}
+                    onPatientUpdate={(updated) => setSelectedPatient(updated)}
+                />
             )}
         </div>
     );
