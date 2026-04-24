@@ -4,6 +4,7 @@ import { supabase } from '../shared/supabase';
 import { requireRole } from '../shared/auth';
 import { Sidebar } from './sidebar';
 import { useToast } from './components/Toast';
+import { ThemeToggle } from './components/ThemeToggle';
 
 // --- Interfaces ---
 interface Patient {
@@ -43,7 +44,7 @@ function PharmacyDashboard() {
     const [profile, setProfile] = useState<any>(null);
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    
+
     const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
     const [dispenseChecklist, setDispenseChecklist] = useState<Record<number, boolean>>({});
     const [isDispensing, setIsDispensing] = useState(false);
@@ -113,7 +114,7 @@ function PharmacyDashboard() {
     // ─── Updated Print Format (Matches doctor.tsx) ───────────────────────────
     const handlePrintUnavailable = () => {
         if (!selectedRx) return;
-        
+
         const meds = JSON.parse(selectedRx.rx_content || '[]');
         const unavailableMeds = meds.filter((_: any, i: number) => !dispenseChecklist[i]);
 
@@ -223,17 +224,17 @@ function PharmacyDashboard() {
         return fullName.includes(searchQuery.toLowerCase());
     });
 
-    const initials = profile?.fullName 
-        ? profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) 
+    const initials = profile?.fullName
+        ? profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
         : 'P';
 
     const medsToDispense = selectedRx ? JSON.parse(selectedRx.rx_content || '[]') : [];
     const allChecked = medsToDispense.length > 0 && medsToDispense.every((_: any, i: number) => dispenseChecklist[i]);
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
+        <div className="flex h-screen bg-[#F8FAFC] dark:bg-neutral-950 overflow-hidden w-full">
             <ToastComponent />
-            <Sidebar 
+            <Sidebar
                 activePage={activePage}
                 userName={profile?.fullName || 'Loading...'}
                 userInitials={initials}
@@ -246,17 +247,17 @@ function PharmacyDashboard() {
             />
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
-                
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
+
+                <header className="h-[60px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
-                        <div className="font-bold text-lg text-slate-800 capitalize">Pharmacy Dashboard</div>
+                        <div className="font-bold text-lg text-slate-800 dark:text-neutral-100 capitalize">Pharmacy Dashboard</div>
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
                         <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 ${isOnline ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-full`}>
                             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
@@ -264,9 +265,10 @@ function PharmacyDashboard() {
                                 {isOnline ? 'Online' : 'Offline'}
                             </span>
                         </div>
+                        <ThemeToggle />
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{profile?.fullName || 'Loading...'}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Pharmacist</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{profile?.fullName || 'Loading...'}</div>
+                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400 font-medium">Pharmacist</div>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">
                             {initials}
@@ -305,9 +307,9 @@ function PharmacyDashboard() {
                                         </div>
                                         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:w-auto">
                                             <span>🔍</span>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Search patient..." 
+                                            <input
+                                                type="text"
+                                                placeholder="Search patient..."
                                                 className="bg-transparent border-none outline-none text-sm text-slate-700 w-full"
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -361,13 +363,13 @@ function PharmacyDashboard() {
                             </div>
                             <button onClick={() => setSelectedRx(null)} className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors">✕</button>
                         </div>
-                        
+
                         <div className="p-5 md:p-6 overflow-y-auto">
                             <div className="flex justify-between items-end mb-4">
                                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prescribed Medications</h3>
                                 <span className="text-xs text-slate-400 italic">Check the box if medication is dispensed</span>
                             </div>
-                            
+
                             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm whitespace-nowrap">
@@ -384,10 +386,10 @@ function PharmacyDashboard() {
                                             {medsToDispense.map((med: Medication, i: number) => (
                                                 <tr key={i} className={`border-b border-slate-100 last:border-0 transition-colors ${dispenseChecklist[i] ? 'bg-white' : 'bg-red-50/50 opacity-60'}`}>
                                                     <td className="p-4 text-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            className="w-5 h-5 accent-blue-600 cursor-pointer" 
-                                                            checked={!!dispenseChecklist[i]} 
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-5 h-5 accent-blue-600 cursor-pointer"
+                                                            checked={!!dispenseChecklist[i]}
                                                             onChange={() => handleToggleChecklist(i)}
                                                         />
                                                     </td>
@@ -407,21 +409,20 @@ function PharmacyDashboard() {
                             <button onClick={() => setSelectedRx(null)} className="px-5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 transition-colors w-full sm:w-auto">
                                 Cancel
                             </button>
-                            
-                            <button 
+
+                            <button
                                 onClick={handlePrintUnavailable}
                                 disabled={allChecked}
-                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${
-                                    allChecked 
-                                    ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' 
-                                    : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'
-                                }`}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked
+                                        ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300'
+                                        : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'
+                                    }`}
                             >
-                                🖨️ Print Unavailable
+                                🖨️ Print
                             </button>
 
-                            <button 
-                                onClick={handleDispense} 
+                            <button
+                                onClick={handleDispense}
                                 disabled={isDispensing}
                                 className="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors w-full sm:w-auto flex items-center justify-center gap-2"
                             >

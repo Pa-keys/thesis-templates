@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import Chart from 'chart.js/auto';
 import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
+import { ThemeToggle } from './components/ThemeToggle';
 
 import ConsultationPage from './consultation';
 import { RecordsComponent } from './records';
@@ -463,7 +464,7 @@ const DoctorDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
+        <div className="flex h-screen bg-[#F8FAFC] dark:bg-neutral-950 overflow-hidden w-full">
             <Sidebar
                 activePage={activePage}
                 userName={userName}
@@ -481,7 +482,7 @@ const DoctorDashboard = () => {
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
                 {/* Topbar */}
-                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm md:shadow-none">
+                <header className="h-[64px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm md:shadow-none">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -497,10 +498,11 @@ const DoctorDashboard = () => {
                                 {!isOnline ? 'Offline Mode' : 'System Online'}
                             </span>
                         </div>
+                        <ThemeToggle />
                         <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500">General Practitioner</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{userName}</div>
+                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400">General Practitioner</div>
                         </div>
                         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">{userInitials}</div>
                     </div>

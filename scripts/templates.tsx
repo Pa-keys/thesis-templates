@@ -427,7 +427,7 @@ export function TemplatesComponent() {
                                 </div>
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Birth Place</label>
-                                    <input 
+                                    <input
                                         type="text" id="birthPlace" value={form.birthPlace}
                                         onChange={handleTextOnly}
                                         className={errors['birthPlace'] ? inputErrorClasses : inputClasses}
@@ -568,48 +568,7 @@ export function TemplatesComponent() {
                     </div>
                 </form>
 
-                <div className="w-full lg:w-[350px] shrink-0">
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sticky top-6">
-                        <div className="flex justify-between items-center mb-5">
-                            <div className="font-bold text-slate-800">Recent Records</div>
-                            <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-xs font-bold">{patients.length}</span>
-                        </div>
-                        <div className="relative mb-5">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                            <input
-                                type="text"
-                                placeholder="Search by name..."
-                                value={search}
-                                onChange={e => { setSearch(e.target.value); fetchPatients(e.target.value); }}
-                                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-colors"
-                            />
-                        </div>
-                        <div className="max-h-[600px] overflow-y-auto pr-2 flex flex-col gap-2 scrollbar-thin">
-                            {patients.length === 0 ? (
-                                <div className="text-center text-slate-400 text-sm py-8">No patients found.</div>
-                            ) : patients.map(p => (
-                                <div
-                                    key={p.id}
-                                    className="flex items-center gap-3 p-3 hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl cursor-pointer transition-all group"
-                                    onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0 shadow-sm">
-                                        {(p.firstName?.[0] || '?').toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors truncate">
-                                            {p.lastName}, {p.firstName} {p.middleName || ''}
-                                        </div>
-                                        <div className="text-[0.65rem] text-slate-500 mt-0.5 truncate uppercase tracking-wider font-semibold">
-                                            {p.sex || '—'} · {p.age ?? '—'} YRS · {p.bloodType || '—'}
-                                        </div>
-                                    </div>
-                                    <span className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all font-bold">→</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     );

@@ -175,7 +175,7 @@ export function PatientDetailModal({
                             name={name}
                             value={editForm[name] as string || ''}
                             onChange={handleInputChange}
-                            className="text-sm font-semibold border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                            className="text-sm font-semibold border border-slate-200 dark:border-neutral-800 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white dark:bg-neutral-800 text-slate-900 dark:text-neutral-100"
                         >
                             <option value="">Select...</option>
                             {options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -186,7 +186,7 @@ export function PatientDetailModal({
                             name={name}
                             value={editForm[name] as string | number || ''}
                             onChange={handleInputChange}
-                            className="text-sm font-semibold border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                            className="text-sm font-semibold border border-slate-200 dark:border-neutral-800 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white dark:bg-neutral-800 text-slate-900 dark:text-neutral-100"
                         />
                     )}
                 </div>
@@ -196,7 +196,7 @@ export function PatientDetailModal({
         return (
             <div className="flex flex-col gap-1">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">{label}</div>
-                <div className={`text-sm font-semibold ${isEmpty ? 'text-slate-400 italic' : 'text-slate-800'}`}>
+                <div className={`text-sm font-semibold ${isEmpty ? 'text-slate-400 italic' : 'text-slate-800 dark:text-neutral-200'}`}>
                     {isEmpty ? 'Not provided' : value}
                 </div>
             </div>
@@ -215,7 +215,7 @@ export function PatientDetailModal({
     };
 
     const sectionCls = "mb-5";
-    const headerCls = "flex items-center gap-2 text-xs font-extrabold text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-2 mb-4";
+    const headerCls = "flex items-center gap-2 text-xs font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest border-b border-blue-100 dark:border-blue-900/50 pb-2 mb-4";
 
     return (
         <>
@@ -224,19 +224,19 @@ export function PatientDetailModal({
 
             {/* Modal Panel */}
             <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-transparent dark:border-neutral-800">
 
                     {/* Modal Header */}
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
+                    <div className="px-6 py-4 border-b border-slate-100 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-base shadow-sm ${patient.sex === 'Male' ? 'bg-blue-600' : 'bg-pink-500'}`}>
                                 {(patient.firstName?.[0] || '?').toUpperCase()}
                             </div>
                             <div>
-                                <div className="font-extrabold text-slate-900 leading-tight">
+                                <div className="font-extrabold text-slate-900 dark:text-neutral-100 leading-tight">
                                     {patient.lastName}, {patient.firstName} {patient.middleName || ''}
                                 </div>
-                                <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                <div className="text-xs text-slate-500 dark:text-neutral-400 font-medium mt-0.5">
                                     {patient.sex || '—'} · {patient.age ?? '—'} yrs · {patient.bloodType || '—'}
                                 </div>
                             </div>
@@ -252,7 +252,7 @@ export function PatientDetailModal({
                             )}
                             <button
                                 onClick={onClose}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors font-bold text-sm"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-neutral-700 transition-colors font-bold text-sm"
                             >
                                 ✕
                             </button>
@@ -260,7 +260,7 @@ export function PatientDetailModal({
                     </div>
 
                     {/* Scrollable Body */}
-                    <div className="flex-1 overflow-y-auto p-6 bg-[#F8FAFC]">
+                    <div className="flex-1 overflow-y-auto p-6 bg-[#F8FAFC] dark:bg-neutral-950">
 
                         {!showHistory ? (
                             <>
@@ -317,7 +317,7 @@ export function PatientDetailModal({
                                 </div>
 
                                 {isEditing ? (
-                                    <div className="sticky bottom-0 bg-[#F8FAFC] pt-4 border-t border-slate-100 flex gap-3">
+                                    <div className="sticky bottom-0 bg-[#F8FAFC] dark:bg-neutral-950 pt-4 border-t border-slate-100 dark:border-neutral-800 flex gap-3">
                                         <button
                                             onClick={handleSave}
                                             disabled={isSaving}
@@ -340,7 +340,7 @@ export function PatientDetailModal({
                                 {/* Back to Details */}
                                 <button
                                     onClick={() => setShowHistory(false)}
-                                    className="mb-5 flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                                    className="mb-5 flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-neutral-200 transition-colors"
                                 >
                                     ← Back to Details
                                 </button>
@@ -363,8 +363,8 @@ export function PatientDetailModal({
                                             ) : (
                                                 <div className="flex flex-col gap-3">
                                                     {initialConsults.map((ic) => (
-                                                        <div key={ic.initialconsultation_id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors">
-                                                            <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100 gap-2">
+                                                        <div key={ic.initialconsultation_id} className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm hover:border-teal-300 dark:hover:border-teal-700 transition-colors">
+                                                            <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100 dark:border-neutral-800 gap-2">
                                                                 <div>
                                                                     <div className="font-extrabold text-teal-700 text-sm">📅 {formatDate(ic.consultation_date)}</div>
                                                                     <div className="text-xs text-slate-500 mt-0.5">⌚ {ic.consultation_time || 'Time unspecified'}</div>
@@ -376,13 +376,13 @@ export function PatientDetailModal({
                                                                 )}
                                                             </div>
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div className="sm:col-span-2 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                                <div className="sm:col-span-2 bg-slate-50 dark:bg-neutral-800 rounded-lg p-3 border border-slate-100 dark:border-neutral-700">
                                                                     <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Chief Complaint</div>
-                                                                    <div className="text-sm font-semibold text-slate-800">{ic.chief_complaint || 'None recorded'}</div>
+                                                                    <div className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{ic.chief_complaint || 'None recorded'}</div>
                                                                 </div>
                                                                 <div>
                                                                     <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
-                                                                    <div className="text-sm text-slate-800">{ic.diagnosis || '—'}</div>
+                                                                    <div className="text-sm text-slate-800 dark:text-neutral-300">{ic.diagnosis || '—'}</div>
                                                                 </div>
                                                                 <div>
                                                                     <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Referred By</div>
@@ -407,13 +407,13 @@ export function PatientDetailModal({
                                             {consultations.length === 0 ? (
                                                 <p className="text-sm text-slate-400 italic text-center py-4">No doctor consultation records found.</p>
                                             ) : (
-                                                <div className="flex flex-col gap-3">
+                                                <div className="flex-col flex gap-3">
                                                     {consultations.map((c) => (
-                                                        <div key={c.consultation_id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                                        <div key={c.consultation_id} className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
                                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div className="sm:col-span-2 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                                <div className="sm:col-span-2 bg-slate-50 dark:bg-neutral-800 rounded-lg p-3 border border-slate-100 dark:border-neutral-700">
                                                                     <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Chief Complaints</div>
-                                                                    <div className="text-sm font-semibold text-slate-800">{c.chief_complaints || 'None recorded'}</div>
+                                                                    <div className="text-sm font-semibold text-slate-800 dark:text-neutral-200">{c.chief_complaints || 'None recorded'}</div>
                                                                 </div>
                                                                 <div>
                                                                     <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>

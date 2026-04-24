@@ -42,23 +42,23 @@ export function Sidebar({
                 />
             )}
             
-            <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] md:w-[240px] bg-white border-r border-slate-200 flex flex-col transform transition-transform duration-300 ease-in-out print:hidden ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}>
+            <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] md:w-[240px] bg-white dark:bg-neutral-900 border-r border-slate-200 dark:border-neutral-800 flex flex-col transform transition-transform duration-300 ease-in-out print:hidden ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}>
                 
                 {/* Brand Header */}
-                <div className="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 shrink-0">
+                <div className="flex items-center justify-between p-4 md:p-5 border-b border-slate-200 dark:border-neutral-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md shrink-0 transition-colors duration-500 ${logoBg}`}>
                             <span className="text-white font-bold text-xl">+</span>
                         </div>
                         <div>
-                            <div className="text-base font-extrabold text-slate-900 leading-tight">MediSens</div>
-                            <div className="text-[0.65rem] font-bold text-slate-400 uppercase">Rural Health Unit</div>
+                            <div className="text-base font-extrabold text-slate-900 dark:text-neutral-100 leading-tight">MediSens</div>
+                            <div className="text-[0.65rem] font-bold text-slate-400 dark:text-neutral-500 uppercase">Rural Health Unit</div>
                         </div>
                     </div>
                 </div>
             
                 {/* Navigation Section */}
-                <div className="px-5 py-4 text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 shrink-0">Main Menu</div>
+                <div className="px-5 py-4 text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500 shrink-0">Main Menu</div>
                 <nav className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto scrollbar-hide">
                     {navItems.map((item) => {
                         const isActive = activePage === item.id;
@@ -72,7 +72,7 @@ export function Sidebar({
                                 className={`flex items-center w-full text-left gap-3 py-2.5 text-sm transition-all duration-500 ${
                                     isActive 
                                     ? `font-semibold ${activeBg} ${activeText} rounded-r-lg relative -ml-3 pl-6 pr-3` 
-                                    : 'font-medium text-slate-600 hover:bg-slate-50 rounded-lg px-3'
+                                    : 'font-medium text-slate-600 dark:text-neutral-400 hover:bg-slate-50 dark:hover:bg-neutral-800 rounded-lg px-3'
                                 }`}
                             >
                                 {isActive && (
@@ -87,7 +87,7 @@ export function Sidebar({
                 {/* Integrated Profile & Logout Block */}
                 <div 
                     onClick={() => setShowLogoutModal(true)}
-                    className="p-3 border-t border-slate-200 bg-white mt-auto shrink-0 cursor-pointer hover:bg-slate-50 transition-colors group"
+                    className="p-3 border-t border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 mt-auto shrink-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors group"
                     title="Click to Logout"
                 >
                     <div className="flex items-center justify-between">
@@ -96,8 +96,8 @@ export function Sidebar({
                                 {userInitials}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-slate-900 truncate leading-tight">{userName}</p>
-                                <p className="text-[0.6rem] text-slate-500 capitalize">{userRole}</p>
+                                <p className="text-xs font-bold text-slate-900 dark:text-neutral-100 truncate leading-tight">{userName}</p>
+                                <p className="text-[0.6rem] text-slate-500 dark:text-neutral-400 capitalize">{userRole}</p>
                             </div>
                         </div>
                         <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,16 +110,16 @@ export function Sidebar({
             {/* Custom Logout Modal */}
             {showLogoutModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity">
-                    <div className="bg-white/80 backdrop-blur-xl rounded-[28px] p-6 w-[320px] shadow-2xl border border-white/20 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-semibold text-slate-900 tracking-tight">Log Out</h3>
-                        <p className="text-sm text-slate-500 mt-2 mb-6">Are you sure you want to end your session?</p>
+                    <div className="bg-white/80 dark:bg-neutral-800/90 backdrop-blur-xl rounded-[28px] p-6 w-[320px] shadow-2xl border border-white/20 dark:border-neutral-700/50 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+                        <h3 className="text-xl font-semibold text-slate-900 dark:text-neutral-100 tracking-tight">Log Out</h3>
+                        <p className="text-sm text-slate-500 dark:text-neutral-400 mt-2 mb-6">Are you sure you want to end your session?</p>
                         <div className="flex w-full gap-3">
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setShowLogoutModal(false);
                                 }}
-                                className="flex-1 py-3 bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 font-semibold rounded-2xl transition-colors"
+                                className="flex-1 py-3 bg-slate-100/80 dark:bg-neutral-700/80 hover:bg-slate-200/80 dark:hover:bg-neutral-600/80 text-slate-700 dark:text-neutral-200 font-semibold rounded-2xl transition-colors"
                             >
                                 Cancel
                             </button>
