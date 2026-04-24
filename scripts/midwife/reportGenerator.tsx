@@ -441,7 +441,7 @@ const ReportGenerator = ({ records }: Props) => {
                     <div className="mt-8 flex justify-between items-end">
                         <div className="text-left">
                             <p className="text-[10px] font-bold uppercase mb-8">Prepared By:</p>
-                            <p className="text-[11px] font-bold border-b border-black pb-1 w-64 text-center">Registered Midwife</p>
+                            <p className="text-[11px] font-bold border-b border-black pb-1 w-64 text-center"> </p>
                         </div>
                         <div className="text-right text-[8px] font-bold italic text-slate-500">
                             <p>Use 8.5" x 13" size Paper</p>

@@ -296,7 +296,7 @@ const MidwifeApp = () => {
                             {activeTab === 'dashboard' ? 'Midwife Dashboard'
                                 : activeTab === 'records'  ? 'Patient Records'
                                 : activeTab === 'census'   ? 'Census Entry'
-                                : activeTab === 'reports'  ? 'OCR Reports'
+                                : activeTab === 'reports'  ? 'OCR Generation'
                                 : activeTab.replace(/([A-Z])/g, ' $1').trim()}
                         </div>
                     </div>
