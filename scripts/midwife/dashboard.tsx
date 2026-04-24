@@ -2,12 +2,14 @@ import React, { useMemo } from 'react';
 
 interface Props {
     patients: any[];
+    rhuPersonnel: string;
     censusRecords: any[];
+    onNavigateToRecords: () => void;
+    onPatientClick?: (patient: any) => void; // ← NEW
 }
 
-const Dashboard = ({ patients, censusRecords }: Props) => {
+const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClick }: Props) => {
 
-    // Process patients prop directly — no internal fetch needed
     const recentPatients = useMemo(() => {
         return [...patients]
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -19,13 +21,11 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
             }));
     }, [patients]);
 
-    // Dynamically calculate metrics based on live FHSIS database
     const maternalCount = censusRecords.filter(r => r.category === 'maternal').length;
-    const childCount = censusRecords.filter(r => r.category === 'child').length;
-    const fpCount = censusRecords.filter(r => r.category === 'family_planning').length;
+    const childCount    = censusRecords.filter(r => r.category === 'child').length;
+    const fpCount       = censusRecords.filter(r => r.category === 'family_planning').length;
     const totalPatients = patients.length;
 
-    // Get today's entries
     const todayCount = useMemo(() => {
         const today = new Date().toISOString().split('T')[0];
         return censusRecords.filter(r => r.created_at?.startsWith(today)).length;
@@ -33,53 +33,39 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
 
     return (
         <div className="w-full max-w-full px-2 sm:px-4 md:px-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
-            {/* Header Section */}
-            <div className="welcome-row mb-8 flex justify-between items-end">
+
+            {/* Header */}
+            <div className="mb-8 flex justify-between items-end">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">FHSIS Overview</h1>
                     <p className="text-sm text-slate-500 mt-1">Live metrics for the current reporting month.</p>
                 </div>
             </div>
 
-            {/* TOP METRICS: Auto-scaling grid for max width */}
+            {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-10 w-full">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                    <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl shadow-inner shrink-0">👥</div>
-                    <div className="min-w-0">
-                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">Master Registry</div>
-                        <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{totalPatients}</div>
+                {[
+                    { icon: '👥', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
+                    { icon: '🤰', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
+                    { icon: '👶', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
+                    { icon: '💊', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
+                ].map(({ icon, label, value, bg, text }) => (
+                    <div key={label} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
+                        <div className={`w-14 h-14 rounded-full ${bg} ${text} flex items-center justify-center text-2xl shadow-inner shrink-0`}>{icon}</div>
+                        <div className="min-w-0">
+                            <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">{label}</div>
+                            <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{value}</div>
+                        </div>
                     </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                    <div className="w-14 h-14 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-2xl shadow-inner shrink-0">🤰</div>
-                    <div className="min-w-0">
-                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">Maternal Care</div>
-                        <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{maternalCount}</div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                    <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shrink-0">👶</div>
-                    <div className="min-w-0">
-                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">Child Care (Immu)</div>
-                        <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{childCount}</div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                    <div className="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-2xl shadow-inner shrink-0">💊</div>
-                    <div className="min-w-0">
-                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">Family Planning</div>
-                        <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{fpCount}</div>
-                    </div>
-                </div>
+                ))}
             </div>
 
-            {/* LOWER CONTENT: Responsive Split (1/3 and 2/3 ratio on large screens) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-3 gap-6 sm:gap-8 w-full">
-                
-                {/* COLUMN 1 & 2: Recent Reports Encodes */}
-                <div className="card shadow-sm border border-slate-200 lg:col-span-2 2xl:col-span-2 flex flex-col bg-white rounded-2xl w-full overflow-hidden">
-                    <div className="card-hd border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
+            {/* Lower Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
+
+                {/* Recent Reports */}
+                <div className="lg:col-span-2 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm w-full overflow-hidden">
+                    <div className="border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
                         <div>
                             <h3 className="text-xl font-bold text-slate-800 tracking-tight">Recent Reports Encodes</h3>
                             <p className="text-sm text-slate-500 mt-1">Latest entries synchronized with the database.</p>
@@ -88,7 +74,6 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                             {todayCount} Today
                         </span>
                     </div>
-                    
                     <div className="flex-1 w-full">
                         {censusRecords.length === 0 ? (
                             <div className="p-12 text-center text-slate-400 font-medium">No entries for this month yet.</div>
@@ -115,21 +100,27 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                     </div>
                 </div>
 
-                {/* COLUMN 3: Patient Directory */}
-                <div className="card shadow-sm border border-slate-200 lg:col-span-1 2xl:col-span-1 flex flex-col bg-white rounded-2xl w-full overflow-hidden max-h-[600px]">
-                    <div className="card-hd border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
+                {/* Patient Directory — clicks now open modal instead of redirecting */}
+                <div className="lg:col-span-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm w-full overflow-hidden max-h-[600px]">
+                    <div className="border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
                         <div>
                             <h3 className="text-xl font-bold text-slate-800 tracking-tight">Patient Directory</h3>
                             <p className="text-sm text-slate-500 mt-1">All registered patients</p>
                         </div>
+                        <button
+                            onClick={onNavigateToRecords}
+                            className="text-xs font-bold text-blue-600 hover:underline shrink-0"
+                        >
+                            View All →
+                        </button>
                     </div>
-                    
+
                     <div className="p-5 sm:p-6 flex-1 w-full bg-white overflow-y-auto scrollbar-thin">
                         <div className="space-y-4 w-full">
                             {recentPatients.length > 0 ? recentPatients.map(p => (
                                 <div
                                     key={p.id}
-                                    onClick={() => window.location.href = `/pages/details.html?id=${p.id}`}
+                                    onClick={() => onPatientClick?.(p)}   // ← opens modal, no redirect
                                     className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:bg-slate-50 cursor-pointer transition-all hover:border-blue-200 hover:shadow-sm group w-full"
                                 >
                                     <div className="flex items-center gap-4 min-w-0">
@@ -150,13 +141,9 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                                             {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </div>
                                         {!p.consent_signed ? (
-                                            <span className="text-[0.6rem] font-extrabold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">
-                                                ⚠️ Pending
-                                            </span>
+                                            <span className="text-[0.6rem] font-extrabold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">⚠️ Pending</span>
                                         ) : (
-                                            <span className="text-[0.6rem] font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">
-                                                ✓ Signed
-                                            </span>
+                                            <span className="text-[0.6rem] font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">✓ Signed</span>
                                         )}
                                     </div>
                                 </div>
