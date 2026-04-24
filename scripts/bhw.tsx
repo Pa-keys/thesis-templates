@@ -6,6 +6,7 @@ import { Sidebar } from './sidebar';
 // ─── Imported Pure Components ────────────────────────────────────────────────
 import { RecordsComponent } from './records';
 import { TemplatesComponent } from './templates';
+import ReportGenerator from './midwife/reportGenerator'; // Imported OCR Report Component
 
 interface Patient {
     id: string;
@@ -25,6 +26,7 @@ const BhwDashboard = () => {
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('?');
     const [patients, setPatients] = useState<Patient[]>([]);
+    const [records, setRecords] = useState<any[]>([]); // State for FHSIS Census Logs
     const [searchQuery, setSearchQuery] = useState('');
 
     // ─── SPA Navigation State ───
@@ -33,7 +35,8 @@ const BhwDashboard = () => {
     const navItems = [
         { id: 'dashboard', label: 'Home', icon: '🏠' },
         { id: 'records', label: 'Records', icon: '📁' },
-        { id: 'new-record', label: 'New Record', icon: '➕' }
+        { id: 'new-record', label: 'New Record', icon: '➕' },
+        { id: 'reports', label: 'OCR Generation', icon: '📊' } // Added Reports Tab
     ];
 
     useEffect(() => {
@@ -62,7 +65,7 @@ const BhwDashboard = () => {
                 setUserInitials(name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
             }
 
-            // 2. Fetch ALL patients with all needed fields for stats + recent intakes
+            // 2. Fetch ALL patients
             const { data: allPatients, error: statsError } = await supabase
                 .from('patients')
                 .select('id, firstName, lastName, age, sex, bloodType, contactNumber, address, created_at')
@@ -71,13 +74,53 @@ const BhwDashboard = () => {
             if (!statsError && allPatients) {
                 setPatients(allPatients as Patient[]);
             }
+
+            // 3. Fetch FHSIS logs for the OCR Reports
+            const { data: fhsisData, error: fhsisError } = await supabase
+                .from('fhsis_logs')
+                .select(`
+                    id,
+                    patient_id,
+                    category,
+                    data_fields,
+                    report_month,
+                    created_at,
+                    patients (
+                        firstName,
+                        lastName,
+                        address
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (!fhsisError && fhsisData) {
+                // Flatten the relationship for the ReportGenerator
+                const formattedRecords = fhsisData.map(record => {
+                    const patientData: any = Array.isArray(record.patients) ? record.patients[0] : record.patients;
+                    return {
+                        ...record,
+                        patientName: patientData ? `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() : 'Unknown Patient',
+                        address: patientData?.address || 'N/A'
+                    };
+                });
+                setRecords(formattedRecords);
+            }
         };
 
         fetchData();
 
+        // Realtime subscription to auto-update reports when Midwife adds new Census Entry
+        const channel = supabase
+            .channel('bhw-fhsis-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'fhsis_logs' }, () => {
+                fetchData();
+            })
+            .subscribe();
+
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            supabase.removeChannel(channel);
         };
     }, []);
 
@@ -88,12 +131,7 @@ const BhwDashboard = () => {
         withAddress: patients.filter(p => p.address && p.address.trim() !== '').length
     };
 
-    // Already sorted by created_at desc from Supabase — just take the first 5
     const recentPatients = patients.slice(0, 5);
-
-    const filteredPatients = patients.filter(p =>
-        `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
@@ -104,9 +142,7 @@ const BhwDashboard = () => {
                 userInitials={userInitials}
                 userRole="Barangay Health Worker"
                 navItems={navItems}
-                onNavigate={(id) => {
-                    setActivePage(id);
-                }}
+                onNavigate={(id) => setActivePage(id)}
                 isMobileMenuOpen={isMobileMenuOpen}
                 setIsMobileMenuOpen={setIsMobileMenuOpen}
                 isOnline={isOnline}
@@ -114,7 +150,6 @@ const BhwDashboard = () => {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
                 
-                {/* Modern Topbar */}
                 <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
@@ -122,7 +157,11 @@ const BhwDashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
-                        <div className="font-bold text-lg text-slate-800">Dashboard</div>
+                        <div className="font-bold text-lg text-slate-800 capitalize">
+                            {activePage === 'dashboard' ? 'Dashboard'
+                                : activePage === 'reports' ? 'OCR Reports'
+                                : activePage.replace(/-/g, ' ')}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -154,10 +193,6 @@ const BhwDashboard = () => {
                                     <div>
                                         <h1 className="text-2xl font-extrabold text-slate-800">Good day, {userName.split(' ')[0]}! 👋</h1>
                                         <p className="text-sm text-slate-500 mt-1">Here's your overview for today.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                                        <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                                        <span className="text-xs font-bold text-slate-700">{isOnline ? 'System Online • Live' : 'Offline Mode'}</span>
                                     </div>
                                 </div>
 
@@ -237,6 +272,9 @@ const BhwDashboard = () => {
                                             <button onClick={() => setActivePage('records')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700">
                                                 <span className="text-xl mb-2">🔍</span> Search
                                             </button>
+                                            <button onClick={() => setActivePage('reports')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700 col-span-2">
+                                                <span className="text-xl mb-2">📊</span> Generate Reports
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -253,6 +291,13 @@ const BhwDashboard = () => {
                         {activePage === 'new-record' && (
                             <div className="w-full bg-white rounded-2xl shadow-sm p-4 min-h-[500px]">
                                 <TemplatesComponent />
+                            </div>
+                        )}
+
+                        {activePage === 'reports' && (
+                            <div className="w-full bg-[#F8FAFC] rounded-2xl min-h-[500px]">
+                                {/* Pass the newly fetched FHSIS logs down to the generator */}
+                                <ReportGenerator records={records} />
                             </div>
                         )}
 
