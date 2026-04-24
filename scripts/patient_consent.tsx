@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const supabase = createClient(supabaseUrl, supabaseKey);
+import { useToast } from './components/Toast';
 
 interface ConsentProps {
     patientId: string;
@@ -290,6 +291,7 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
     // ← CHANGED: pre-filled from prop, locked as read-only
     const [rhuPersonnel] = useState(initialPersonnel);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { showToast, ToastComponent } = useToast();
 
     const patientSigCanvas = useRef<SignatureCanvas | null>(null);
     const personnelSigCanvas = useRef<SignatureCanvas | null>(null);
@@ -298,11 +300,11 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
         e.preventDefault();
 
         if (patientSigCanvas.current?.isEmpty()) {
-            alert("Please provide the patient's signature.");
+            showToast("Please provide the patient's signature.", true);
             return;
         }
         if (personnelSigCanvas.current?.isEmpty()) {
-            alert("Please provide the RHU Personnel's signature.");
+            showToast("Please provide the RHU Personnel's signature.", true);
             return;
         }
 
@@ -325,20 +327,22 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
                 }]);
 
             if (error) {
-                alert("Database Error: " + error.message);
+                showToast("Database Error: " + error.message, true);
             } else {
                 // Removed the old !data check since standard insert doesn't return data without .select()
-                alert("Consent successfully recorded!");
+                showToast("Consent successfully recorded!", false);
                 onConsentSaved();
             }
         } catch (err: any) {
-            alert("A critical error occurred: " + err.message);
+            showToast("A critical error occurred: " + err.message, true);
         } finally {
             setIsSubmitting(false);
         }
     };
     
     return (
+        <>
+        <ToastComponent />
         <form onSubmit={handleSubmit} style={styles.page}>
 
             {/* ── Section I: Consent Text ── */}
@@ -442,5 +446,6 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
                 {isSubmitting ? '⏳ Saving Consent...' : '✅ Confirm & Save Consent'}
             </button>
         </form>
+        </>
     );
 }

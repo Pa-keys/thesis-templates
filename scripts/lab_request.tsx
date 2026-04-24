@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../shared/supabase';
+import { useToast } from './components/Toast';
 
 interface LabRequestData {
   date: string; labNo: string; name: string; age: string; sex: string; address: string; cc: string;
@@ -16,6 +17,7 @@ function LabRequest() {
     fastingTests: { rbs: false, uricAcid: false, fbs: false, cholesterol: false },
     others: '', requestedBy: '', status: 'Pending', labNotes: ''
   });
+  const { showToast, ToastComponent } = useToast();
 
   // RBAC Guard
   useEffect(() => {
@@ -64,8 +66,8 @@ function LabRequest() {
       }]);
       
       if (error) throw error;
-      alert(`Lab Request ${formData.status === 'Completed' ? 'Results Saved' : 'Submitted'}!`);
-    } catch (err: any) { alert('Error: ' + err.message); }
+      showToast(`Lab Request ${formData.status === 'Completed' ? 'Results Saved' : 'Submitted'}!`, false);
+    } catch (err: any) { showToast('Error: ' + err.message, true); }
   };
 
   if (!role) return <div>Loading...</div>;
@@ -74,6 +76,8 @@ function LabRequest() {
   const inputStyle = "border-b border-gray-400 focus:border-blue-600 outline-none bg-transparent px-2 text-sm w-full";
 
   return (
+    <>
+    <ToastComponent />
     <div className="max-w-4xl mx-auto p-8 bg-white shadow border rounded-lg mt-10">
       <h2 className="text-2xl font-bold text-center mb-6 border-b-2 pb-2">LABORATORY REQUEST</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -135,6 +139,7 @@ function LabRequest() {
         <button type="submit" className="w-full bg-blue-700 text-white font-bold py-3 rounded mt-4">{isLab ? 'Save Lab Results' : 'Submit Lab Request'}</button>
       </form>
     </div>
+    </>
   );
 }
 

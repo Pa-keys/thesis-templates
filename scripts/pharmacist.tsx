@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { supabase } from '../shared/supabase';
 import { requireRole } from '../shared/auth';
 import { Sidebar } from './sidebar';
+import { useToast } from './components/Toast';
 
 // --- Interfaces ---
 interface Patient {
@@ -43,6 +44,7 @@ function PharmacyDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
     const [isDispensing, setIsDispensing] = useState(false);
+    const { showToast, ToastComponent } = useToast();
 
     // Sidebar & Layout State
     const [activePage, setActivePage] = useState('queue');
@@ -105,8 +107,9 @@ function PharmacyDashboard() {
         if (!error) {
             setSelectedRx(null);
             setPrescriptions(prev => prev.filter(p => p.prescription_id !== selectedRx.prescription_id));
+            showToast('Medication dispensed successfully!', false);
         } else {
-            alert('Error dispensing: ' + error.message);
+            showToast('Error dispensing: ' + error.message, true);
         }
     };
 
@@ -123,7 +126,7 @@ function PharmacyDashboard() {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
-            
+            <ToastComponent />
             <Sidebar 
                 activePage={activePage}
                 userName={profile?.fullName || 'Loading...'}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../shared/supabase';
+import { useToast } from './components/Toast';
 
 // ─── ✨ GLASSMORPHISM Tailwind Classes ✨ ────────────────────────────────────
 const inputClasses = "w-full border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/40 focus:border-white/80 outline-none bg-white/30 hover:bg-white/40 focus:bg-white/60 backdrop-blur-md transition-all text-slate-800 placeholder:text-slate-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]";
@@ -97,13 +98,11 @@ export function ConsultationComponent() {
     const [searchQuery, setSearchQuery] = useState('');
     const [consentedPatients, setConsentedPatients] = useState<any[]>([]);
 
-    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-    const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const { showToast, ToastComponent } = useToast();
     const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         return () => {
-            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
             if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
         };
     }, []);
@@ -166,11 +165,7 @@ export function ConsultationComponent() {
         });
     }, [formData.weight, formData.height]);
 
-    const showToast = (msg: string, ok: boolean) => {
-        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        setToast({ msg, ok });
-        toastTimerRef.current = setTimeout(() => setToast(null), 4000);
-    };
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -190,7 +185,7 @@ export function ConsultationComponent() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentPatientId) {
-            alert('No patient ID found.');
+            showToast('No patient ID found.', true);
             return;
         }
 
@@ -239,7 +234,7 @@ export function ConsultationComponent() {
                 throw new Error('vital_sign: ' + e2.message);
             }
 
-            showToast('Consultation record saved successfully!', true);
+            showToast('Consultation record saved successfully!', false);
             // Reset form but keep blood type and refresh date/time for next entry
             setFormData({ ...makeEmptyForm(), bloodType: formData.bloodType });
 
@@ -248,7 +243,7 @@ export function ConsultationComponent() {
             }, 1500);
         } catch (err: any) {
             console.error(err);
-            showToast('Failed to save: ' + err.message, false);
+            showToast('Failed to save: ' + err.message, true);
         } finally {
             setIsSubmitting(false);
         }
@@ -260,13 +255,7 @@ export function ConsultationComponent() {
 
     return (
         <div className="w-full max-w-5xl mx-auto relative pb-12">
-            {toast && (
-                <div role="alert" className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    <span>{toast.ok ? '✅' : '❌'}</span>
-                    {toast.msg}
-                    <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100 transition-opacity">✕</button>
-                </div>
-            )}
+            <ToastComponent />
 
             <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>

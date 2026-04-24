@@ -6,6 +6,7 @@ import { Sidebar } from './sidebar';
 import SignatureCanvas from 'react-signature-canvas';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
 import { OfflineBanner } from './OfflineBanner';
+import { useToast } from './components/Toast';
 
 interface FollowUpData {
     date: string; time: string; modeOfTx: string; modeOfTransfer: string;
@@ -29,7 +30,7 @@ export default function FollowUp() {
     
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+    const { showToast, ToastComponent } = useToast();
 
     const [formData, setFormData] = useState<FollowUpData>(EMPTY_FORM);
     const sigCanvas = useRef<SignatureCanvas | null>(null);
@@ -69,10 +70,7 @@ export default function FollowUp() {
         return isNaN(parsed) ? null : parsed;
     };
 
-    const showToast = (msg: string, ok: boolean) => {
-        setToast({ msg, ok });
-        setTimeout(() => setToast(null), 4000);
-    };
+
 
     const w = parseFloat(formData.vitals.wt);
     const h = parseFloat(formData.vitals.ht);
@@ -80,7 +78,7 @@ export default function FollowUp() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!patientId) { alert('No patient selected.'); return; }
+        if (!patientId) { showToast('No patient selected.', true); return; }
         setIsSubmitting(true);
 
         try {
@@ -118,16 +116,16 @@ export default function FollowUp() {
             if (isOnline) {
                 const { error } = await supabase.from('follow_up').insert([payload]);
                 if (error) throw error;
-                showToast('Follow-up record saved to database successfully!', true);
+                showToast('Follow-up record saved to database successfully!', false);
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'follow_up', data: payload });
-                showToast('Offline Mode: Follow-up record saved locally!', true);
+                showToast('Offline Mode: Follow-up record saved locally!', false);
             }
             
             setFormData(EMPTY_FORM);
             sigCanvas.current?.clear();
         } catch (err: any) { 
-            showToast('Error: ' + err.message, false); 
+            showToast('Error: ' + err.message, true); 
         } finally {
             setIsSubmitting(false);
         }
@@ -151,13 +149,7 @@ export default function FollowUp() {
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden font-sans">
             
-            {/* Toast Notification */}
-            {toast && (
-                <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-8 fade-in ${toast.ok ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold">{toast.ok ? '✓' : '✕'}</div>
-                    <p className="font-bold text-sm">{toast.msg}</p>
-                </div>
-            )}
+            <ToastComponent />
 
             {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
 

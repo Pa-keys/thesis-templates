@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../shared/supabase';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
+import { useToast } from './components/Toast';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface ConsultationPageProps {
@@ -432,6 +433,8 @@ export function ConsultationPage({
     const { isOnline, isSyncing } = useNetworkSync();
     const primaryBtnBg = isOnline ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
 
+    const { showToast, ToastComponent } = useToast();
+
     const [vitalsId, setVitalsId] = useState<number | null>(null);
     const [vitalsLoading, setVitalsLoading] = useState(false);
 
@@ -776,13 +779,13 @@ export function ConsultationPage({
                     if (error) throw error;
                 }
                 setConsultationSaved(true);
-                alert('Consultation saved successfully!');
+                showToast('Consultation saved successfully!', false);
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'consultation', data: consultationPayload });
                 setConsultationSaved(true);
-                alert('Offline: Consultation saved locally and will sync when connection returns!');
+                showToast('Offline Mode: Consultation saved locally and will sync when connection returns!', false);
             }
-        } catch (err: any) { alert('Failed to save consultation: ' + err.message); } finally { setLoading(false); }
+        } catch (err: any) { showToast('Failed to save consultation: ' + err.message, true); } finally { setLoading(false); }
     };
 
     const handleMarkFollowUpDone = async () => {
@@ -821,16 +824,16 @@ export function ConsultationPage({
                 if (insertError) throw insertError;
             }
             setFollowUpDone(true);
-            alert('Follow-up marked as done!');
+            showToast('Follow-up marked as done!', false);
         } catch (err: any) {
             console.error('Full error:', err);
-            alert('Failed to mark follow-up as done: ' + err.message);
+            showToast('Failed to mark follow-up as done: ' + err.message, true);
         } finally { setLoading(false); }
     };
 
     const handlePrintPrescription = () => {
         const validMeds = medications.filter(m => m.name.trim() !== '');
-        if (validMeds.length === 0) { alert('Please add at least one medication before printing.'); return; }
+        if (validMeds.length === 0) { showToast('Please add at least one medication before printing.', true); return; }
         const html = `
             <!DOCTYPE html><html><head>
             <title>Prescription - ${patientFullName}</title>
@@ -898,7 +901,7 @@ export function ConsultationPage({
     };
 
     const handlePrintMedCert = () => {
-        if (!formData.diagnosis || formData.diagnosis.trim() === '') { alert('Please enter a Diagnosis before printing.'); return; }
+        if (!formData.diagnosis || formData.diagnosis.trim() === '') { showToast('Please enter a Diagnosis before printing.', true); return; }
         const html = `
             <!DOCTYPE html><html><head>
             <title>Medical Certificate - ${patientFullName}</title>
@@ -979,16 +982,16 @@ export function ConsultationPage({
                 };
                 const { error: labError } = await supabase.from('lab_request').insert([labPayload]);
                 if (labError) throw labError;
-                alert('Lab request sent to laboratory successfully!');
-            } else { alert('Offline mode requires connecting to the server to generate a consultation ID first.'); }
-        } catch (error: any) { console.error('Error:', error); alert('Failed to save lab request: ' + error.message); } finally { setLoading(false); }
+                showToast('Lab request sent to laboratory successfully!', false);
+            } else { showToast('Offline mode requires connecting to the server to generate a consultation ID first.', true); }
+        } catch (error: any) { console.error('Error:', error); showToast('Failed to save lab request: ' + error.message, true); } finally { setLoading(false); }
     };
 
     const handleSavePrescription = async () => {
         if (!patient?.id) return;
-        if (sigCanvas.current?.isEmpty()) { alert('Doctor signature is required before saving.'); return; }
+        if (sigCanvas.current?.isEmpty()) { showToast('Doctor signature is required before saving.', true); return; }
         const validMedications = medications.filter(m => m.name.trim() !== '');
-        if (validMedications.length === 0) { alert('Please add at least one medication before saving.'); return; }
+        if (validMedications.length === 0) { showToast('Please add at least one medication before saving.', true); return; }
         setLoading(true);
         try {
             if (isOnline) {
@@ -1001,10 +1004,10 @@ export function ConsultationPage({
                 };
                 const { error } = await supabase.from('prescription').insert([rxPayload]);
                 if (error) throw error;
-                alert('Prescription saved and sent to pharmacy!');
+                showToast('Prescription saved and sent to pharmacy!', false);
                 sigCanvas.current?.clear();
-            } else { alert('Offline mode requires connecting to the server to generate a consultation ID first.'); }
-        } catch (error: any) { console.error('Error:', error); alert('Failed to save prescription: ' + error.message); } finally { setLoading(false); }
+            } else { showToast('Offline mode requires connecting to the server to generate a consultation ID first.', true); }
+        } catch (error: any) { console.error('Error:', error); showToast('Failed to save prescription: ' + error.message, true); } finally { setLoading(false); }
     };
 
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
@@ -1407,6 +1410,7 @@ export function ConsultationPage({
 
     return (
         <div className="w-full flex justify-center pb-12">
+            <ToastComponent />
             <div className="w-full max-w-5xl">
 
                 {/* Patient Info Card */}

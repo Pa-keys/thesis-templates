@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { midwifeAPI } from './api';
+import { useToast } from '../components/Toast';
 
 interface Props {
     patients: any[];
@@ -18,7 +19,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     
     // Global UI Requirement states
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
+    const { showToast, ToastComponent } = useToast();
     const [errorMsg, setErrorMsg] = useState('');
 
     const activeRecords = useMemo(() => {
@@ -114,10 +115,9 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             });
             
             // Show Global UI Success Toast
-            setShowSuccess(true);
+            showToast('Record Saved Successfully', false, 'The database has been updated.');
             
             setTimeout(async () => {
-                setShowSuccess(false);
                 setFormData({}); 
                 setSelectedPatient(null);
                 setSearchQuery('');
@@ -145,17 +145,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     return (
         <div className="max-w-6xl mx-auto animate-in fade-in duration-500 relative pb-10">
             
-            {/* GLOBAL SUCCESS TOAST NOTIFICATION */}
-            {showSuccess && (
-                <div className="fixed top-6 right-6 bg-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-in slide-in-from-right-8 fade-in">
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold">✓</div>
-                    <div>
-                        <p className="font-bold text-sm">Record Saved Successfully</p>
-                        <p className="text-xs text-emerald-100">The database has been updated.</p>
-                    </div>
-                </div>
-            )}
-
+            <ToastComponent />
             <div className="mb-8">
                 <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Program Logbooks (FHSIS)</h2>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-5">
