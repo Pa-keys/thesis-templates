@@ -164,6 +164,7 @@ function LabRequestDetail({
                         performed_by: performedBy,
                         date_performed: datePerformed,
                         patient_id: request.patient_id,
+                        consultation_id: request.consultation_id, // Added this linking field
                         status: 'Completed',
                     })
                     .eq('labresult_id', existingLabResult.labresult_id);
@@ -175,6 +176,7 @@ function LabRequestDetail({
                     .insert({
                         labrequest_id: request.labrequest_id,
                         patient_id: request.patient_id,
+                        consultation_id: request.consultation_id, // Added this linking field
                         findings: results,
                         performed_by: performedBy,
                         date_performed: datePerformed,
@@ -404,10 +406,6 @@ const LaboratoryDashboard = () => {
 
         fetchData();
 
-        // FIX: Removed the UPDATE listener — it was overwriting local state with stale
-        // Supabase data immediately after submission, causing status to revert to Pending.
-        // handleStatusUpdate already updates local state optimistically, so the UPDATE
-        // listener is redundant and harmful here. Only listen for new INSERTs.
         const channel = supabase
             .channel('lab-realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lab_request' }, () => loadRequests(false))
@@ -450,16 +448,12 @@ const LaboratoryDashboard = () => {
                     });
                 }
 
-                // FIX: Fetch lab_result statuses and use them as the source of truth.
-                // lab_request.status is unreliable — lab_result.status = 'Completed'
-                // is the actual indicator that a request was completed.
                 const labrequestIds = labData.map((r: any) => r.labrequest_id);
                 const { data: labResultData } = await supabase
                     .from('lab_result')
                     .select('labrequest_id, status')
                     .in('labrequest_id', labrequestIds);
 
-                // Build a map: labrequest_id -> 'Completed' if any result row is Completed
                 const completedSet = new Set<number>(
                     (labResultData || [])
                         .filter((lr: any) => lr.status === 'Completed')
@@ -469,8 +463,6 @@ const LaboratoryDashboard = () => {
                 const enriched: LabRequest[] = labData.map((r: any) => {
                     const p = r.patient_id != null ? patientMap[r.patient_id] : null;
 
-                    // If lab_result says Completed, always show Completed regardless
-                    // of what lab_request.status says
                     const resolvedStatus = completedSet.has(r.labrequest_id)
                         ? 'Completed'
                         : (r.status ?? null);

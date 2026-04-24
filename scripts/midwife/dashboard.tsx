@@ -1,5 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { supabase } from '../../shared/supabase';
+import React, { useMemo } from 'react';
 
 interface Props {
     patients: any[];
@@ -7,43 +6,18 @@ interface Props {
 }
 
 const Dashboard = ({ patients, censusRecords }: Props) => {
-    const [recentPatients, setRecentPatients] = useState<any[]>([]);
 
-    // Fetch ALL patients ordered by newest first, joining with patient_consent
-    useEffect(() => {
-        const fetchRecentPatients = async () => {
-            const { data, error } = await supabase
-                .from('patients')
-                .select(`
-                    id, 
-                    firstName, 
-                    lastName, 
-                    sex, 
-                    age, 
-                    created_at,
-                    patient_consent ( consent_id )
-                `)
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                console.error("Error fetching patients:", error);
-                return;
-            }
-
-            if (data) {
-                // Process the data to map the joined table into a simple boolean
-                const processedData = data.map((p: any) => ({
-                    ...p,
-                    // If patient_consent has records, consent is signed
-                    consent_signed: Array.isArray(p.patient_consent) 
-                        ? p.patient_consent.length > 0 
-                        : p.patient_consent !== null
-                }));
-                setRecentPatients(processedData);
-            }
-        };
-        fetchRecentPatients();
-    }, []);
+    // Process patients prop directly — no internal fetch needed
+    const recentPatients = useMemo(() => {
+        return [...patients]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .map((p: any) => ({
+                ...p,
+                consent_signed: Array.isArray(p.patient_consent)
+                    ? p.patient_consent.length > 0
+                    : p.patient_consent !== null
+            }));
+    }, [patients]);
 
     // Dynamically calculate metrics based on live FHSIS database
     const maternalCount = censusRecords.filter(r => r.category === 'maternal').length;
@@ -141,7 +115,7 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                     </div>
                 </div>
 
-                {/* COLUMN 3: Newly Registered Patients */}
+                {/* COLUMN 3: Patient Directory */}
                 <div className="card shadow-sm border border-slate-200 lg:col-span-1 2xl:col-span-1 flex flex-col bg-white rounded-2xl w-full overflow-hidden max-h-[600px]">
                     <div className="card-hd border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
                         <div>
@@ -150,7 +124,6 @@ const Dashboard = ({ patients, censusRecords }: Props) => {
                         </div>
                     </div>
                     
-                    {/* Added overflow-y-auto here to allow scrolling through all patients */}
                     <div className="p-5 sm:p-6 flex-1 w-full bg-white overflow-y-auto scrollbar-thin">
                         <div className="space-y-4 w-full">
                             {recentPatients.length > 0 ? recentPatients.map(p => (
