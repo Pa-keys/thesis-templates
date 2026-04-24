@@ -5,7 +5,9 @@ import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
 import { useNetworkSync } from '../shared/useNetworkSync';
 import { OfflineBanner } from './OfflineBanner';
+import { OfflineBanner } from './OfflineBanner';
 import PatientConsent from './patient_consent';
+import { useToast } from './components/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Patient {
@@ -61,6 +63,7 @@ function DetailsPage() {
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [showConsent, setShowConsent] = useState(false);
+    const { showToast, ToastComponent } = useToast();
     
     // NEW STATES FOR HISTORY MODAL
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -153,7 +156,8 @@ function DetailsPage() {
         const { error } = await supabase.from('patients').update(updates).eq('id', patientId);
         setSaving(false);
         
-        if (error) { alert('Error updating record: ' + error.message); return; }
+        if (error) { showToast('Error updating record: ' + error.message, true); return; }
+        showToast('Record Updated Successfully', false);
         setPatient(p => p ? { ...p, ...updates } as Patient : null);
         setEditing(false);
     };
@@ -187,6 +191,7 @@ function DetailsPage() {
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
             {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
+            <ToastComponent />
 
             <Sidebar activePage="records" userName={userName} userInitials={userInitials} userRole={role.toUpperCase()} navItems={navItems} onNavigate={handleNavigate} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} />
 

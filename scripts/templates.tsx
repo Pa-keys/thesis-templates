@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../shared/supabase';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../shared/useNetworkSync';
+import { useToast } from './components/Toast';
 
 // ─── Reusable Tailwind Classes ───────────────────────────────────────────────
 const inputClasses = "w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-slate-50 focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
@@ -159,7 +160,7 @@ export function TemplatesComponent() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState(false);
-    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+    const { showToast, ToastComponent } = useToast();
     const [errors, setErrors] = useState<FieldErrors>({});
 
     const { isOnline } = useNetworkSync();
@@ -180,10 +181,7 @@ export function TemplatesComponent() {
 
     useEffect(() => { if (session) fetchPatients(); }, [session, fetchPatients]);
 
-    const showToast = (msg: string, ok: boolean) => {
-        setToast({ msg, ok });
-        setTimeout(() => setToast(null), 4000);
-    };
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
@@ -259,7 +257,7 @@ export function TemplatesComponent() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) {
-            showToast('Please fix the errors before saving.', false);
+            showToast('Please fix the errors before saving.', true);
             return;
         }
         setSaving(true);
@@ -268,17 +266,17 @@ export function TemplatesComponent() {
             if (isOnline) {
                 const { error } = await supabase.from('patients').insert([payload]);
                 if (error) throw error;
-                showToast('Patient record saved to database!', true);
+                showToast('Patient record saved to database!', false);
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'patient_registration', data: payload });
-                showToast('Offline Mode: Record saved locally. Will sync when online.', true);
+                showToast('Offline Mode: Record saved locally. Will sync when online.', false);
             }
             setForm(EMPTY_FORM);
             setErrors({});
             fetchPatients();
         } catch (error: any) {
             console.error("Save Error:", error);
-            showToast('Error saving record: ' + error.message, false);
+            showToast('Error saving record: ' + error.message, true);
         } finally {
             setSaving(false);
         }
@@ -288,11 +286,7 @@ export function TemplatesComponent() {
 
     return (
         <div className="w-full relative">
-            {toast && (
-                <div className={`fixed top-6 right-6 z-[100] px-5 py-3 rounded-xl text-sm font-bold shadow-xl flex items-center gap-2 border transition-all ${toast.ok ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    <span>{toast.ok ? '✅' : '❌'}</span> {toast.msg}
-                </div>
-            )}
+            <ToastComponent />
 
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>

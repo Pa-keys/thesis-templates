@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
+import { useToast } from './components/Toast';
 
 interface LabRequest {
     labrequest_id: number;
@@ -65,6 +66,7 @@ function LabRequestDetail({
     const [datePerformed, setDatePerformed] = useState(formatDateTimeLocal());
     const [saving, setSaving] = useState(false);
     const [loadingLabResult, setLoadingLabResult] = useState(false);
+    const { showToast, ToastComponent } = useToast();
 
     useEffect(() => {
         setResults('');
@@ -131,11 +133,11 @@ function LabRequestDetail({
 
     const handleMarkCompleted = async () => {
         if (!results.trim()) {
-            alert('Please enter lab results before marking as completed.');
+            showToast('Please enter lab results before marking as completed.', true);
             return;
         }
         if (!datePerformed) {
-            alert('Please select the date performed.');
+            showToast('Please select the date performed.', true);
             return;
         }
 
@@ -194,9 +196,9 @@ function LabRequestDetail({
             if (updateRequestError) throw updateRequestError;
 
             onStatusUpdate(request.labrequest_id, 'Completed');
-            alert('Lab results submitted successfully!');
+            showToast('Lab results submitted successfully!', false);
         } catch (err: any) {
-            alert('Failed to submit results: ' + err.message);
+            showToast('Failed to submit results: ' + err.message, true);
         } finally {
             setSaving(false);
         }
@@ -204,6 +206,7 @@ function LabRequestDetail({
 
     return (
         <>
+            <ToastComponent />
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
@@ -369,6 +372,7 @@ const LaboratoryDashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
     const [selectedRequest, setSelectedRequest] = useState<LabRequest | null>(null);
+    const { showToast, ToastComponent } = useToast();
 
     const navItems = [
         { id: 'lab', label: 'Dashboard', icon: '🧪' },
@@ -483,7 +487,7 @@ const LaboratoryDashboard = () => {
             }
         } catch (err: any) {
             console.error('Failed to load lab requests:', err.message);
-            alert('Error loading lab requests: ' + err.message);
+            showToast('Error loading lab requests: ' + err.message, true);
         } finally {
             if (showSpinner) setLoading(false);
         }
@@ -534,6 +538,7 @@ const LaboratoryDashboard = () => {
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
+            <ToastComponent />
             <Sidebar
                 activePage="lab"
                 userName={userName}

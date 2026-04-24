@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../shared/supabase';
 import SignatureCanvas from 'react-signature-canvas';
+import { useToast } from './components/Toast';
 
 interface Medication { name: string; dosage: string; frequency: string; duration: string; quantity: string; }
 
@@ -18,6 +19,7 @@ function EPrescription() {
     licNo: '', ptrNo: '', signatureUrl: ''
   });
   const sigCanvas = useRef<SignatureCanvas | null>(null);
+  const { showToast, ToastComponent } = useToast();
 
   // RBAC Guard
   useEffect(() => {
@@ -39,7 +41,10 @@ function EPrescription() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === 'doctor' && sigCanvas.current?.isEmpty()) return alert('Doctor signature is required.');
+    if (role === 'doctor' && sigCanvas.current?.isEmpty()) {
+       showToast('Doctor signature is required.', true);
+       return;
+    }
     
     const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
     const patientId = new URLSearchParams(window.location.search).get('id');
@@ -56,10 +61,10 @@ function EPrescription() {
         status: 'Pending'
       }]);
       if (error) throw error;
-      alert('Prescription saved successfully!');
+      showToast('Prescription saved successfully!', false);
       sigCanvas.current?.clear();
     } catch (err: any) {
-      alert('Error saving prescription: ' + err.message);
+      showToast('Error saving prescription: ' + err.message, true);
     }
   };
 
@@ -68,6 +73,8 @@ function EPrescription() {
   const inputStyle = "w-full border-b border-gray-400 focus:border-blue-600 outline-none bg-transparent py-1 px-2 text-sm";
 
   return (
+    <>
+    <ToastComponent />
     <div className="max-w-4xl mx-auto p-8 bg-white shadow-lg rounded-lg mt-10 border-t-8 border-blue-800">
       <div className="flex justify-between items-center mb-8 border-b-2 border-gray-800 pb-4">
         <div className="text-center w-full">
@@ -119,6 +126,7 @@ function EPrescription() {
         {role === 'doctor' && <button type="submit" className="w-full bg-blue-700 text-white font-bold py-3 rounded hover:bg-blue-800">Authorize & Save Prescription</button>}
       </form>
     </div>
+    </>
   );
 }
 
