@@ -1003,8 +1003,15 @@ export function ConsultationPage({
                 if (!resolvedConsultationId) throw new Error('Could not create consultation record.');
                 const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
                 const rxPayload = {
-                    patient_id: patient.id, consultation_id: resolvedConsultationId, prescription_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), rx_content: JSON.stringify(validMedications),
-                    license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null, ptr_no: formData.rxPtrNo || null, signature_url: sigUrl, status: 'Pending',
+                    patient_id: patient.id,
+                    consultation_id: resolvedConsultationId,
+                    prescription_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }),
+                    rx_content: JSON.stringify(validMedications),
+                    license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null,
+                    ptr_no: formData.rxPtrNo || null,
+                    signature_url: sigUrl,
+                    status: 'Pending',
+                    doctor_name: doctorName // Ensure doctor's name is saved
                 };
                 const { error } = await supabase.from('prescription').insert([rxPayload]);
                 if (error) throw error;
@@ -1384,10 +1391,7 @@ export function ConsultationPage({
             <button onClick={handleAddMed} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-sm font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all mb-8">
                 + Add Another Medication
             </button>
-            <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div><label className={labelCls}>License No. (PRC)</label><input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="e.g. 0123456" /></div>
-                <div><label className={labelCls}>PTR No.</label><input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="e.g. 1234567" /></div>
-            </div>
+
 
             <div className="mt-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Doctor's Authorization</p>

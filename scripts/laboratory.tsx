@@ -423,6 +423,16 @@ const LaboratoryDashboard = () => {
         };
     }, []);
 
+    // Background Refresh Interval (1.5s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (isOnline) {
+                loadRequests(false);
+            }
+        }, 1500);
+        return () => clearInterval(interval);
+    }, [isOnline]);
+
     const loadRequests = async (showSpinner = false) => {
         if (showSpinner) setLoading(true);
         try {

@@ -83,16 +83,46 @@ function PharmacyDashboard() {
         };
     }, []);
 
+    // Background Refresh Interval (1.5s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (activePage === 'queue' && isOnline) {
+                loadPrescriptions();
+            }
+        }, 1500);
+        return () => clearInterval(interval);
+    }, [activePage, isOnline]);
+
     const loadPrescriptions = async () => {
         const { data, error } = await supabase
             .from('prescription')
-            // Included address to ensure the printout has full data
-            .select(`*, patients (id, firstName, middleName, lastName, age, sex, address)`)
+            .select(`
+                *,
+                patients (
+                    id,
+                    firstName,
+                    middleName,
+                    lastName,
+                    age,
+                    sex,
+                    address
+                )
+            `)
             .eq('status', 'Pending')
             .order('prescription_id', { ascending: false });
 
         if (!error && data) {
-            setPrescriptions(data as unknown as Prescription[]);
+            // Transform data to handle cases where patients might be an array
+            const transformed = data.map((rx: any) => {
+                const patientData = Array.isArray(rx.patients) ? rx.patients[0] : rx.patients;
+                return {
+                    ...rx,
+                    patients: patientData
+                };
+            });
+            setPrescriptions(transformed as unknown as Prescription[]);
+        } else if (error) {
+            console.error('Error loading prescriptions:', error.message);
         }
     };
 
@@ -265,7 +295,7 @@ function PharmacyDashboard() {
                                 {isOnline ? 'Online' : 'Offline'}
                             </span>
                         </div>
-                        
+
                         <div className="text-right hidden sm:block">
                             <div className="text-sm font-bold text-slate-900 leading-tight">{profile?.fullName || 'Loading...'}</div>
                             <div className="text-[0.7rem] text-slate-500 font-medium">Pharmacist</div>
@@ -333,7 +363,6 @@ function PharmacyDashboard() {
                                                             <h4 className="font-bold text-slate-900">{rx.patients?.lastName}, {rx.patients?.firstName}</h4>
                                                             <div className="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1 mt-1">
                                                                 <span className="flex items-center gap-1">👤 {rx.patients?.sex}</span>
-                                                                <span className="flex items-center gap-1">👨‍⚕️ {rx.doctor_name || 'Unknown Doctor'}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -413,7 +442,7 @@ function PharmacyDashboard() {
                             <button
                                 onClick={handlePrintUnavailable}
                                 disabled={allChecked}
-                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow' }`}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'}`}
                             >
                                 🖨️ Print
                             </button>

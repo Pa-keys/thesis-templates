@@ -133,20 +133,29 @@ const AdminDashboard = () => {
         };
     }, [activePage]);
 
-    const loadUsers = async () => {
-        setIsLoading(true);
+    // Background Refresh Interval (1.5s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (activePage === 'admin' && isOnline) {
+                loadUsers(true);
+            }
+        }, 1500);
+        return () => clearInterval(interval);
+    }, [activePage, isOnline]);
+
+    const loadUsers = async (isSilent = false) => {
+        if (!isSilent) setIsLoading(true);
         const { data, error } = await supabase
             .from('profiles')
             .select('id, full_name, role, email')
             .order('role', { ascending: true });
 
         if (error) {
-            showToast('Error loading users: ' + error.message, true);
+            if (!isSilent) showToast('Error loading users: ' + error.message, true);
         } else {
-            console.log(data);
             setAllUsers((data as UserProfile[]) || []);
         }
-        setIsLoading(false);
+        if (!isSilent) setIsLoading(false);
     };
 
     const filteredUsers = useMemo(() => {
