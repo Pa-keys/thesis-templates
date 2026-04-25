@@ -780,6 +780,10 @@ export function ConsultationPage({
                 }
                 setConsultationSaved(true);
                 showToast('Consultation saved successfully!', false);
+                // Automatically go back to dashboard after a short delay
+                setTimeout(() => {
+                    goBack();
+                }, 1500);
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'consultation', data: consultationPayload });
                 setConsultationSaved(true);
@@ -1228,14 +1232,22 @@ export function ConsultationPage({
                     </div>
                 </div>
             </div>
-            <div className="flex justify-end">
-                <div className="w-full md:w-80">
-                    <label className={labelCls}>Provider Signature</label>
-                    <div className="border-2 border-dashed border-slate-300 bg-slate-50 rounded-xl h-36 mb-2 relative overflow-hidden cursor-crosshair">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-sm pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
-                        <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
+            <div className="border-t border-slate-100 pt-6">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Certification & Verification</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <label className={labelCls}>Provider Signature</label>
+                        <div className="border-2 border-dashed border-slate-300 bg-white rounded-xl h-32 mb-2 relative overflow-hidden cursor-crosshair">
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-200 font-bold text-[10px] pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
+                            <SignatureCanvas ref={followUpSigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
+                        </div>
+                        <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Signature</button>
                     </div>
-                    <button type="button" onClick={() => followUpSigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Canvas</button>
+                    <div className="hidden md:block py-6">
+                        <p className="text-[11px] text-slate-400 leading-relaxed font-medium bg-slate-50/50 p-4 rounded-xl border border-slate-100 border-dashed">
+                            I hereby certify that the patient mentioned above has been examined and that the clinical findings and treatment plan recorded are accurate and based on professional medical assessment.
+                        </p>
+                    </div>
                 </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
@@ -1271,10 +1283,6 @@ export function ConsultationPage({
                 </div>
             </div>
             <div className="pt-6 mt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <label className={labelCls}>Doctor License No. (PRC)</label>
-                    <input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="Required for signature block" />
-                </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
                 <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
@@ -1284,7 +1292,7 @@ export function ConsultationPage({
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
                         <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Consultation</button>
-                        <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next Tab →</button>
+                        <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Lab Request →</button>
                     </div>
                 </div>
             </div>
@@ -1380,6 +1388,25 @@ export function ConsultationPage({
                 <div><label className={labelCls}>License No. (PRC)</label><input type="text" name="rxLicNo" value={formData.rxLicNo} onChange={handleChange} className={inputCls} placeholder="e.g. 0123456" /></div>
                 <div><label className={labelCls}>PTR No.</label><input type="text" name="rxPtrNo" value={formData.rxPtrNo} onChange={handleChange} className={inputCls} placeholder="e.g. 1234567" /></div>
             </div>
+
+            <div className="mt-6 bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Doctor's Authorization</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div>
+                        <label className={labelCls}>E-Signature</label>
+                        <div className="border-2 border-dashed border-slate-300 bg-white rounded-xl h-32 mb-2 relative overflow-hidden cursor-crosshair">
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-200 font-bold text-[10px] pointer-events-none select-none uppercase tracking-widest">Sign Here</div>
+                            <SignatureCanvas ref={sigCanvas} canvasProps={{ className: 'w-full h-full relative z-10' }} />
+                        </div>
+                        <button type="button" onClick={() => sigCanvas.current?.clear()} className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest">Clear Signature</button>
+                    </div>
+                    <div className="hidden md:block">
+                        <p className="text-[11px] text-slate-400 leading-relaxed font-medium bg-white/50 p-4 rounded-xl border border-slate-100 border-dashed">
+                            By signing this electronic prescription, you authorize the dispensing of the medications listed above to the patient. This electronic signature carries the same legal weight as a physical signature.
+                        </p>
+                    </div>
+                </div>
+            </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
                 <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
@@ -1436,7 +1463,7 @@ export function ConsultationPage({
                             key={tab.id}
                             onClick={() => !tab.disabled && setActiveTab(tab.id)}
                             disabled={tab.disabled}
-                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${tab.disabled ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through' : activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600' }`}
+                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${tab.disabled ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through' : activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'}`}
                         >
                             {tab.label}
                         </button>

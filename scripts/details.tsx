@@ -5,7 +5,6 @@ import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
 import { useNetworkSync } from '../shared/useNetworkSync';
 import { OfflineBanner } from './OfflineBanner';
-import { OfflineBanner } from './OfflineBanner';
 import PatientConsent from './patient_consent';
 import { useToast } from './components/Toast';
 
@@ -15,9 +14,9 @@ interface Patient {
     id: string; firstName: string; middleName: string; lastName: string;
     age: number | null; sex: string; birthday: string; birthPlace: string;
     bloodType: string; nationality: string; religion: string; civilStatus: string;
-    suffix: string; address: string; contactNumber: string; educationalAttain: string; 
-    employmentStatus: string; philhealthNo: string; philhealthStatus: string; 
-    category: string; categoryOthers: string; relativeName: string; 
+    suffix: string; address: string; contactNumber: string; educationalAttain: string;
+    employmentStatus: string; philhealthNo: string; philhealthStatus: string;
+    category: string; categoryOthers: string; relativeName: string;
     relativeRelation: string; relativeAddress: string;
     consent_signed: boolean;
 }
@@ -65,7 +64,7 @@ function DetailsPage() {
     const [saving, setSaving] = useState(false);
     const [showConsent, setShowConsent] = useState(false);
     const { showToast, ToastComponent } = useToast();
-    
+
     // NEW STATES FOR HISTORY MODAL
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -134,7 +133,7 @@ function DetailsPage() {
             });
             setConsultRecords(sortedRecords);
         }
-        
+
         setHistoryLoading(false);
     };
 
@@ -153,10 +152,10 @@ function DetailsPage() {
         setSaving(true);
         const parsed = parseInt(editForm.age);
         const updates = { ...editForm, age: isNaN(parsed) ? null : parsed };
-        
+
         const { error } = await supabase.from('patients').update(updates).eq('id', patientId);
         setSaving(false);
-        
+
         if (error) { showToast('Error updating record: ' + error.message, true); return; }
         showToast('Record Updated Successfully', false);
         setPatient(p => p ? { ...p, ...updates } as Patient : null);
@@ -171,10 +170,10 @@ function DetailsPage() {
     if (!role) return null;
 
     let navItems: any[] = [];
-    if (role === 'doctor') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'consultation', label: 'Consultation', icon: '📋' } ];
-    else if (role === 'nurse') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Initial Consultation', icon: '📝' } ];
-    else if (role === 'midwife') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Census', icon: '📁' }, { id: 'reports', label: 'Generate Reports', icon: '📊' } ];
-    else if (role === 'bhw') navItems = [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' } ];
+    if (role === 'doctor') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'consultation', label: 'Consultation', icon: '📋' }];
+    else if (role === 'nurse') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Initial Consultation', icon: '📝' }];
+    else if (role === 'midwife') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Census', icon: '📁' }, { id: 'reports', label: 'Generate Reports', icon: '📊' }];
+    else if (role === 'bhw') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }];
 
     const handleNavigate = (id: string) => {
         if (id === 'dashboard') window.location.href = `/pages/${role}.html`;
@@ -203,7 +202,7 @@ function DetailsPage() {
                         <div className="font-bold text-lg text-slate-800">{editing ? 'Edit Profile' : 'Patient Profile'}</div>
                     </div>
                     <div className="flex items-center gap-3">
-                        
+
                         <button onClick={() => window.history.back()} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">← Back</button>
                     </div>
                 </header>
@@ -331,7 +330,7 @@ function DetailsPage() {
                                             <span className="text-sm text-slate-500 font-medium truncate max-w-xs">📍 <span className="font-bold text-slate-700">{patient.address || '—'}</span></span>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="shrink-0 flex flex-col md:items-end gap-2 w-full md:w-auto mt-4 md:mt-0">
                                         <div className="flex gap-2 w-full md:w-auto">
                                             <button onClick={() => setEditing(true)} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 flex-1 md:flex-none">
@@ -412,7 +411,7 @@ function DetailsPage() {
             {historyModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        
+
                         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
                                 <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
@@ -448,7 +447,7 @@ function DetailsPage() {
 
                                         return (
                                             <div key={record.initialconsultation_id || index} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-teal-300 transition-colors">
-                                                
+
                                                 <div className="flex flex-wrap justify-between items-start mb-4 border-b border-slate-100 pb-4 gap-4">
                                                     <div>
                                                         <div className="font-extrabold text-teal-700 text-sm">
@@ -470,12 +469,12 @@ function DetailsPage() {
                                                         <div className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest mb-1">Chief Complaint</div>
                                                         <div className="text-sm font-semibold text-slate-800">{record.chief_complaint || 'None recorded'}</div>
                                                     </div>
-                                                    
+
                                                     <div>
                                                         <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
                                                         <div className="text-sm font-medium text-slate-800">{record.diagnosis || 'N/A'}</div>
                                                     </div>
-                                                    
+
                                                     <div>
                                                         <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Referred By</div>
                                                         <div className="text-sm font-medium text-slate-800">{record.referred_by || 'N/A'}</div>

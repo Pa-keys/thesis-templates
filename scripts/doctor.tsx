@@ -212,9 +212,9 @@ const DoctorDashboard = () => {
         // Queue: initial_consultations today that don't yet have a linked consultation row
         const { data: completedConsults } = await supabase
             .from('consultation')
-            .select('initialconsultation_id')
-            .not('initialconsultation_id', 'is', null);
-        const completedIds = completedConsults?.map((c: any) => c.initialconsultation_id).filter(Boolean) || [];
+            .select('initial_consultation_id')
+            .not('initial_consultation_id', 'is', null);
+        const completedIds = completedConsults?.map((c: any) => c.initial_consultation_id).filter(Boolean) || [];
 
         let qQuery = supabase
             .from('initial_consultation')
