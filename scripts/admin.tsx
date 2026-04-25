@@ -81,7 +81,6 @@ const AdminDashboard = () => {
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('active');
 
     // Modal States
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -93,6 +92,8 @@ const AdminDashboard = () => {
     const [fFullName, setFFullName] = useState('');
     const [fEmail, setFEmail] = useState('');
     const [fPassword, setFPassword] = useState('');
+    const [fConfirmPassword, setFConfirmPassword] = useState('');
+    const [fAdminPassword, setFAdminPassword] = useState('');
     const [fRole, setFRole] = useState('');
 
     // Confirm Delete Modal
@@ -154,7 +155,7 @@ const AdminDashboard = () => {
             const matchRole = roleFilter ? u.role === roleFilter : true;
             return matchSearch && matchRole;
         });
-    }, [allUsers, searchQuery, roleFilter, statusFilter]);
+    }, [allUsers, searchQuery, roleFilter]);
 
     // ─── Modal Handlers ───────────────────────────────────────────────────────
     const openAddModal = () => {
@@ -163,6 +164,8 @@ const AdminDashboard = () => {
         setFFullName('');
         setFEmail('');
         setFPassword('');
+        setFConfirmPassword('');
+        setFAdminPassword('');
         setFRole('');
         setIsUserModalOpen(true);
         document.body.style.overflow = 'hidden';
@@ -209,24 +212,26 @@ const AdminDashboard = () => {
                 return;
             }
             showToast(`${fullName}'s profile updated successfully.`);
+            
+            // Optimistically update local state
+            setAllUsers(prev => prev.map(u => u.id === editingUserId ? { ...u, full_name: fullName, role } : u));
+            
             closeUserModal();
             loadUsers();
         } else {
             // Create new user
             const email = fEmail.trim();
             const password = fPassword;
+            const confirmPassword = fConfirmPassword;
+            const adminPassword = fAdminPassword;
 
             if (!email) { showToast('Please enter an email.', true); setIsSaving(false); return; }
             if (password.length < 6) { showToast('Password must be at least 6 characters.', true); setIsSaving(false); return; }
+            if (password !== confirmPassword) { showToast('Passwords do not match.', true); setIsSaving(false); return; }
+            if (!adminPassword) { showToast('Please enter your admin password to authorize this action.', true); setIsSaving(false); return; }
 
             const { data: { session: adminSession } } = await supabase.auth.getSession();
             const adminEmail = adminSession?.user?.email || '';
-            const adminPassword = prompt('Re-enter your admin password to confirm user creation:');
-
-            if (!adminPassword) {
-                setIsSaving(false);
-                return;
-            }
 
             const { error: authError } = await supabase.auth.signUp({
                 email,
@@ -249,8 +254,8 @@ const AdminDashboard = () => {
             setIsSaving(false);
 
             if (reLoginError) {
-                alert('User created but could not restore admin session. Please log in again.');
-                window.location.href = '/pages/login.html';
+                showToast('User created, but failed to restore your admin session. Please log in again.', true);
+                setTimeout(() => { window.location.href = '/pages/login.html'; }, 2000);
                 return;
             }
 
@@ -291,7 +296,13 @@ const AdminDashboard = () => {
         }
 
         showToast(`${userToDelete.name} has been permanently deleted.`);
+        
+        // Optimistically update local state to ensure immediate UI feedback
+        setAllUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+        
         closeConfirmModal();
+        
+        // Then re-fetch to ensure sync with server
         loadUsers();
     };
 
@@ -330,7 +341,7 @@ const AdminDashboard = () => {
                                 {!isOnline ? 'Offline Mode' : 'System Online'}
                             </span>
                         </div>
-                                                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                         <div className="text-right hidden sm:block">
                             <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
                             <div className="text-[0.7rem] text-slate-500">Administrator</div>
@@ -355,7 +366,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-blue-200 hover:shadow-md transition-all">
                             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👥</div>
                             <div>
@@ -370,13 +381,7 @@ const AdminDashboard = () => {
                                 <div className="text-2xl font-black text-slate-800 leading-none">{allUsers.length}</div>
                             </div>
                         </div>
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-red-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🗑</div>
-                            <div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Deleted</div>
-                                <div className="text-2xl font-black text-slate-800 leading-none">0</div>
-                            </div>
-                        </div>
+
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-indigo-200 hover:shadow-md transition-all">
                             <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔑</div>
                             <div>
@@ -389,14 +394,9 @@ const AdminDashboard = () => {
                     {/* Main Content Card */}
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
                         {/* Card Header */}
-                        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-lg font-black text-slate-800 tracking-tight">System Users</h2>
-                                <p className="text-sm text-slate-500">Manage accounts and role assignments</p>
-                            </div>
-                            <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95 shrink-0 justify-center">
-                                <span className="text-lg">➕</span> Add User
-                            </button>
+                        <div className="p-6 border-b border-slate-100">
+                            <h2 className="text-lg font-black text-slate-800 tracking-tight">System Users</h2>
+                            <p className="text-sm text-slate-500">Manage accounts and role assignments</p>
                         </div>
 
                         {/* Filter Bar */}
@@ -411,11 +411,11 @@ const AdminDashboard = () => {
                                     className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
                                 />
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 w-full sm:w-auto">
                                 <select
                                     value={roleFilter}
                                     onChange={(e) => setRoleFilter(e.target.value)}
-                                    className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 transition-all min-w-[140px] cursor-pointer"
+                                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 transition-all min-w-[140px] cursor-pointer"
                                 >
                                     <option value="">All Roles</option>
                                     <option value="doctor">Doctor</option>
@@ -426,23 +426,16 @@ const AdminDashboard = () => {
                                     <option value="laboratory">Laboratory</option>
                                     <option value="admin">Admin</option>
                                 </select>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 transition-all min-w-[120px] cursor-pointer"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="deleted">Deleted</option>
-                                    <option value="all">All</option>
-                                </select>
+                                <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95 shrink-0 justify-center">
+                                    <span>➕</span> Add User
+                                </button>
                             </div>
                         </div>
 
                         {/* Table Header */}
-                        <div className="hidden md:grid grid-cols-[minmax(0,2fr)_150px_100px_180px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-black uppercase tracking-wider text-slate-400">
+                        <div className="hidden md:grid grid-cols-[minmax(0,2fr)_160px_200px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-black uppercase tracking-wider text-slate-400">
                             <div>User</div>
                             <div>Role</div>
-                            <div>Status</div>
                             <div className="text-right">Actions</div>
                         </div>
 
@@ -462,7 +455,7 @@ const AdminDashboard = () => {
                                         const av = (u.full_name?.[0] || '?').toUpperCase();
                                         const colorClass = getAvatarColor(u.role);
                                         return (
-                                            <div key={u.id} className="flex flex-col md:grid md:grid-cols-[minmax(0,2fr)_150px_100px_180px] md:items-center gap-4 p-5 hover:bg-slate-50/80 transition-colors group">
+                                            <div key={u.id} className="flex flex-col md:grid md:grid-cols-[minmax(0,2fr)_160px_200px] md:items-center gap-4 p-5 hover:bg-slate-50/80 transition-colors group">
                                                 {/* User Info */}
                                                 <div className="flex items-center gap-3.5 min-w-0">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0 shadow-sm ${colorClass}`}>
@@ -479,19 +472,12 @@ const AdminDashboard = () => {
                                                     <RoleBadge role={u.role} />
                                                 </div>
 
-                                                {/* Status */}
-                                                <div className="flex items-center md:pl-0 pl-[54px] -mt-2 md:mt-0">
-                                                    <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active
-                                                    </span>
-                                                </div>
-
                                                 {/* Actions */}
                                                 <div className="flex items-center md:justify-end gap-2 md:pl-0 pl-[54px] mt-2 md:mt-0">
-                                                    <button onClick={() => openEditModal(u.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 rounded-lg text-xs font-bold transition-all shadow-sm">
+                                                    <button onClick={() => openEditModal(u.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
                                                         ✏️ Edit
                                                     </button>
-                                                    <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-lg text-xs font-bold transition-all shadow-sm">
+                                                    <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
                                                         🗑 Delete
                                                     </button>
                                                 </div>
@@ -528,9 +514,20 @@ const AdminDashboard = () => {
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
                                         <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="e.g. user@medisens.com" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
-                                        <input type="password" value={fPassword} onChange={e => setFPassword(e.target.value)} placeholder="Minimum 6 characters" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                                            <input type="password" value={fPassword} onChange={e => setFPassword(e.target.value)} placeholder="Min. 6 chars" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirm Password</label>
+                                            <input type="password" value={fConfirmPassword} onChange={e => setFConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-2">
+                                        <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Confirm Admin Identity</label>
+                                        <p className="text-[10px] text-amber-700 font-medium leading-tight">For security, please enter your admin password to authorize the creation of this new account.</p>
+                                        <input type="password" value={fAdminPassword} onChange={e => setFAdminPassword(e.target.value)} placeholder="Your Admin Password" className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all" />
                                     </div>
                                 </>
                             )}
