@@ -368,7 +368,7 @@ export function ConsultationPage({
         birthControlMethod: '', gravidity: '', parity: '', typeOfDelivery: '', fullTerm: '', premature: '',
         abortion: '', livingChildren: '', preEclampsia: '', medicationAndTreatment: '',
 
-        followUpDate: new Date().toISOString().split('T')[0], followUpTime: '', followUpModeOfTx: 'Walk-in',
+        followUpDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), followUpTime: '', followUpModeOfTx: 'Walk-in',
         followUpModeOfTransfer: 'Ambulatory', followUpChiefComplaint: '', followUpDiagnosis: '', followUpHpi: '',
         followUpBp: '', followUpHr: '', followUpRr: '', followUpTemp: '', followUpO2: '', followUpWeight: '',
         followUpHeight: '', followUpMuac: '', followUpNutritionalStatus: '', followUpBmi: '', followUpVaL: '',
@@ -975,7 +975,7 @@ export function ConsultationPage({
                 const resolvedConsultationId = await ensureConsultationExists();
                 if (!resolvedConsultationId) throw new Error('Could not create consultation record.');
                 const labPayload = {
-                    patient_id: patient.id, consultation_id: resolvedConsultationId, request_date: new Date().toISOString().split('T')[0], chief_complaint: formData.labChiefComplaint || null,
+                    patient_id: patient.id, consultation_id: resolvedConsultationId, request_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), chief_complaint: formData.labChiefComplaint || null,
                     is_cbc: formData.labTests.cbc, is_cbc_platelet: formData.labTests.cbcPlatelet, is_hgb_hct: formData.labTests.hgbHct, is_xray: formData.labTests.chestXray, is_ultrasound: formData.labTests.ultrasound,
                     is_urinalysis: formData.labTests.urinalysis, is_fecalysis: formData.labTests.fecalysis, is_sputum: formData.labTests.sputum, is_rbs: formData.labTests.rbs, is_fbs: formData.labTests.fbs,
                     is_uric_acid: formData.labTests.uricAcid, is_cholesterol: formData.labTests.cholesterol, others: formData.labTestsOther || null, requested_by: formData.labRequestedBy || null, status: 'Pending',
@@ -999,7 +999,7 @@ export function ConsultationPage({
                 if (!resolvedConsultationId) throw new Error('Could not create consultation record.');
                 const sigUrl = sigCanvas.current?.getCanvas().toDataURL('image/png') || '';
                 const rxPayload = {
-                    patient_id: patient.id, consultation_id: resolvedConsultationId, prescription_date: new Date().toISOString().split('T')[0], rx_content: JSON.stringify(validMedications),
+                    patient_id: patient.id, consultation_id: resolvedConsultationId, prescription_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), rx_content: JSON.stringify(validMedications),
                     license_no: formData.rxLicNo ? Number(formData.rxLicNo) : null, ptr_no: formData.rxPtrNo || null, signature_url: sigUrl, status: 'Pending',
                 };
                 const { error } = await supabase.from('prescription').insert([rxPayload]);

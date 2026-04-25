@@ -20,7 +20,7 @@ interface InitialConsultationData {
 }
 
 // ─── Helper: get current date (YYYY-MM-DD) and time (HH:MM) ─────────────────
-const getCurrentDate = () => new Date().toISOString().split('T')[0];
+const getCurrentDate = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 const getCurrentTime = () => {
     const now = new Date();
     return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -229,7 +229,7 @@ export function ConsultationComponent() {
 
             if (e2) {
                 if (consData?.initialconsultation_id) {
-                    await supabase.from('initial_consultation').delete().eq('id', consData.initialconsultation_id);
+                    await supabase.from('initial_consultation').delete().eq('initialconsultation_id', consData.initialconsultation_id);
                 }
                 throw new Error('vital_sign: ' + e2.message);
             }

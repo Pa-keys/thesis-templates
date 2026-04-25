@@ -3,12 +3,10 @@ import { createRoot } from 'react-dom/client';
 import Chart from 'chart.js/auto';
 import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
-import { ThemeToggle } from './components/ThemeToggle';
 
 import ConsultationPage from './consultation';
 import { RecordsComponent } from './records';
 import { TemplatesComponent } from './templates';
-import { PatientDetailModal, Patient } from './components/PatientDetailModal';
 
 type FilterPeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -52,13 +50,13 @@ const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: Fi
 // ── Small pulsing "LIVE" badge ─────────────────────────────────────────────
 const LiveBadge = ({ status }: { status: 'connecting' | 'live' | 'error' }) => (
     <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full
-        ${status === 'live'        ? 'bg-green-100 text-green-700'
-        : status === 'error'       ? 'bg-red-100 text-red-500'
-        :                            'bg-slate-100 text-slate-400'}`}>
+        ${status === 'live' ? 'bg-green-100 text-green-700'
+            : status === 'error' ? 'bg-red-100 text-red-500'
+                : 'bg-slate-100 text-slate-400'}`}>
         <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0
-            ${status === 'live'    ? 'bg-green-500 animate-pulse'
-            : status === 'error'   ? 'bg-red-400'
-            :                        'bg-slate-300 animate-pulse'}`} />
+            ${status === 'live' ? 'bg-green-500 animate-pulse'
+                : status === 'error' ? 'bg-red-400'
+                    : 'bg-slate-300 animate-pulse'}`} />
         {status === 'live' ? 'Live' : status === 'error' ? 'Off' : '…'}
     </span>
 );
@@ -72,7 +70,6 @@ const DoctorDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [selectedIcid, setSelectedIcid] = useState<string | null>(null);
-    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     const [totalPatients, setTotalPatients] = useState(0);
     const [visitsToday, setVisitsToday] = useState(0);
@@ -86,7 +83,7 @@ const DoctorDashboard = () => {
 
     // ── Refs so realtime callbacks always see the latest filter values ──────
     const trendFilterRef = useRef<FilterPeriod>('week');
-    const morbFilterRef  = useRef<FilterPeriod>('week');
+    const morbFilterRef = useRef<FilterPeriod>('week');
 
     // ── Realtime status for the two panels ──────────────────────────────────
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
@@ -97,14 +94,14 @@ const DoctorDashboard = () => {
     const showFollowUpsModalRef = useRef(false); // lets realtime refresh the open modal
     useEffect(() => { showFollowUpsModalRef.current = showFollowUpsModal; }, [showFollowUpsModal]);
 
-    const trendChartRef    = useRef<HTMLCanvasElement>(null);
-    const morbChartRef     = useRef<HTMLCanvasElement>(null);
-    const trendChartInst   = useRef<Chart | null>(null);
-    const morbChartInst    = useRef<Chart | null>(null);
+    const trendChartRef = useRef<HTMLCanvasElement>(null);
+    const morbChartRef = useRef<HTMLCanvasElement>(null);
+    const trendChartInst = useRef<Chart | null>(null);
+    const morbChartInst = useRef<Chart | null>(null);
 
     const navItems = [
-        { id: 'dashboard',    label: 'Dashboard',       icon: '🏠' },
-        { id: 'records',      label: 'Patient Records', icon: '📁' },
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'records', label: 'Patient Records', icon: '📁' },
         { id: 'consultation', label: 'Consultation Room', icon: '📝' },
     ];
 
@@ -182,7 +179,7 @@ const DoctorDashboard = () => {
         }
 
         if (period === 'year') {
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const mm: Record<string, number> = {};
             months.forEach(m => { mm[m] = 0; });
             dates.forEach(date => { const m = months[new Date(date).getMonth()]; if (m) mm[m]++; });
@@ -221,9 +218,9 @@ const DoctorDashboard = () => {
         // Queue: initial_consultations today that don't yet have a linked consultation row
         const { data: completedConsults } = await supabase
             .from('consultation')
-            .select('initial_consultation_id')
-            .not('initial_consultation_id', 'is', null);
-        const completedIds = completedConsults?.map((c: any) => c.initial_consultation_id).filter(Boolean) || [];
+            .select('initialconsultation_id')
+            .not('initialconsultation_id', 'is', null);
+        const completedIds = completedConsults?.map((c: any) => c.initialconsultation_id).filter(Boolean) || [];
 
         let qQuery = supabase
             .from('initial_consultation')
@@ -277,9 +274,9 @@ const DoctorDashboard = () => {
     // Initial load + auth check
     // ─────────────────────────────────────────────────────────────────────────
     useEffect(() => {
-        const handleOnline  = () => setIsOnline(true);
+        const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
-        window.addEventListener('online',  handleOnline);
+        window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
         const init = async () => {
@@ -302,7 +299,7 @@ const DoctorDashboard = () => {
         init();
 
         return () => {
-            window.removeEventListener('online',  handleOnline);
+            window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
     }, []); // runs once on mount
@@ -386,7 +383,7 @@ const DoctorDashboard = () => {
 
             .subscribe((status) => {
                 console.log('[RT] dashboard channel:', status);
-                if (status === 'SUBSCRIBED')    setRealtimeStatus('live');
+                if (status === 'SUBSCRIBED') setRealtimeStatus('live');
                 else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error');
                 else setRealtimeStatus('connecting');
             });
@@ -464,7 +461,7 @@ const DoctorDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] dark:bg-neutral-950 overflow-hidden w-full">
+        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
             <Sidebar
                 activePage={activePage}
                 userName={userName}
@@ -482,7 +479,7 @@ const DoctorDashboard = () => {
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
                 {/* Topbar */}
-                <header className="h-[64px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm md:shadow-none">
+                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm md:shadow-none">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -498,11 +495,10 @@ const DoctorDashboard = () => {
                                 {!isOnline ? 'Offline Mode' : 'System Online'}
                             </span>
                         </div>
-                        <ThemeToggle />
                         <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400">General Practitioner</div>
+                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
+                            <div className="text-[0.7rem] text-slate-500">General Practitioner</div>
                         </div>
                         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">{userInitials}</div>
                     </div>
@@ -640,7 +636,7 @@ const DoctorDashboard = () => {
                     )}
 
                     {activePage === 'records' && (
-                        <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
+                        <RecordsComponent onPatientClick={(p) => handleConsultNavigate(p.id)} />
                     )}
                     {activePage === 'new-record' && <TemplatesComponent />}
                     {activePage === 'consultation' && (
@@ -705,13 +701,6 @@ const DoctorDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
-            {selectedPatient && (
-                <PatientDetailModal
-                    patient={selectedPatient}
-                    onClose={() => setSelectedPatient(null)}
-                    onPatientUpdate={(updated) => setSelectedPatient(updated)}
-                />
             )}
         </div>
     );

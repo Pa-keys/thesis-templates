@@ -27,8 +27,12 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
     const totalPatients = patients.length;
 
     const todayCount = useMemo(() => {
-        const today = new Date().toISOString().split('T')[0];
-        return censusRecords.filter(r => r.created_at?.startsWith(today)).length;
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+        return censusRecords.filter(r => {
+            if (!r.created_at) return false;
+            const recordDate = new Date(r.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+            return recordDate === today;
+        }).length;
     }, [censusRecords]);
 
     return (

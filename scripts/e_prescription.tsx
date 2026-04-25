@@ -14,7 +14,7 @@ interface PrescriptionData {
 function EPrescription() {
   const [role, setRole] = useState<string | null>(null);
   const [formData, setFormData] = useState<PrescriptionData>({
-    patientId: '', date: new Date().toISOString().split('T')[0], name: '', age: '', sex: '', address: '',
+    patientId: '', date: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), name: '', age: '', sex: '', address: '',
     medications: [{ name: '', dosage: '', frequency: '', duration: '', quantity: '' }],
     licNo: '', ptrNo: '', signatureUrl: ''
   });

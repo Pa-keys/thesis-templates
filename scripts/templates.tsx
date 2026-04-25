@@ -379,7 +379,7 @@ export function TemplatesComponent() {
                                         type="date" id="birthday" value={form.birthday}
                                         onChange={handleBirthday}
                                         className={errors['birthday'] ? inputErrorClasses : inputClasses}
-                                        max={new Date().toISOString().split('T')[0]}
+                                        max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
                                         required
                                     />
                                     <FieldError message={errors['birthday']} />
