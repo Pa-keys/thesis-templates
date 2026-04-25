@@ -4,7 +4,6 @@ import { supabase } from '../shared/supabase';
 import { requireRole, logout } from '../shared/auth';
 import { Sidebar } from './sidebar';
 import { useToast } from './components/Toast';
-import { ThemeToggle } from './components/ThemeToggle';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -297,7 +296,7 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 dark:bg-neutral-950 overflow-hidden w-full font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex h-screen bg-slate-50 overflow-hidden w-full font-['Plus_Jakarta_Sans',sans-serif]">
             <ToastComponent />
 
             <Sidebar
@@ -314,12 +313,12 @@ const AdminDashboard = () => {
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
                 {/* ─── Topbar ─── */}
-                <header className="h-[64px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
+                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                         </button>
-                        <h1 className="font-bold text-slate-800 dark:text-neutral-100 hidden sm:block">User Management</h1>
+                        <h1 className="font-bold text-slate-800 hidden sm:block">User Management</h1>
                     </div>
                     <div className="flex items-center gap-4 md:gap-5">
                         <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-full transition-colors duration-300 ${!isOnline ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
@@ -331,11 +330,10 @@ const AdminDashboard = () => {
                                 {!isOnline ? 'Offline Mode' : 'System Online'}
                             </span>
                         </div>
-                        <ThemeToggle />
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                                                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400">Administrator</div>
+                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
+                            <div className="text-[0.7rem] text-slate-500">Administrator</div>
                         </div>
                         <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer shrink-0">
                             {userInitials}

@@ -158,11 +158,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 setFormData({});
                                 setSelectedPatient(null);
                             }}
-                            className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                                activeLogbook === log.id 
-                                ? 'bg-blue-600 text-white shadow-md' 
-                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                            }`}
+                            className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
                         >
                             {log.label}
                         </button>

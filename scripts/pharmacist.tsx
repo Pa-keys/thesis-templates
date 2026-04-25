@@ -4,7 +4,7 @@ import { supabase } from '../shared/supabase';
 import { requireRole } from '../shared/auth';
 import { Sidebar } from './sidebar';
 import { useToast } from './components/Toast';
-import { ThemeToggle } from './components/ThemeToggle';
+
 
 // --- Interfaces ---
 interface Patient {
@@ -232,7 +232,7 @@ function PharmacyDashboard() {
     const allChecked = medsToDispense.length > 0 && medsToDispense.every((_: any, i: number) => dispenseChecklist[i]);
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] dark:bg-neutral-950 overflow-hidden w-full">
+        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
             <ToastComponent />
             <Sidebar
                 activePage={activePage}
@@ -248,14 +248,14 @@ function PharmacyDashboard() {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
 
-                <header className="h-[60px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
+                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
                             </svg>
                         </button>
-                        <div className="font-bold text-lg text-slate-800 dark:text-neutral-100 capitalize">Pharmacy Dashboard</div>
+                        <div className="font-bold text-lg text-slate-800 capitalize">Pharmacy Dashboard</div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -265,10 +265,10 @@ function PharmacyDashboard() {
                                 {isOnline ? 'Online' : 'Offline'}
                             </span>
                         </div>
-                        <ThemeToggle />
+                        
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{profile?.fullName || 'Loading...'}</div>
-                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400 font-medium">Pharmacist</div>
+                            <div className="text-sm font-bold text-slate-900 leading-tight">{profile?.fullName || 'Loading...'}</div>
+                            <div className="text-[0.7rem] text-slate-500 font-medium">Pharmacist</div>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">
                             {initials}
@@ -413,10 +413,7 @@ function PharmacyDashboard() {
                             <button
                                 onClick={handlePrintUnavailable}
                                 disabled={allChecked}
-                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked
-                                        ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300'
-                                        : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'
-                                    }`}
+                                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow' }`}
                             >
                                 🖨️ Print
                             </button>

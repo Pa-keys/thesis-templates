@@ -176,18 +176,18 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
         <div className="border border-slate-200 rounded-xl overflow-hidden mb-2">
             <button
                 onClick={() => toggle(id)}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
             >
                 <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${badgeColor}`}>{badge}</span>
                 <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-slate-800 dark:text-neutral-200 truncate">{title}</div>
+                    <div className="text-sm font-bold text-slate-800 truncate">{title}</div>
                     {subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
                 </div>
                 <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
                 <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
             </button>
             {expandedId === id && (
-                <div className="px-4 pb-4 pt-2 bg-slate-50 dark:bg-neutral-800/50 border-t border-slate-100 dark:border-neutral-800 space-y-4">{children}</div>
+                <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">{children}</div>
             )}
         </div>
     );
@@ -196,12 +196,12 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
         value ? (
             <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{label}</div>
-                <div className="text-sm text-slate-700 dark:text-neutral-300">{value}</div>
+                <div className="text-sm text-slate-700">{value}</div>
             </div>
         ) : null;
 
     const SectionHeader = ({ label }: { label: string }) => (
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 pb-1 border-t border-slate-200 dark:border-neutral-800">{label}</div>
+        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2 pb-1 border-t border-slate-200">{label}</div>
     );
 
     const totalCount = consultations.length + initialConsults.length;
@@ -210,25 +210,25 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
         <>
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]" onClick={onClose} />
             <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-transparent dark:border-neutral-800">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-800/50 shrink-0">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-transparent">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                                 {patientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                             </div>
                             <div>
-                                <div className="font-extrabold text-slate-900 dark:text-neutral-100 text-base leading-tight">Patient History</div>
+                                <div className="font-extrabold text-slate-900 text-base leading-tight">Patient History</div>
                                 <div className="text-xs text-slate-500 mt-0.5">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-neutral-700 hover:text-slate-800 dark:hover:text-neutral-100 transition-colors font-bold text-sm">✕</button>
+                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm">✕</button>
                     </div>
-                    <div className="flex gap-2 px-6 py-3 border-b border-slate-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0 flex-wrap">
+                    <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
                         {sectionBtn('All', 'all', totalCount)}
                         {sectionBtn('Consultations', 'consultation', consultations.length)}
                         {sectionBtn('Initial', 'initial', initialConsults.length)}
                     </div>
-                    <div className="flex-1 overflow-y-auto px-6 py-4 bg-[#F8FAFC] dark:bg-neutral-950">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 bg-[#F8FAFC]">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-3">
                                 <svg className="animate-spin w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24">
@@ -339,8 +339,8 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                             </>
                         )}
                     </div>
-                    <div className="px-6 py-4 border-t border-slate-100 dark:border-neutral-800 shrink-0 bg-white dark:bg-neutral-900">
-                        <button onClick={onClose} className="w-full py-2.5 text-sm font-bold text-slate-600 dark:text-neutral-400 bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 rounded-xl transition-colors">Close</button>
+                    <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white">
+                        <button onClick={onClose} className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
                     </div>
                 </div>
             </div>
@@ -1218,14 +1218,8 @@ export function ConsultationPage({
                         <label className={labelCls}>
                             Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span>
                             {/* ── live indicator dot next to Lab Results ── */}
-                            <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                                ${realtimeStatus === 'live' ? 'bg-green-100 text-green-700' :
-                                  realtimeStatus === 'error' ? 'bg-red-100 text-red-600' :
-                                  'bg-slate-100 text-slate-400'}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full inline-block
-                                    ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' :
-                                      realtimeStatus === 'error' ? 'bg-red-500' :
-                                      'bg-slate-300 animate-pulse'}`} />
+                            <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${realtimeStatus === 'live' ? 'bg-green-100 text-green-700' : realtimeStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' : realtimeStatus === 'error' ? 'bg-red-500' : 'bg-slate-300 animate-pulse'}`} />
                                 {realtimeStatus === 'live' ? 'LIVE' : realtimeStatus === 'error' ? 'OFFLINE' : 'CONNECTING'}
                             </span>
                         </label>
@@ -1426,14 +1420,8 @@ export function ConsultationPage({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {/* ── realtime pill in patient header ── */}
-                        <span className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border
-                            ${realtimeStatus === 'live' ? 'bg-green-50 border-green-200 text-green-700' :
-                              realtimeStatus === 'error' ? 'bg-red-50 border-red-200 text-red-600' :
-                              'bg-slate-100 border-slate-200 text-slate-400'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full
-                                ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' :
-                                  realtimeStatus === 'error' ? 'bg-red-500' :
-                                  'bg-slate-300 animate-pulse'}`} />
+                        <span className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border ${realtimeStatus === 'live' ? 'bg-green-50 border-green-200 text-green-700' : realtimeStatus === 'error' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' : realtimeStatus === 'error' ? 'bg-red-500' : 'bg-slate-300 animate-pulse'}`} />
                             {realtimeStatus === 'live' ? 'Live Updates' : realtimeStatus === 'error' ? 'Realtime Off' : 'Connecting…'}
                         </span>
                         <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">🕐 View History</button>
@@ -1448,13 +1436,7 @@ export function ConsultationPage({
                             key={tab.id}
                             onClick={() => !tab.disabled && setActiveTab(tab.id)}
                             disabled={tab.disabled}
-                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0
-                                ${tab.disabled
-                                    ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through'
-                                    : activeTab === tab.id
-                                        ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]'
-                                        : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'
-                                }`}
+                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${tab.disabled ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through' : activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600' }`}
                         >
                             {tab.label}
                         </button>

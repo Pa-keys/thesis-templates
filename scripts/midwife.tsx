@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../shared/supabase';
 import { Sidebar } from './sidebar';
-import { ThemeToggle } from './components/ThemeToggle';
+
 import Dashboard from './midwife/dashboard';
 import PatientRecords from './midwife/patientRecords';
 import CensusEntry from './midwife/censusEntry';
@@ -271,7 +271,7 @@ const MidwifeApp = () => {
     ];
 
     return (
-        <div className="flex h-screen w-screen bg-[#F8FAFC] dark:bg-neutral-950 overflow-hidden">
+        <div className="flex h-screen w-screen bg-[#F8FAFC] overflow-hidden">
             <Sidebar
                 activePage={activeTab}
                 userName={userData.name}
@@ -286,14 +286,14 @@ const MidwifeApp = () => {
 
             <main className="flex-1 flex flex-col overflow-hidden md:ml-[240px]">
                 {/* Header */}
-                <header className="h-[60px] md:h-[72px] w-full bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
+                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
-                        <div className="font-bold text-lg text-slate-800 dark:text-neutral-100 capitalize">
+                        <div className="font-bold text-lg text-slate-800 capitalize">
                             {activeTab === 'dashboard' ? 'Midwife Dashboard'
                                 : activeTab === 'records'  ? 'Patient Records'
                                 : activeTab === 'census'   ? 'Census Entry'
@@ -311,11 +311,11 @@ const MidwifeApp = () => {
                                 {isOnline ? 'System Online' : 'System Offline'}
                             </span>
                         </div>
-                        <ThemeToggle />
+                        
                         <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                         <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 dark:text-neutral-100 leading-tight">{userData.name}</div>
-                            <div className="text-[0.7rem] text-slate-500 dark:text-neutral-400 font-medium">Registered Midwife</div>
+                            <div className="text-sm font-bold text-slate-900 leading-tight">{userData.name}</div>
+                            <div className="text-[0.7rem] text-slate-500 font-medium">Registered Midwife</div>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
                             {userData.initials}
@@ -324,7 +324,7 @@ const MidwifeApp = () => {
                 </header>
 
                 {/* Content */}
-                <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[#F8FAFC] dark:bg-neutral-950">
+                <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[#F8FAFC]">
                     <div className="w-full h-full p-4 md:p-6 lg:p-8">
                         <div className="w-full">
                             {activeTab === 'dashboard' && (

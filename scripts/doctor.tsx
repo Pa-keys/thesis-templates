@@ -49,14 +49,8 @@ const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: Fi
 
 // ── Small pulsing "LIVE" badge ─────────────────────────────────────────────
 const LiveBadge = ({ status }: { status: 'connecting' | 'live' | 'error' }) => (
-    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full
-        ${status === 'live' ? 'bg-green-100 text-green-700'
-            : status === 'error' ? 'bg-red-100 text-red-500'
-                : 'bg-slate-100 text-slate-400'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0
-            ${status === 'live' ? 'bg-green-500 animate-pulse'
-                : status === 'error' ? 'bg-red-400'
-                    : 'bg-slate-300 animate-pulse'}`} />
+    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full ${status === 'live' ? 'bg-green-100 text-green-700' : status === 'error' ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-400'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${status === 'live' ? 'bg-green-500 animate-pulse' : status === 'error' ? 'bg-red-400' : 'bg-slate-300 animate-pulse'}`} />
         {status === 'live' ? 'Live' : status === 'error' ? 'Off' : '…'}
     </span>
 );

@@ -129,14 +129,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                 <select
                                     value={selectedBarangay}
                                     onChange={e => setSelectedBarangay(e.target.value)}
-                                    className={`
-                                        w-full h-full pl-4 pr-10 py-2.5
-                                        border rounded-xl text-sm
-                                        appearance-none cursor-pointer
-                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                                        transition-colors
-                                        ${selectedBarangay ? 'border-blue-400 bg-blue-50 text-blue-700 font-medium' : 'border-slate-200 bg-white text-slate-700'}
-                                    `}
+                                    className={`w-full h-full pl-4 pr-10 py-2.5 border rounded-xl text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${selectedBarangay ? 'border-blue-400 bg-blue-50 text-blue-700 font-medium' : 'border-slate-200 bg-white text-slate-700'}`}
                                 >
                                     <option value="">All Barangays</option>
                                     {MALVAR_BARANGAYS.map(b => (
