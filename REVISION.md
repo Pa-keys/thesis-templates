@@ -149,6 +149,76 @@ Plan without schema change:
 Plan with future schema migration:
 - See the migration plan below.
 
+
+## Vaccine Options To Integrate
+...
+## Vaccine Options To Integrate
+
+Codex must use this list as the source of truth for vaccine dropdowns, repeatable vaccine rows, and vaccine history display.
+
+### Child Care / Core RHU Immunization
+
+* BCG
+* Hepatitis B Vaccine
+* Pentavalent Vaccine (DPT-HepB-Hib)
+* Oral Polio Vaccine (OPV)
+* Inactivated Polio Vaccine (IPV)
+* Pneumococcal Conjugate Vaccine (PCV)
+* Measles-Containing Vaccine (MCV)
+* Measles-Rubella Vaccine (MR)
+* Measles-Mumps-Rubella Vaccine (MMR)
+* Rotavirus Vaccine
+
+### Maternal Care / Women of Reproductive Age
+
+* Tetanus Toxoid Vaccine (TT)
+* Tetanus-Diphtheria Vaccine (Td)
+
+### NCD & Seniors / Adult or Special-Risk Vaccines
+
+* Influenza Vaccine
+* Pneumococcal Vaccine
+* PCV
+* PPSV23
+* COVID-19 Vaccine
+
+### Rabies & Leprosy / Post-Exposure and Special Public Health
+
+* Anti-Rabies Vaccine
+* Tetanus Toxoid / Td
+
+### Optional
+
+* Others / Specify
+
+### Vaccine Record Fields
+
+Each vaccine record should support:
+
+* vaccine_category
+* vaccine_name
+* other_vaccine_name
+* dose_label
+* date_given
+* next_due_date
+* administered_by
+* facility
+* lot_number
+* remarks
+
+### Implementation Note
+
+Do not hardcode these options directly inside UI components. Create a reusable vaccine options file, such as:
+
+`src/features/vaccines/vaccineOptions.ts`
+
+or
+
+`src/features/midwife/vaccineOptions.ts`
+
+Then import the options into the Census Entry form.
+
+
 ### Transaction / Patient History
 
 Current storage sources:

@@ -31,6 +31,7 @@
 ## 3. Files or Folders Updated
 
 
+### Initial Structure Update
 - Updated:
   - `pages/*.html`
   - `vite.config.ts`
@@ -48,6 +49,18 @@
   - `shared/`
   - root `css/`
 
+### Panel Revision Sprint (Commit `4c35de7`)
+- Added:
+  - `src/features/patients/vaccineService.ts`
+- Changed:
+  - `src/features/patients/history.ts`
+  - `src/components/patient/PatientTransactionHistory.tsx`
+  - `src/components/patient/PatientDetailModal.tsx`
+  - `src/app/patients/details.tsx`
+  - `src/app/patients/templates.tsx`
+  - `src/app/initial-consultation/index.tsx`
+  - `src/app/consultation/index.tsx`
+  - `src/features/midwife/patientRecords.tsx`
 
 Important: the removed files were replaced by files inside `src/`. The workflows were not intentionally removed.
 
@@ -55,6 +68,7 @@ Important: the removed files were replaced by files inside `src/`. The workflows
 ## 4. Features Added or Improved
 
 
+### Initial Features
 - Role-based routing and dashboard protection were improved.
 - Admin, BHW, Doctor, Nurse, Pharmacist, Laboratory, and Midwife dashboards now use the new structure.
 - Patient registration now uses shared validation and shared Supabase workflow logic.
@@ -78,10 +92,27 @@ Important: the removed files were replaced by files inside `src/`. The workflows
   - sidebar layout,
   - print iframe cleanup.
 
+### Panel Revision Sprint
+- **Vaccine record management**: New `vaccineService.ts` provides CRUD for vaccine records stored in `fhsis_logs.data_fields.vaccine_records` (category `'vaccination'`). Accessible from the PatientDetailModal — any staff role (BHW, nurse, midwife, doctor) can add/remove vaccines while viewing patient details.
+- **Unified patient history**: `PatientTransactionHistory` component now queries 9 tables (patients, patient_consent, initial_consultation, consultation, lab_request, lab_result, prescription, follow_up, fhsis_logs) and composes a single newest-first timeline with 10 transaction types.
+- **Rich transaction details**: Each transaction type now exposes its full set of medical fields:
+  - Registration: demographics, contact, consent status
+  - Consent: status, personnel name
+  - Initial consultation: chief complaint, diagnosis, time, mode, referred by, transfer
+  - Doctor consultation: complaints, assessment, diagnosis, treatment/management/plan, family history, immunization, smoking, drinking, past medical/surgical history
+  - Lab request: requested tests (itemized by category), complaint, urgent flag
+  - Lab result: findings, performed by, date performed
+  - Prescription: medications parsed from JSON (name, dosage, frequency, duration, quantity)
+  - Follow-up: complaint, diagnosis, treatment, visit date, status
+  - Vaccine: name, dose, date, remarks
+- **Transaction history UI**: Redesigned with vertical timeline, colored dots per type, type-specific icons, 2-column item grid, hover effects, loading state, and empty state.
+- **Midwife vaccine display**: FHSIS log history modal now shows vaccine records from `data_fields.vaccine_records` using `normalizeVaccineRecords()`.
+
 
 ## 5. Bugs Fixed
 
 
+### Initial Bug Fixes
 - Fixed missing Vite build entry for the Midwife page.
 - Fixed role-based access issues across dashboards.
 - Fixed admin role creation flow so Admin users can be created using the configured verification PIN.
@@ -94,10 +125,18 @@ Important: the removed files were replaced by files inside `src/`. The workflows
 - Fixed print iframe cleanup to reduce leftover hidden iframes.
 - Replaced native alert-style feedback in main workflows with toast notifications where safe.
 
+### Panel Revision Sprint
+- **Date inputs now left-aligned**: Registration (`templates.tsx`), nurse triage (`initial-consultation/index.tsx`), and doctor consultation (`consultation/index.tsx`) date/time fields explicitly set `text-left` to override browser default centering.
+- **Disabled/read-only field contrast**: Age (registration), BMI, nutritional status, blood type (nurse triage), and BMI (doctor consultation follow-up) now use `bg-slate-100` with `text-slate-500/600` and distinct borders instead of blending into the background.
+- **Grey panel readability**: Smoking/drinking history panel and signature panel in doctor consultation changed from flat `bg-slate-50` to `bg-slate-50/70` with `shadow-sm` for better visual depth.
+- **Removed redundant detail sections**: `PatientDetailModal` no longer shows separate initial consultation and doctor consultation lists below the timeline — those records are already represented in the unified transaction history.
+- **Expanded role access to history**: Patient details page history button now accessible to nurse, doctor, midwife, and BHW (previously nurse-only).
+
 
 ## 6. UI/UX Changes
 
 
+### Initial UI Changes
 - Added more consistent toast feedback across workflows.
 - Added shared online/offline badges.
 - Added shared empty and loading states.
@@ -106,6 +145,12 @@ Important: the removed files were replaced by files inside `src/`. The workflows
 - Improved print slip layout for unavailable medications.
 - Preserved the existing MEDISENS visual direction and did not redesign the full system.
 - Mobile layouts were improved where safe, especially for dashboards and modals.
+
+### Panel Revision Sprint
+- **Timeline view**: Patient transaction history now uses a vertical timeline layout with colored dots (blue for registration, amber for consent, purple for follow-up, green for results, indigo for vaccines) and type-specific emoji icons.
+- **Inline vaccination management**: PatientDetailModal shows live vaccine count, add/remove UI with inline form (name, dose, date, remarks), loading spinner, and empty state.
+- **Input consistency**: All text inputs across registration, nurse triage, and doctor consultation now use `bg-white` (was `bg-slate-50`) for cleaner appearance with better label contrast.
+- **Itemized clinical data**: Chief complaints, diagnosis, medication/treatment, and management/treatment in doctor consultation HistoryPanel now split into individual list items via `itemizeText()` for easier scanning.
 
 
 ## 7. Backend / Database Changes, If Any
@@ -120,6 +165,7 @@ Important: the removed files were replaced by files inside `src/`. The workflows
   - `midwives`
   - `BHW`
 - Supabase calls were better organized into shared or feature-level modules where practical.
+- Vaccine records are stored in `fhsis_logs.data_fields.vaccine_records` as a JSON array under `category: 'vaccination'` — compatible with the existing schema used by the midwife child logbook.
 
 
 ## 8. Important Notes for the Team
@@ -133,6 +179,8 @@ Important: the removed files were replaced by files inside `src/`. The workflows
 - `midwives` is intentionally preserved for compatibility.
 - Admin user creation currently uses a frontend verification PIN fallback of `1234`. This is acceptable for a demo, but it is not production-grade security.
 - The build passes, but the app still needs real account testing using Supabase demo users.
+- Vaccine records stored via `vaccineService.ts` use the `fhsis_logs` table with `category: 'vaccination'` — the same table used by the midwife FHSIS child logbook, but with a separate category to avoid conflicts.
+- The `PatientTransactionHistory` component queries all transaction tables in parallel via `safeSelect()` — if a table is missing or an optional column is absent, it fails silently and skips that data.
 
 
 ## 9. Remaining TODOs or Known Issues
@@ -145,6 +193,10 @@ Important: the removed files were replaced by files inside `src/`. The workflows
 - Supabase Row Level Security policies were not changed or fully audited in this update.
 - Admin user creation should eventually move to a secure backend function instead of being handled fully on the frontend.
 - Real end-to-end testing with actual demo accounts is still required before presentation.
+- `lab_request.is_urgent` column may not exist in all deployed schemas — the lab request transaction type checks for it and only shows "Urgent: Yes" if truthy.
+- `patient_consent.personnel_name` may not exist in older schemas — falls back to `consent_personnel` for display.
+- Midwife child logbook vaccine row UI (`censusEntry.tsx`) currently saves to `data_fields.vaccine_records` — this should be verified with real FHSIS usage.
+- No edit capability for individual vaccine records — only add/remove is supported.
 
 
 ## 10. How to Test the Updates
@@ -177,6 +229,22 @@ Important: the removed files were replaced by files inside `src/`. The workflows
   - Create a Midwife FHSIS record.
   - Generate a report PDF.
   - Create or edit users in Admin.
+- Test the unified patient history:
+  - Open any patient record from BHW, Nurse, Doctor, or Midwife dashboard.
+  - Click "View Complete Transaction History" or "View Consultation History".
+  - Verify the timeline shows registration, consent, consultations, lab, pharmacy, vaccines, and follow-ups sorted newest-first.
+  - Check that type-specific icons and colored dots are displayed.
+  - Verify each transaction card shows itemized medical details.
+- Test vaccine record management:
+  - Open a patient detail modal (click patient name/record).
+  - Scroll to the "Vaccination Records" section.
+  - Click "+ Add Vaccine", fill in the form, and save.
+  - Verify the new record appears in the list and in the transaction history timeline.
+  - Remove a vaccine record using the ✕ button.
+- Test UI polish:
+  - Verify birthday/date fields are left-aligned in registration, nurse triage, and doctor consultation.
+  - Verify disabled fields (age, BMI, nutritional status) have distinct `bg-slate-100` styling.
+  - Verify grey informational panels in doctor consultation have subtle shadow depth.
 - Test offline behavior:
   - Turn off network.
   - Try a critical save action.
