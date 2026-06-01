@@ -67,20 +67,6 @@ export interface Consultation {
     past_med_surge_history: string | null;
 }
 
-// Type-specific icon and label helpers for the history view
-const TYPE_ICON: Record<string, string> = {
-    registration: '📋',
-    consent: '✍️',
-    initial_consultation: '🩺',
-    doctor_consultation: '👨‍⚕️',
-    lab_request: '🔬',
-    lab_result: '📊',
-    prescription: '💊',
-    pharmacy: '💊',
-    vaccine: '💉',
-    follow_up: '📅',
-};
-
 interface PatientDetailModalProps {
     patient: Patient;
     onClose: () => void;
@@ -287,7 +273,7 @@ export function PatientDetailModal({
                             name={name}
                             value={editForm[name] as string || ''}
                             onChange={handleInputChange}
-                            className="text-left text-sm font-semibold border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900 shadow-sm"
+                            className={inputCls}
                         >
                             <option value="">Select...</option>
                             {options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -298,7 +284,7 @@ export function PatientDetailModal({
                             name={name}
                             value={editForm[name] as string | number || ''}
                             onChange={handleInputChange}
-                            className="text-left text-sm font-semibold border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900 shadow-sm"
+                            className={inputCls}
                         />
                     )}
                 </div>
@@ -326,8 +312,11 @@ export function PatientDetailModal({
         return patient.category || 'N/A';
     };
 
-    const sectionCls = "mb-5";
-    const headerCls = "flex items-center gap-2 text-xs font-extrabold text-blue-600  uppercase tracking-widest border-b border-blue-100  pb-2 mb-4";
+    const sectionCls = "mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
+    const headerCls = "flex items-center gap-2 text-xs font-extrabold text-blue-700 uppercase tracking-widest border-b border-blue-100 pb-2 mb-4";
+    const focusCls = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600";
+    const inputCls = `w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 ${focusCls}`;
+    const vaccineInputCls = `w-full rounded-lg border border-teal-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition-colors focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${focusCls}`;
 
     return (
         <>
@@ -357,17 +346,20 @@ export function PatientDetailModal({
                         <div className="flex items-center gap-2">
                             {!showHistory && (
                                 <button
+                                    type="button"
                                     onClick={handleEditToggle}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${isEditing ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${focusCls} ${isEditing ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
                                 >
-                                    {isEditing ? '✕ Cancel' : 'Edit Profile'}
+                                    {isEditing ? 'Cancel' : 'Edit Profile'}
                                 </button>
                             )}
                             <button
+                                type="button"
                                 onClick={onClose}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors font-bold text-sm"
+                                aria-label="Close patient details"
+                                className={`w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors font-bold text-sm ${focusCls}`}
                             >
-                                ✕
+                                X
                             </button>
                         </div>
                     </div>
@@ -379,7 +371,7 @@ export function PatientDetailModal({
                             <>
                                 {/* Patient Info */}
                                 <div className={sectionCls}>
-                                    <div className={headerCls}><span>👤</span> Personal Information</div>
+                                    <div className={headerCls}>Personal Information</div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <DetailItem label="First Name" value={patient.firstName} name="firstName" />
                                         <DetailItem label="Middle Name" value={patient.middleName} name="middleName" />
@@ -401,19 +393,32 @@ export function PatientDetailModal({
                                 </div>
 
                                 <div className={sectionCls}>
-                                    <div className={headerCls}><span>🏥</span> PhilHealth & Categorization</div>
+                                    <div className={headerCls}>PhilHealth & Categorization</div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <DetailItem label="PhilHealth No." value={patient.philhealthNo} name="philhealthNo" />
                                         <DetailItem label="PhilHealth Status" value={patient.philhealthStatus} name="philhealthStatus" type="select" options={['Member', 'Dependent', '4Ps', 'None']} />
+                                        {isEditing ? (
+                                            <>
+                                                <DetailItem label="Category" value={editForm.category} name="category" type="select" options={['4Ps', 'Other/s']} />
+                                                {editForm.category === 'Other/s' && (
+                                                    <DetailItem label="Specify Category" value={editForm.categoryOthers} name="categoryOthers" />
+                                                )}
+                                            </>
+                                        ) : (
+                                            <DetailItem label="Category" value={displayCategory()} name="category" />
+                                        )}
+                                    </div>
+                                </div>
                                 {!isEditing && (
                                     <div className={sectionCls}>
                                         <div className="flex items-center justify-between mb-2">
-                                            <div className={headerCls} style={{ marginBottom: 0 }}><span>💉</span> Vaccination Records ({vaccineRecords.length})</div>
+                                            <div className={headerCls} style={{ marginBottom: 0 }}>Vaccination Records ({vaccineRecords.length})</div>
                                             <button
+                                                type="button"
                                                 onClick={() => setShowAddVaccine(!showAddVaccine)}
-                                                className="text-xs font-bold text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                                className={`text-xs font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 ${focusCls}`}
                                             >
-                                                {showAddVaccine ? '✕ Cancel' : '+ Add Vaccine'}
+                                                {showAddVaccine ? 'Cancel' : 'Add Vaccine'}
                                             </button>
                                         </div>
 
@@ -425,7 +430,7 @@ export function PatientDetailModal({
                                                         <select
                                                             value={newVaccine.vaccine_name}
                                                             onChange={(e) => updateNewVaccine('vaccine_name', e.target.value)}
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         >
                                                             <option value="">Select vaccine...</option>
                                                             {VACCINE_OPTIONS.map(option => (
@@ -441,7 +446,7 @@ export function PatientDetailModal({
                                                                 value={newVaccine.other_vaccine_name || ''}
                                                                 onChange={(e) => updateNewVaccine('other_vaccine_name', e.target.value)}
                                                                 placeholder="Enter vaccine name"
-                                                                className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                                className={vaccineInputCls}
                                                             />
                                                         </div>
                                                     )}
@@ -451,7 +456,7 @@ export function PatientDetailModal({
                                                             type="text"
                                                             value={newVaccine.vaccine_category || 'Select a vaccine'}
                                                             readOnly
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-100 bg-teal-100/50 text-sm font-medium text-teal-800"
+                                                            className="w-full rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-900"
                                                         />
                                                     </div>
                                                     <div>
@@ -461,7 +466,7 @@ export function PatientDetailModal({
                                                             value={newVaccine.dose_label}
                                                             onChange={(e) => updateNewVaccine('dose_label', e.target.value)}
                                                             placeholder="e.g. Dose 1, Booster"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -470,7 +475,7 @@ export function PatientDetailModal({
                                                             type="date"
                                                             value={newVaccine.date_given}
                                                             onChange={(e) => updateNewVaccine('date_given', e.target.value)}
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -479,7 +484,7 @@ export function PatientDetailModal({
                                                             type="date"
                                                             value={newVaccine.next_due_date || ''}
                                                             onChange={(e) => updateNewVaccine('next_due_date', e.target.value)}
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -489,7 +494,7 @@ export function PatientDetailModal({
                                                             value={newVaccine.administered_by || ''}
                                                             onChange={(e) => updateNewVaccine('administered_by', e.target.value)}
                                                             placeholder="Staff name"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -499,7 +504,7 @@ export function PatientDetailModal({
                                                             value={newVaccine.facility || ''}
                                                             onChange={(e) => updateNewVaccine('facility', e.target.value)}
                                                             placeholder="RHU / barangay"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -509,7 +514,7 @@ export function PatientDetailModal({
                                                             value={newVaccine.lot_number || ''}
                                                             onChange={(e) => updateNewVaccine('lot_number', e.target.value)}
                                                             placeholder="Optional"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                     <div>
@@ -519,14 +524,15 @@ export function PatientDetailModal({
                                                             value={newVaccine.remarks || ''}
                                                             onChange={(e) => updateNewVaccine('remarks', e.target.value)}
                                                             placeholder="Optional notes"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            className={vaccineInputCls}
                                                         />
                                                     </div>
                                                 </div>
                                                 <button
+                                                    type="button"
                                                     onClick={handleAddVaccine}
                                                     disabled={vaccineSaving || !navigator.onLine}
-                                                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2 rounded-lg transition-colors"
+                                                    className={`bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${focusCls}`}
                                                 >
                                                     {vaccineSaving ? 'Saving...' : 'Save Vaccine Record'}
                                                 </button>
@@ -537,7 +543,7 @@ export function PatientDetailModal({
                                             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                                                 <div className="font-bold">Vaccine records could not be loaded.</div>
                                                 <div className="mt-1">{vaccineLoadError}</div>
-                                                <button type="button" onClick={loadVaccineRecords} className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">
+                                                <button type="button" onClick={loadVaccineRecords} className={`mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 ${focusCls}`}>
                                                     Retry
                                                 </button>
                                             </div>
@@ -557,12 +563,14 @@ export function PatientDetailModal({
                                                 {vaccineRecords.map((vr) => (
                                                     <div key={vr.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors relative">
                                                         <button
+                                                            type="button"
                                                             onClick={() => setPendingRemoveVaccine(vr)}
                                                             disabled={removingVaccineId === vr.id}
-                                                            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"
+                                                            aria-label={`Remove ${getVaccineDisplayName(vr)} vaccine record`}
+                                                            className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60 ${focusCls}`}
                                                             title="Remove vaccine record"
                                                         >
-                                                            ✕
+                                                            X
                                                         </button>
                                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pr-6">
                                                             <div>
@@ -608,22 +616,8 @@ export function PatientDetailModal({
                                         )}
                                     </div>
                                 )}
-
-                                {isEditing ? (
-                                            <>
-                                                <DetailItem label="Category" value={editForm.category} name="category" type="select" options={['4Ps', 'Other/s']} />
-                                                {editForm.category === 'Other/s' && (
-                                                    <DetailItem label="Specify Category" value={editForm.categoryOthers} name="categoryOthers" />
-                                                )}
-                                            </>
-                                        ) : (
-                                            <DetailItem label="Category" value={displayCategory()} name="category" />
-                                        )}
-                                    </div>
-                                </div>
-
                                 <div className={sectionCls}>
-                                    <div className={headerCls}><span>🆘</span> Emergency Contact</div>
+                                    <div className={headerCls}>Emergency Contact</div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <DetailItem label="Relative's Name" value={patient.relativeName} name="relativeName" />
                                         <DetailItem label="Relationship" value={patient.relativeRelation} name="relativeRelation" />
@@ -636,19 +630,21 @@ export function PatientDetailModal({
                                 {isEditing ? (
                                     <div className="sticky bottom-0 bg-[#F8FAFC] pt-4 border-t border-slate-100 flex gap-3">
                                         <button
+                                            type="button"
                                             onClick={handleSave}
                                             disabled={isSaving}
-                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-extrabold text-sm uppercase tracking-wider py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            className={`flex-1 bg-green-600 hover:bg-green-700 text-white font-extrabold text-sm uppercase tracking-wider py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60 ${focusCls}`}
                                         >
-                                            {isSaving ? '⏳ Saving...' : '💾 Save Changes'}
+                                            {isSaving ? 'Saving...' : 'Save Changes'}
                                         </button>
                                     </div>
                                 ) : (
                                     <button
+                                        type="button"
                                         onClick={loadHistory}
-                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm uppercase tracking-wider py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
+                                        className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm uppercase tracking-wider py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 ${focusCls}`}
                                     >
-                                        📋 View Consultation History
+                                        View Consultation History
                                     </button>
                                 )}
                             </>
@@ -656,10 +652,11 @@ export function PatientDetailModal({
                             <>
                                 {/* Back to Details */}
                                 <button
+                                    type="button"
                                     onClick={() => setShowHistory(false)}
-                                    className="mb-5 flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                                    className={`mb-5 flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors ${focusCls}`}
                                 >
-                                    ← Back to Details
+                                    Back to Details
                                 </button>
 
                                 {historyLoading ? (
@@ -673,7 +670,7 @@ export function PatientDetailModal({
                                 ) : (
                                     <div className="mb-6">
                                         <div className={headerCls}>
-                                            <span>📋</span> Complete Patient History ({transactions.length} events)
+                                            Complete Patient History ({transactions.length} events)
                                         </div>
                                         <PatientTransactionHistory
                                             transactions={transactions}
@@ -701,7 +698,7 @@ export function PatientDetailModal({
                                 type="button"
                                 onClick={() => setPendingRemoveVaccine(null)}
                                 disabled={Boolean(removingVaccineId)}
-                                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                                className={`flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${focusCls}`}
                             >
                                 Cancel
                             </button>
@@ -709,7 +706,7 @@ export function PatientDetailModal({
                                 type="button"
                                 onClick={() => handleRemoveVaccine(pendingRemoveVaccine)}
                                 disabled={Boolean(removingVaccineId)}
-                                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                                className={`flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 ${focusCls}`}
                             >
                                 {removingVaccineId ? 'Removing...' : 'Remove'}
                             </button>

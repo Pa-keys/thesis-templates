@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface ToastState {
     show: boolean;
@@ -25,19 +25,28 @@ export function useToast() {
         if (!toast.show) return null;
 
         return (
-            <div className={`fixed top-6 right-6 z-[9999] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-8 fade-in duration-300 ${toast.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                <div className="w-8 h-8 flex-shrink-0 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold">
-                    {toast.isError ? '✕' : '✓'}
+            <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className={`fixed right-4 top-4 z-[10000] flex w-[calc(100vw-2rem)] max-w-sm items-start gap-3 rounded-xl px-5 py-4 text-white shadow-2xl ring-1 ring-white/20 sm:right-6 sm:top-6 ${toast.isError ? 'bg-red-700' : 'bg-emerald-700'}`}
+            >
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-black">
+                    {toast.isError ? '!' : 'OK'}
                 </div>
-                <div>
-                    <div className="flex items-center gap-4">
-                        <p className="font-bold text-sm tracking-wide">{toast.msg}</p>
-                        <button onClick={hideToast} className="ml-auto flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity focus:outline-none" aria-label="Close message">
-                            ✕
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-4">
+                        <p className="text-sm font-bold leading-snug tracking-wide">{toast.msg}</p>
+                        <button
+                            onClick={hideToast}
+                            className="ml-auto flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-black opacity-80 transition-opacity hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                            aria-label="Close message"
+                        >
+                            X
                         </button>
                     </div>
                     {toast.subText && (
-                        <p className="text-xs text-opacity-90 mt-0.5">{toast.subText}</p>
+                        <p className="mt-1 text-xs font-medium text-white/90">{toast.subText}</p>
                     )}
                 </div>
             </div>
