@@ -10,11 +10,18 @@ export default defineConfig({
         main: 'pages/login.html',
         templates: 'pages/templates.html',
         details: 'pages/details.html',
+        records: 'pages/records.html',
         doctor: 'pages/doctor.html',
+        consultation: 'pages/consultation.html',
+        ePrescription: 'pages/e_prescription.html',
+        labRequest: 'pages/lab_request.html',
+        initialConsultation: 'pages/initial_consultation.html',
+        followUpVisitation: 'pages/follow_up_visitation.html',
         nurse: 'pages/nurse.html',
         bhw: 'pages/bhw.html',
         pharmacist: 'pages/pharmacist.html',
         laboratory: 'pages/laboratory.html',
+        midwife: 'pages/midwife.html',
         admin: 'pages/admin.html',
       }
     }
