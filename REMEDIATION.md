@@ -195,7 +195,7 @@ Required fixes:
    - no missing role guards on patient details
    - no emoji structural icons in medical workflow UI
    - no silent Supabase history failures
-11. Do not make destructive DB changes.
+11. Do not make destructive DB changes.9
 
 After changes, run:
 - npm run build
