@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { normalizeVaccineRecords } from '../patients/itemization';
 
 interface Props {
     patients: any[];
@@ -45,9 +46,19 @@ function HistoryModal({ patient, logs, onClose }: { patient: any; logs: any[]; o
                                             <span className="font-bold text-slate-800 text-sm uppercase">{log.category.replace('_', ' ')}</span>
                                             <span className="text-[0.65rem] font-bold text-slate-400">{new Date(log.created_at).toLocaleDateString()}</span>
                                         </div>
-                                        <div className="text-xs text-slate-600">
-                                            {Object.entries(log.data_fields || {}).map(([key, value]) => (
-                                                <div key={key} className="mt-1"><span className="font-semibold capitalize">{key.replace('_', ' ')}:</span> {String(value)}</div>
+                                        <div className="text-xs text-slate-600 space-y-1">
+                                            {log.category === 'child' && log.data_fields?.vaccine_records && Array.isArray(log.data_fields.vaccine_records) && (
+                                                <div className="mb-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                                                    <span className="font-bold text-blue-700 uppercase text-[0.6rem] tracking-wider block mb-1">Vaccine Records</span>
+                                                    {normalizeVaccineRecords(log.data_fields).map((v, i) => (
+                                                        <div key={i} className="text-[0.65rem] text-blue-800 ml-1">
+                                                            • {v.vaccine_name}{v.dose_label ? ` (${v.dose_label})` : ''}{v.date_given ? ` — ${v.date_given}` : ''}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {Object.entries(log.data_fields || {}).filter(([key]) => key !== 'vaccine_records').map(([key, value]) => (
+                                                <div key={key} className="mt-1"><span className="font-semibold capitalize">{key.replace(/_/g, ' ')}:</span> {String(value)}</div>
                                             ))}
                                         </div>
                                     </div>

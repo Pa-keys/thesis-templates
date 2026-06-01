@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase/client';
 import { useToast } from '../feedback/Toast';
 import { updatePatientRecord } from '../../features/patients/services';
 import { getErrorMessage } from '../../lib/utils/errors';
 import { fetchPatientTransactions, type PatientTransaction } from '../../features/patients/history';
 import { PatientTransactionHistory } from './PatientTransactionHistory';
+import { saveVaccineRecord, fetchVaccineRecords, removeVaccineRecord } from '../../features/patients/vaccineService';
+import type { VaccineRecord } from '../../features/patients/itemization';
 
 export interface Patient {
     id: string;
@@ -58,6 +59,20 @@ export interface Consultation {
     past_med_surge_history: string | null;
 }
 
+// Type-specific icon and label helpers for the history view
+const TYPE_ICON: Record<string, string> = {
+    registration: '📋',
+    consent: '✍️',
+    initial_consultation: '🩺',
+    doctor_consultation: '👨‍⚕️',
+    lab_request: '🔬',
+    lab_result: '📊',
+    prescription: '💊',
+    pharmacy: '💊',
+    vaccine: '💉',
+    follow_up: '📅',
+};
+
 interface PatientDetailModalProps {
     patient: Patient;
     onClose: () => void;
@@ -81,14 +96,22 @@ export function PatientDetailModal({
     const [patient, setPatient] = useState<Patient>(initialPatient);
     const [showHistory, setShowHistory] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
-    const [initialConsults, setInitialConsults] = useState<InitialConsultation[]>([]);
-    const [consultations, setConsultations] = useState<Consultation[]>([]);
     const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editForm, setEditForm] = useState<Patient>({ ...initialPatient });
     const { showToast, ToastComponent } = useToast();
+
+    const [vaccineRecords, setVaccineRecords] = useState<VaccineRecord[]>([]);
+    const [vaccineLoading, setVaccineLoading] = useState(false);
+    const [showAddVaccine, setShowAddVaccine] = useState(false);
+    const [newVaccine, setNewVaccine] = useState<VaccineRecord>({
+        vaccine_name: '',
+        dose_label: '',
+        date_given: '',
+        remarks: '',
+    });
 
     // Sync local state if prop changes (though usually initialPatient won't change while modal is open)
     useEffect(() => {
@@ -100,27 +123,57 @@ export function PatientDetailModal({
         setShowHistory(true);
         setHistoryLoading(true);
         try {
-            const [{ data: icData }, { data: cData }, transactionData] = await Promise.all([
-                supabase
-                    .from('initial_consultation')
-                    .select('*')
-                    .eq('patient_id', patient.id)
-                    .order('consultation_date', { ascending: false }),
-                supabase
-                    .from('consultation')
-                    .select('*')
-                    .eq('patient_id', patient.id)
-                    .order('consultation_id', { ascending: false }),
-                fetchPatientTransactions(patient.id),
-            ]);
-            setInitialConsults(icData || []);
-            setConsultations(cData || []);
+            const transactionData = await fetchPatientTransactions(patient.id);
             setTransactions(transactionData);
         } catch (err) {
             console.error('Failed to load history:', err);
             showToast('Failed to load complete transaction history: ' + getErrorMessage(err), true);
+            setTransactions([]);
         } finally {
             setHistoryLoading(false);
+        }
+    };
+
+    const loadVaccineRecords = async () => {
+        setVaccineLoading(true);
+        try {
+            const records = await fetchVaccineRecords(patient.id);
+            setVaccineRecords(records);
+        } catch (err) {
+            console.error('Failed to load vaccine records:', err);
+            showToast('Failed to load vaccine records: ' + getErrorMessage(err), true);
+        } finally {
+            setVaccineLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadVaccineRecords();
+    }, [patient.id]);
+
+    const handleAddVaccine = async () => {
+        if (!newVaccine.vaccine_name.trim() || !newVaccine.date_given) {
+            showToast('Vaccine name and date are required.', true);
+            return;
+        }
+        try {
+            await saveVaccineRecord(patient.id, newVaccine);
+            showToast('Vaccine record saved successfully.', false);
+            setShowAddVaccine(false);
+            setNewVaccine({ vaccine_name: '', dose_label: '', date_given: '', remarks: '' });
+            await loadVaccineRecords();
+        } catch (err) {
+            showToast('Failed to save vaccine record: ' + getErrorMessage(err), true);
+        }
+    };
+
+    const handleRemoveVaccine = async (index: number) => {
+        try {
+            await removeVaccineRecord(patient.id, index);
+            showToast('Vaccine record removed.', false);
+            await loadVaccineRecords();
+        } catch (err) {
+            showToast('Failed to remove vaccine record: ' + getErrorMessage(err), true);
         }
     };
 
@@ -299,7 +352,118 @@ export function PatientDetailModal({
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         <DetailItem label="PhilHealth No." value={patient.philhealthNo} name="philhealthNo" />
                                         <DetailItem label="PhilHealth Status" value={patient.philhealthStatus} name="philhealthStatus" type="select" options={['Member', 'Dependent', '4Ps', 'None']} />
-                                        {isEditing ? (
+                                {!isEditing && (
+                                    <div className={sectionCls}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className={headerCls} style={{ marginBottom: 0 }}><span>💉</span> Vaccination Records ({vaccineRecords.length})</div>
+                                            <button
+                                                onClick={() => setShowAddVaccine(!showAddVaccine)}
+                                                className="text-xs font-bold text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                            >
+                                                {showAddVaccine ? '✕ Cancel' : '+ Add Vaccine'}
+                                            </button>
+                                        </div>
+
+                                        {showAddVaccine && (
+                                            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Vaccine Name *</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.vaccine_name}
+                                                            onChange={(e) => setNewVaccine(p => ({ ...p, vaccine_name: e.target.value }))}
+                                                            placeholder="e.g. BCG, OPV, DPT"
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Dose / Label</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.dose_label}
+                                                            onChange={(e) => setNewVaccine(p => ({ ...p, dose_label: e.target.value }))}
+                                                            placeholder="e.g. Dose 1, Booster"
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Date Given *</label>
+                                                        <input
+                                                            type="date"
+                                                            value={newVaccine.date_given}
+                                                            onChange={(e) => setNewVaccine(p => ({ ...p, date_given: e.target.value }))}
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Remarks</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.remarks || ''}
+                                                            onChange={(e) => setNewVaccine(p => ({ ...p, remarks: e.target.value }))}
+                                                            placeholder="Optional notes"
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={handleAddVaccine}
+                                                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2 rounded-lg transition-colors"
+                                                >
+                                                    Save Vaccine Record
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {vaccineLoading ? (
+                                            <div className="py-4 flex justify-center">
+                                                <svg className="animate-spin w-5 h-5 text-teal-500" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                                </svg>
+                                            </div>
+                                        ) : vaccineRecords.length === 0 ? (
+                                            <p className="text-sm text-slate-400 italic text-center py-4 bg-white rounded-xl border border-slate-200">
+                                                No vaccination records found.
+                                            </p>
+                                        ) : (
+                                            <div className="flex flex-col gap-2">
+                                                {vaccineRecords.map((vr, i) => (
+                                                    <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors relative">
+                                                        <button
+                                                            onClick={() => handleRemoveVaccine(i)}
+                                                            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"
+                                                            title="Remove vaccine record"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine</div>
+                                                                <div className="text-sm font-bold text-slate-800">{vr.vaccine_name}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Dose</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.dose_label || '—'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Date Given</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.date_given || '—'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Remarks</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.remarks || '—'}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isEditing ? (
                                             <>
                                                 <DetailItem label="Category" value={editForm.category} name="category" type="select" options={['4Ps', 'Other/s']} />
                                                 {editForm.category === 'Other/s' && (
@@ -353,117 +517,20 @@ export function PatientDetailModal({
                                 </button>
 
                                 {historyLoading ? (
-                                    <div className="py-12 flex flex-col items-center text-slate-400">
-                                        <svg className="animate-spin w-7 h-7 text-teal-500 mb-3" fill="none" viewBox="0 0 24 24">
+                                    <div className="py-16 flex flex-col items-center text-slate-400">
+                                        <svg className="animate-spin w-10 h-10 text-teal-500 mb-4" fill="none" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                         </svg>
-                                        <span className="text-sm font-bold">Loading history...</span>
+                                        <span className="text-sm font-bold">Loading complete patient history...</span>
                                     </div>
                                 ) : (
-                                    <>
-                                        <div className="mb-6">
-                                            <div className={headerCls}><span>Timeline</span> Complete Transaction History ({transactions.length})</div>
-                                            <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
+                                    <div className="mb-6">
+                                        <div className={headerCls}>
+                                            <span>📋</span> Complete Patient History ({transactions.length} events)
                                         </div>
-
-                                        {/* Initial Consultations */}
-                                        <div className="mb-6">
-                                            <div className={headerCls}><span>📝</span> Initial Consultations ({initialConsults.length})</div>
-                                            {initialConsults.length === 0 ? (
-                                                <p className="text-sm text-slate-400 italic text-center py-4">No initial consultation records found.</p>
-                                            ) : (
-                                                <div className="flex flex-col gap-3">
-                                                    {initialConsults.map((ic) => (
-                                                        <div key={ic.initialconsultation_id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors">
-                                                            <div className="flex justify-between items-start mb-3 pb-3 border-b border-slate-100 gap-2">
-                                                                <div>
-                                                                    <div className="font-extrabold text-teal-700 text-sm">📅 {formatDate(ic.consultation_date)}</div>
-                                                                    <div className="text-xs text-slate-500 mt-0.5">⌚ {ic.consultation_time || 'Time unspecified'}</div>
-                                                                </div>
-                                                                {ic.mode_of_transaction && (
-                                                                    <span className="bg-teal-50 text-teal-700 border border-teal-100 px-2.5 py-1 rounded-md text-[0.65rem] font-bold uppercase tracking-wider shrink-0">
-                                                                        {ic.mode_of_transaction}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div className="sm:col-span-2 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Chief Complaint</div>
-                                                                    <div className="text-sm font-semibold text-slate-800">{ic.chief_complaint || 'None recorded'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
-                                                                    <div className="text-sm text-slate-800">{ic.diagnosis || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Referred By</div>
-                                                                    <div className="text-sm text-slate-800">{ic.referred_by || '—'}</div>
-                                                                </div>
-                                                                {ic.mode_of_transfer && (
-                                                                    <div>
-                                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Mode of Transfer</div>
-                                                                        <div className="text-sm text-slate-800">{ic.mode_of_transfer}</div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Full Consultations */}
-                                        <div>
-                                            <div className={headerCls}><span>🩺</span> Doctor Consultations ({consultations.length})</div>
-                                            {consultations.length === 0 ? (
-                                                <p className="text-sm text-slate-400 italic text-center py-4">No doctor consultation records found.</p>
-                                            ) : (
-                                                <div className="flex-col flex gap-3">
-                                                    {consultations.map((c) => (
-                                                        <div key={c.consultation_id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-blue-300 transition-colors">
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div className="sm:col-span-2 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Chief Complaints</div>
-                                                                    <div className="text-sm font-semibold text-slate-800">{c.chief_complaints || 'None recorded'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
-                                                                    <div className="text-sm text-slate-800">{c.diagnosis || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Medication / Treatment</div>
-                                                                    <div className="text-sm text-slate-800">{c.medication_treatment || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Family History</div>
-                                                                    <div className="text-sm text-slate-800">{c.family_history || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Immunization History</div>
-                                                                    <div className="text-sm text-slate-800">{c.immunization_history || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Smoking Status</div>
-                                                                    <div className="text-sm text-slate-800">{c.smoking_status || '—'}</div>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Drinking Status</div>
-                                                                    <div className="text-sm text-slate-800">{c.drinking_status || '—'}</div>
-                                                                </div>
-                                                                {c.past_med_surge_history && (
-                                                                    <div className="sm:col-span-2">
-                                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Past Medical / Surgical History</div>
-                                                                        <div className="text-sm text-slate-800">{c.past_med_surge_history}</div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </>
+                                        <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
+                                    </div>
                                 )}
                             </>
                         )}

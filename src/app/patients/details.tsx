@@ -1,4 +1,3 @@
-// thesis-templates/src/app/patients/details.tsx
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
@@ -7,6 +6,8 @@ import { useNetworkSync } from '../../hooks/useNetworkSync';
 import { OfflineBanner } from '../../components/feedback/OfflineBanner';
 import PatientConsent from '../patients/patient-consent';
 import { useToast } from '../../components/feedback/Toast';
+import { fetchPatientTransactions, type PatientTransaction } from '../../features/patients/history';
+import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,10 +66,9 @@ function DetailsPage() {
     const [showConsent, setShowConsent] = useState(false);
     const { showToast, ToastComponent } = useToast();
 
-    // NEW STATES FOR HISTORY MODAL
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
-    const [consultRecords, setConsultRecords] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
 
     const [role, setRole] = useState<string | null>(null);
     const [userName, setUserName] = useState('Loading...');
@@ -117,21 +117,13 @@ function DetailsPage() {
         setHistoryModalOpen(true);
         setHistoryLoading(true);
 
-        const { data, error } = await supabase
-            .from('initial_consultation')
-            .select('*')
-            .eq('patient_id', patientId);
-
-        if (error) {
-            console.error("Error fetching consultation history:", error);
-            setConsultRecords([]);
-        } else if (data) {
-            const sortedRecords = data.sort((a, b) => {
-                const dateA = new Date(a.consultation_date || a.created_at || 0).getTime();
-                const dateB = new Date(b.consultation_date || b.created_at || 0).getTime();
-                return dateB - dateA;
-            });
-            setConsultRecords(sortedRecords);
+        try {
+            const txns = await fetchPatientTransactions(patientId!);
+            setTransactions(txns);
+        } catch (err) {
+            console.error('Failed to load transaction history:', err);
+            showToast('Failed to load complete transaction history.', true);
+            setTransactions([]);
         }
 
         setHistoryLoading(false);
@@ -394,10 +386,10 @@ function DetailsPage() {
                                         </button>
                                     )}
 
-                                    {/* Nurse action */}
-                                    {role === 'nurse' && (
+                                    {/* Nurse / Doctor / any role action */}
+                                    {(role === 'nurse' || role === 'doctor' || role === 'midwives' || role === 'BHW') && (
                                         <button onClick={handleOpenHistory} className="w-full bg-teal-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-teal-700 hover:shadow-teal-600/30 transition-all active:scale-95 flex items-center justify-center gap-3">
-                                            📋 View Initial Consultation History
+                                            📋 View Complete Transaction History
                                         </button>
                                     )}
                                 </div>
@@ -407,84 +399,27 @@ function DetailsPage() {
                 </main>
             </div>
 
-            {/* ─── HISTORY MODAL POPUP ─── */}
+            {/* ─── UNIFIED TRANSACTION HISTORY MODAL ─── */}
             {historyModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
-                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                             <div>
                                 <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                                    <span>📋</span> Consultation History
+                                    📋 Transaction History
                                 </h3>
                                 <p className="text-sm text-slate-500 font-medium mt-0.5">
-                                    {patient?.lastName}, {patient?.firstName}
+                                    {patient?.lastName}, {patient?.firstName} — Registration, consultations, lab, pharmacy, vaccines, follow-ups
                                 </p>
                             </div>
-                            <button onClick={() => setHistoryModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold">
+                            <button onClick={() => setHistoryModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold shrink-0">
                                 ✕
                             </button>
                         </div>
 
                         <div className="p-6 overflow-y-auto bg-[#F8FAFC] flex-1 scrollbar-thin">
-                            {historyLoading ? (
-                                <div className="py-12 flex flex-col items-center justify-center text-slate-400">
-                                    <svg className="animate-spin w-8 h-8 text-teal-500 mb-3" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                                    </svg>
-                                    <span className="font-bold text-sm tracking-wide">Fetching Records...</span>
-                                </div>
-                            ) : consultRecords.length === 0 ? (
-                                <div className="text-center py-10 text-slate-500 font-medium">No initial consultation records found for this patient.</div>
-                            ) : (
-                                <div className="flex flex-col gap-4">
-                                    {consultRecords.map((record, index) => {
-                                        let displayDate = record.consultation_date;
-                                        if (!displayDate && record.created_at) {
-                                            displayDate = new Date(record.created_at).toLocaleDateString();
-                                        }
-
-                                        return (
-                                            <div key={record.initialconsultation_id || index} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-teal-300 transition-colors">
-
-                                                <div className="flex flex-wrap justify-between items-start mb-4 border-b border-slate-100 pb-4 gap-4">
-                                                    <div>
-                                                        <div className="font-extrabold text-teal-700 text-sm">
-                                                            📅 {displayDate || 'Date unspecified'}
-                                                        </div>
-                                                        <div className="text-xs font-semibold text-slate-500 mt-1">
-                                                            ⌚ {record.consultation_time || 'Time unspecified'}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <span className="bg-teal-50 text-teal-700 border border-teal-100 px-2.5 py-1 rounded-md text-[0.65rem] font-bold uppercase tracking-wider">
-                                                            {record.mode_of_transaction || 'Walk In'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
-                                                    <div className="sm:col-span-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                        <div className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest mb-1">Chief Complaint</div>
-                                                        <div className="text-sm font-semibold text-slate-800">{record.chief_complaint || 'None recorded'}</div>
-                                                    </div>
-
-                                                    <div>
-                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Diagnosis</div>
-                                                        <div className="text-sm font-medium text-slate-800">{record.diagnosis || 'N/A'}</div>
-                                                    </div>
-
-                                                    <div>
-                                                        <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Referred By</div>
-                                                        <div className="text-sm font-medium text-slate-800">{record.referred_by || 'N/A'}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
                         </div>
                     </div>
                 </div>

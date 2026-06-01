@@ -5,7 +5,7 @@ import { saveInitialConsultationWithVitals } from '../../features/consultation/s
 import { getErrorMessage } from '../../lib/utils/errors';
 
 // ─── ✨ GLASSMORPHISM Tailwind Classes ✨ ────────────────────────────────────
-const inputClasses = "w-full border border-white/50 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/40 focus:border-white/80 outline-none bg-white/30 hover:bg-white/40 focus:bg-white/60 backdrop-blur-md transition-all text-slate-800 placeholder:text-slate-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]";
+const inputClasses = "w-full border border-white/50 rounded-xl px-4 py-2.5 text-sm text-left focus:ring-2 focus:ring-blue-500/40 focus:border-white/80 outline-none bg-white/30 hover:bg-white/40 focus:bg-white/60 backdrop-blur-md transition-all text-slate-800 placeholder:text-slate-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]";
 const labelClasses = "block text-xs font-bold uppercase tracking-wide text-slate-600 mb-1.5 drop-shadow-sm";
 const fieldsetClasses = "bg-white/30 backdrop-blur-xl rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] border border-white/60 mb-6 overflow-hidden";
 const legendClasses = "w-full px-6 py-4 border-b border-white/40 text-sm font-extrabold text-slate-800 uppercase tracking-wider bg-white/20 flex items-center gap-2";
@@ -376,7 +376,7 @@ export function ConsultationComponent() {
                                             onKeyDown={f.type === 'number' ? (e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); } : undefined}
                                             onBeforeInput={f.allowedPattern ? (e: any) => { if (e.data && !f.allowedPattern!.test(e.data)) e.preventDefault(); } : undefined}
                                             onPaste={f.allowedPattern ? (e) => { const pasted = e.clipboardData.getData('text'); if (!f.allowedPattern!.test(pasted)) e.preventDefault(); } : undefined}
-                                            className={`w-full border border-white/40 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/30 focus:border-white/80 outline-none transition-all ${f.readOnly ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed shadow-none' : 'bg-white/50 focus:bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'}`}
+                                            className={`w-full border border-white/40 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500/30 focus:border-white/80 outline-none transition-all ${f.readOnly ? 'bg-slate-100 border-slate-300 text-slate-500 font-semibold cursor-not-allowed shadow-none' : 'bg-white/50 focus:bg-white text-slate-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'}`}
                                         />
                                     </div>
                                 ))}

@@ -6,6 +6,7 @@ import { useToast } from '../../components/feedback/Toast';
 import { createLabRequest, createPrescription, upsertConsultation, upsertFollowUpByConsultation, upsertLatestFollowUpByPatient } from '../../features/consultation/services';
 import { getErrorMessage } from '../../lib/utils/errors';
 import { printHtmlDocument } from '../../lib/utils/print';
+import { itemizeText } from '../../features/patients/itemization';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface ConsultationPageProps {
@@ -252,12 +253,26 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                             <Field label="Date" value={formatDate(rec.consultation_date)} />
                                             <Field label="Time" value={rec.consultation_time} />
-                                            <Field label="Chief Complaint" value={rec.chief_complaint} />
-                                            <Field label="Diagnosis" value={rec.diagnosis} />
                                             <Field label="Mode of Transaction" value={rec.mode_of_transaction} />
                                             <Field label="Mode of Transfer" value={rec.mode_of_transfer} />
                                             <Field label="Referred By" value={rec.referred_by} />
                                         </div>
+                                        {(() => {
+                                            const cc = itemizeText(rec.chief_complaint);
+                                            const dx = itemizeText(rec.diagnosis);
+                                            return (
+                                                <>
+                                                    {cc.length > 0 && (
+                                                        <div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Chief Complaint</div>
+                                                            <ul className="space-y-0.5">{cc.map((v, i) => <li key={i} className="text-sm text-slate-700 ml-2 list-disc list-inside">{v}</li>)}</ul></div>
+                                                    )}
+                                                    {dx.length > 0 && (
+                                                        <div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Diagnosis</div>
+                                                            <ul className="space-y-0.5">{dx.map((v, i) => <li key={i} className="text-sm text-slate-700 ml-2 list-disc list-inside">{v}</li>)}</ul></div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                         {rec.vitals && (
                                             <>
                                                 <SectionHeader label="Vital Signs" />
@@ -286,21 +301,50 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                 {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
                                     <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
                                         <SectionHeader label="Clinical" />
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <Field label="Chief Complaints" value={rec.chief_complaints} />
-                                            <Field label="Diagnosis" value={rec.diagnosis} />
-                                            <Field label="HPI" value={rec.hpi} />
-                                            <Field label="Assessment" value={rec.assessment} />
-                                            <Field label="Plan" value={rec.plan} />
-                                            <Field label="Attending Provider" value={rec.attending_provider} />
+                                        <div className="space-y-2">
+                                            {(() => {
+                                                const cc = itemizeText(rec.chief_complaints);
+                                                const dx = itemizeText(rec.diagnosis);
+                                                return (
+                                                    <>
+                                                        {cc.length > 0 && (
+                                                            <div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Chief Complaints</div>
+                                                                <ul className="space-y-0.5">{cc.map((v, i) => <li key={i} className="text-sm text-slate-700 ml-2 list-disc list-inside">{v}</li>)}</ul></div>
+                                                        )}
+                                                        {dx.length > 0 && (
+                                                            <div><div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Diagnosis</div>
+                                                                <ul className="space-y-0.5">{dx.map((v, i) => <li key={i} className="text-sm text-slate-700 ml-2 list-disc list-inside">{v}</li>)}</ul></div>
+                                                        )}
+                                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                            <Field label="HPI" value={rec.hpi} />
+                                                            <Field label="Assessment" value={rec.assessment} />
+                                                            <Field label="Plan" value={rec.plan} />
+                                                            <Field label="Attending Provider" value={rec.attending_provider} />
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                         {(rec.medication_treatment || rec.management_treatment || rec.past_med_surge_history) && (
                                             <>
                                                 <SectionHeader label="Treatment & History" />
-                                                <div className="grid grid-cols-1 gap-y-2">
-                                                    <Field label="Medication / Treatment" value={rec.medication_treatment} />
-                                                    <Field label="Management / Treatment" value={rec.management_treatment} />
-                                                    <Field label="Past Medical / Surgical History" value={rec.past_med_surge_history} />
+                                                <div className="space-y-3">
+                                                    {(() => {
+                                                        const items: { label: string; values: string[] }[] = [];
+                                                        const mt = itemizeText(rec.medication_treatment);
+                                                        const mgt = itemizeText(rec.management_treatment);
+                                                        if (mt.length > 0) items.push({ label: 'Medication / Treatment', values: mt });
+                                                        if (mgt.length > 0) items.push({ label: 'Management / Treatment', values: mgt });
+                                                        if (rec.past_med_surge_history) items.push({ label: 'Past Medical / Surgical History', values: itemizeText(rec.past_med_surge_history) });
+                                                        return items.map(group => (
+                                                            <div key={group.label}>
+                                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">{group.label}</div>
+                                                                <ul className="space-y-0.5">
+                                                                    {group.values.map((v, i) => <li key={i} className="text-sm text-slate-700 ml-2 list-disc list-inside">{v}</li>)}
+                                                                </ul>
+                                                            </div>
+                                                        ));
+                                                    })()}
                                                 </div>
                                             </>
                                         )}
@@ -991,7 +1035,7 @@ export function ConsultationPage({
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
     const isMale = patient?.sex?.toLowerCase() === 'male';
-    const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-slate-800";
+    const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3.5 text-left focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-slate-800";
     const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2";
     const textareaCls = "w-full bg-white border border-slate-200 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-y";
     const cardCls = "space-y-6 animate-in fade-in pb-20 md:pb-0";
@@ -1039,7 +1083,7 @@ export function ConsultationPage({
                     <div><label className={labelCls}>Family History</label><textarea name="familyHistory" value={formData.familyHistory} onChange={handleChange} rows={4} className={textareaCls} /></div>
                     <div><label className={labelCls}>Immunization History</label><textarea name="immunizationHistory" value={formData.immunizationHistory} onChange={handleChange} rows={4} className={textareaCls} /></div>
                 </div>
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-6">
+                <div className="bg-slate-50/70 rounded-xl border border-slate-200 p-5 space-y-6 shadow-sm">
                     <div>
                         <label className={labelCls}>Smoking History</label>
                         <RadioGroup name="smoking" options={['Yes', 'No']} value={formData.smoking} />
@@ -1178,7 +1222,7 @@ export function ConsultationPage({
                     <div><label className={labelCls}>Height (cm)</label><input type="text" name="followUpHeight" value={formData.followUpHeight} onChange={handleChange} className={inputCls} placeholder="165" /></div>
                     <div>
                         <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto)</span></label>
-                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-50 text-slate-500 cursor-default`} placeholder="—" />
+                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-100 text-slate-500 font-semibold cursor-default`} placeholder="—" />
                         {followUpBmiInfo && <p className={`text-xs mt-1.5 font-semibold ${followUpBmiInfo.color}`}>{followUpBmiInfo.status}</p>}
                     </div>
                     <div><label className={labelCls}>Visual Acuity — Left</label><input type="text" name="followUpVaL" value={formData.followUpVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
@@ -1209,7 +1253,7 @@ export function ConsultationPage({
             <div className="border-t border-slate-100 pt-6">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Certification & Verification</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200 shadow-sm">
                         <label className={labelCls}>Provider Signature</label>
                         <div className="border-2 border-dashed border-slate-300 bg-white rounded-xl h-32 mb-2 relative overflow-hidden cursor-crosshair">
                             <div className="absolute inset-0 flex items-center justify-center text-slate-200 font-bold text-[10px] pointer-events-none select-none uppercase tracking-widest">Sign Here</div>

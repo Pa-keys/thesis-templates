@@ -80,14 +80,21 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
     const transactions: PatientTransaction[] = [];
 
     patients.forEach(patient => {
+        const consentsForPatient = consents.filter(c => String(c.patient_id) === String(patient.id));
+        const consentStatus = consentsForPatient.length > 0
+            ? asText(consentsForPatient[0].consent_status || 'Signed')
+            : 'Pending';
         transactions.push({
             id: `registration-${patient.id}`,
             type: 'registration',
             title: 'Patient registered',
             date: asText(patient.created_at),
-            status: 'Recorded',
+            status: consentStatus === 'Signed' ? 'Consented' : consentStatus,
             summary: `${asText(patient.firstName)} ${asText(patient.lastName)}`.trim(),
-            items: [{ label: 'Registration', values: ['Demographics and emergency details saved'] }],
+            items: [
+                { label: 'Demographics', values: [`${asText(patient.lastName)}, ${asText(patient.firstName)}`, `Age ${asText(patient.age)}`].filter(Boolean) },
+                { label: 'Contact', values: [`${asText(patient.contactNumber)}`, `${asText(patient.address)}`].filter(Boolean) },
+            ],
         });
     });
 
@@ -98,11 +105,23 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
             title: 'Patient consent',
             date: asText(consent.consent_date || consent.created_at),
             status: asText(consent.consent_status || 'Signed'),
-            items: [{ label: 'Consent', values: [asText(consent.consent_status || 'Signed')] }],
+            summary: asText(consent.personnel_name || consent.consent_personnel),
+            items: [
+                { label: 'Consent status', values: [asText(consent.consent_status || 'Signed')] },
+                { label: 'Personnel', values: [asText(consent.personnel_name || consent.consent_personnel || 'Unknown')] },
+            ].filter(group => group.values.length > 0),
         });
     });
 
     initials.forEach(record => {
+        const items: { label: string; values: string[] }[] = [
+            { label: 'Chief complaint', values: itemizeText(asText(record.chief_complaint)) },
+            { label: 'Diagnosis', values: itemizeText(asText(record.diagnosis)) },
+            { label: 'Consultation time', values: [asText(record.consultation_time)].filter(Boolean) },
+            { label: 'Mode of transaction', values: [asText(record.mode_of_transaction)].filter(Boolean) },
+            { label: 'Referred by', values: [asText(record.referred_by)].filter(Boolean) },
+            { label: 'Mode of transfer', values: [asText(record.mode_of_transfer)].filter(Boolean) },
+        ].filter(group => group.values.length > 0);
         transactions.push({
             id: `initial-${record.initialconsultation_id}`,
             type: 'initial_consultation',
@@ -110,15 +129,27 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
             date: asText(record.consultation_date),
             status: asText(record.mode_of_transaction),
             summary: asText(record.chief_complaint),
-            items: [
-                { label: 'Ailments / complaints', values: itemizeText(asText(record.chief_complaint)) },
-                { label: 'Initial diagnosis', values: itemizeText(asText(record.diagnosis)) },
-                { label: 'Transfer', values: itemizeText(asText(record.mode_of_transfer)) },
-            ].filter(group => group.values.length > 0),
+            items,
         });
     });
 
     consultations.forEach(record => {
+        const treatmentItems: string[] = [
+            ...itemizeText(asText(record.medication_treatment)),
+            ...itemizeText(asText(record.management_treatment)),
+            ...itemizeText(asText(record.plan)),
+        ];
+        const items: { label: string; values: string[] }[] = [
+            { label: 'Chief complaints', values: itemizeText(asText(record.chief_complaints)) },
+            { label: 'Assessment / findings', values: itemizeText(asText(record.assessment || record.diagnosis)) },
+            { label: 'Treatment / management', values: treatmentItems },
+            { label: 'Diagnosis', values: itemizeText(asText(record.diagnosis)) },
+            { label: 'Family history', values: itemizeText(asText(record.family_history)) },
+            { label: 'Immunization history', values: itemizeText(asText(record.immunization_history)) },
+            { label: 'Smoking status', values: [asText(record.smoking_status)].filter(Boolean) },
+            { label: 'Drinking status', values: [asText(record.drinking_status)].filter(Boolean) },
+            { label: 'Past medical / surgical history', values: itemizeText(asText(record.past_med_surge_history)) },
+        ].filter(group => group.values.length > 0);
         transactions.push({
             id: `consultation-${record.consultation_id}`,
             type: 'doctor_consultation',
@@ -126,31 +157,33 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
             date: asText(record.consultation_date || record.created_at),
             status: asText(record.attending_provider),
             summary: asText(record.diagnosis),
-            items: [
-                { label: 'Ailments / complaints', values: itemizeText(asText(record.chief_complaints)) },
-                { label: 'Findings / assessment', values: itemizeText(asText(record.assessment || record.diagnosis)) },
-                { label: 'Treatment', values: [...itemizeText(asText(record.medication_treatment)), ...itemizeText(asText(record.management_treatment)), ...itemizeText(asText(record.plan))] },
-                { label: 'Immunization history', values: itemizeText(asText(record.immunization_history)) },
-            ].filter(group => group.values.length > 0),
+            items,
         });
     });
 
     labRequests.forEach(record => {
+        const items: { label: string; values: string[] }[] = [
+            { label: 'Requested tests', values: itemizeLabTests(record) },
+            { label: 'Chief complaint', values: itemizeText(asText(record.chief_complaint)) },
+            { label: 'Urgent', values: [record.is_urgent ? 'Yes' : null].filter(Boolean) },
+        ].filter(group => group.values.length > 0);
         transactions.push({
             id: `lab-request-${record.labrequest_id}`,
             type: 'lab_request',
             title: 'Laboratory request',
             date: asText(record.request_date),
             status: asText(record.status || 'Pending'),
-            summary: asText(record.chief_complaint),
-            items: [
-                { label: 'Requested tests', values: itemizeLabTests(record) },
-                { label: 'Complaint', values: itemizeText(asText(record.chief_complaint)) },
-            ].filter(group => group.values.length > 0),
+            summary: `${itemizeLabTests(record).length} test(s) requested`,
+            items,
         });
     });
 
     labResults.forEach(record => {
+        const items: { label: string; values: string[] }[] = [
+            { label: 'Findings', values: itemizeText(asText(record.findings)) },
+            { label: 'Performed by', values: [asText(record.performed_by)].filter(Boolean) },
+            { label: 'Date performed', values: [asText(record.date_performed)].filter(Boolean) },
+        ].filter(group => group.values.length > 0);
         transactions.push({
             id: `lab-result-${record.labresult_id}`,
             type: 'lab_result',
@@ -158,7 +191,7 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
             date: asText(record.date_performed),
             status: asText(record.status || 'Completed'),
             summary: asText(record.performed_by),
-            items: [{ label: 'Findings', values: itemizeText(asText(record.findings)) }],
+            items,
         });
     });
 
@@ -172,24 +205,28 @@ export async function fetchPatientTransactions(patientId: string): Promise<Patie
             status: asText(record.status || 'Pending'),
             summary: asText(record.doctor_name),
             items: [{
-                label: 'Prescriptions',
+                label: 'Medications',
                 values: medications.map(med => [med.name, med.dosage, med.frequency, med.duration, med.quantity].filter(Boolean).join(' | ')),
             }],
         });
     });
 
     followUps.forEach(record => {
+        const items: { label: string; values: string[] }[] = [
+            { label: 'Chief complaint', values: itemizeText(asText(record.chief_complaint)) },
+            { label: 'Treatment', values: itemizeText(asText(record.medication_treatment)) },
+            { label: 'Diagnosis', values: itemizeText(asText(record.diagnosis)) },
+            { label: 'Visit date', values: [asText(record.visit_date)].filter(Boolean) },
+            { label: 'Status', values: [asText(record.follow_up_status || 'Scheduled')] },
+        ].filter(group => group.values.length > 0);
         transactions.push({
             id: `follow-up-${record.followup_id}`,
             type: 'follow_up',
-            title: 'Follow-up',
+            title: 'Follow-up visit',
             date: asText(record.visit_date),
             status: asText(record.follow_up_status || 'Scheduled'),
             summary: asText(record.diagnosis || record.chief_complaint),
-            items: [
-                { label: 'Ailments / complaints', values: itemizeText(asText(record.chief_complaint)) },
-                { label: 'Treatment', values: itemizeText(asText(record.medication_treatment)) },
-            ].filter(group => group.values.length > 0),
+            items,
         });
     });
 
