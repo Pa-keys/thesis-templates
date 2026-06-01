@@ -1,7 +1,7 @@
 import { supabase } from '../supabase/client';
 import type { Role } from '../../types/user';
 
-const ROLE_DASHBOARD: Record<Role, string> = {
+export const ROLE_DASHBOARD: Record<Role, string> = {
     doctor:     '/pages/doctor.html',
     nurse:      '/pages/nurse.html',
     BHW:        '/pages/bhw.html',
@@ -11,7 +11,21 @@ const ROLE_DASHBOARD: Record<Role, string> = {
     midwives:   '/pages/midwife.html',
 };
 
-export async function requireRole(expectedRole: Role): Promise<{ userId: string; role: Role; fullName: string }> {
+export interface AuthProfile {
+    userId: string;
+    role: Role;
+    fullName: string;
+}
+
+export function isRole(value: unknown): value is Role {
+    return typeof value === 'string' && value in ROLE_DASHBOARD;
+}
+
+export function getDashboardPath(role: Role): string {
+    return ROLE_DASHBOARD[role];
+}
+
+async function getAuthProfile(): Promise<AuthProfile> {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
@@ -25,18 +39,35 @@ export async function requireRole(expectedRole: Role): Promise<{ userId: string;
         .eq('id', session.user.id)
         .single();
 
-    if (error || !profile) {
+    if (error || !profile || !isRole(profile.role)) {
         await supabase.auth.signOut();
         window.location.href = '/pages/login.html';
         throw new Error('Profile not found');
     }
 
+    return { userId: session.user.id, role: profile.role, fullName: profile.full_name || '' };
+}
+
+export async function requireRole(expectedRole: Role): Promise<AuthProfile> {
+    const profile = await getAuthProfile();
+
     if (profile.role !== expectedRole) {
-        window.location.href = ROLE_DASHBOARD[profile.role as Role] || '/pages/login.html';
+        window.location.href = getDashboardPath(profile.role);
         throw new Error('Wrong role');
     }
 
-    return { userId: session.user.id, role: profile.role as Role, fullName: profile.full_name };
+    return profile;
+}
+
+export async function requireAnyRole(expectedRoles: readonly Role[]): Promise<AuthProfile> {
+    const profile = await getAuthProfile();
+
+    if (!expectedRoles.includes(profile.role)) {
+        window.location.href = getDashboardPath(profile.role);
+        throw new Error('Wrong role');
+    }
+
+    return profile;
 }
 
 export async function redirectToDashboard(): Promise<void> {
@@ -49,8 +80,10 @@ export async function redirectToDashboard(): Promise<void> {
         .eq('id', session.user.id)
         .single();
 
-    if (profile?.role) {
-        window.location.href = ROLE_DASHBOARD[profile.role as Role] || '/pages/login.html';
+    if (isRole(profile?.role)) {
+        window.location.href = getDashboardPath(profile.role);
+    } else {
+        window.location.href = '/pages/login.html';
     }
 }
 

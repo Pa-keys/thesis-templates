@@ -2,10 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../feedback/Toast';
 import { updatePatientRecord } from '../../features/patients/services';
 import { getErrorMessage } from '../../lib/utils/errors';
-import { fetchPatientTransactions, type PatientTransaction } from '../../features/patients/history';
+import { fetchPatientTransactions, type PatientHistoryWarning, type PatientTransaction } from '../../features/patients/history';
 import { PatientTransactionHistory } from './PatientTransactionHistory';
 import { saveVaccineRecord, fetchVaccineRecords, removeVaccineRecord } from '../../features/patients/vaccineService';
 import type { VaccineRecord } from '../../features/patients/itemization';
+import {
+    OTHER_VACCINE_NAME,
+    VACCINE_OPTIONS,
+    cleanVaccineRecord,
+    createVaccineRecord,
+    getVaccineCategory,
+    getVaccineDisplayName,
+} from '../../features/vaccines/vaccineOptions';
 
 export interface Patient {
     id: string;
@@ -97,6 +105,8 @@ export function PatientDetailModal({
     const [showHistory, setShowHistory] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
+    const [historyWarnings, setHistoryWarnings] = useState<PatientHistoryWarning[]>([]);
+    const [historyError, setHistoryError] = useState<string | null>(null);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -105,13 +115,12 @@ export function PatientDetailModal({
 
     const [vaccineRecords, setVaccineRecords] = useState<VaccineRecord[]>([]);
     const [vaccineLoading, setVaccineLoading] = useState(false);
+    const [vaccineSaving, setVaccineSaving] = useState(false);
+    const [removingVaccineId, setRemovingVaccineId] = useState<string | null>(null);
+    const [pendingRemoveVaccine, setPendingRemoveVaccine] = useState<VaccineRecord | null>(null);
+    const [vaccineLoadError, setVaccineLoadError] = useState<string | null>(null);
     const [showAddVaccine, setShowAddVaccine] = useState(false);
-    const [newVaccine, setNewVaccine] = useState<VaccineRecord>({
-        vaccine_name: '',
-        dose_label: '',
-        date_given: '',
-        remarks: '',
-    });
+    const [newVaccine, setNewVaccine] = useState<VaccineRecord>(createVaccineRecord());
 
     // Sync local state if prop changes (though usually initialPatient won't change while modal is open)
     useEffect(() => {
@@ -122,13 +131,22 @@ export function PatientDetailModal({
     const loadHistory = async () => {
         setShowHistory(true);
         setHistoryLoading(true);
+        setHistoryError(null);
+        setHistoryWarnings([]);
         try {
-            const transactionData = await fetchPatientTransactions(patient.id);
-            setTransactions(transactionData);
+            const history = await fetchPatientTransactions(patient.id);
+            setTransactions(history.transactions);
+            setHistoryWarnings(history.warnings);
+            if (history.warnings.length > 0) {
+                showToast('Partial history loaded. Retry if clinical records are missing.', true);
+            }
         } catch (err) {
             console.error('Failed to load history:', err);
-            showToast('Failed to load complete transaction history: ' + getErrorMessage(err), true);
+            const message = getErrorMessage(err);
+            setHistoryError(message);
+            showToast('Failed to load complete transaction history: ' + message, true);
             setTransactions([]);
+            setHistoryWarnings([]);
         } finally {
             setHistoryLoading(false);
         }
@@ -136,12 +154,15 @@ export function PatientDetailModal({
 
     const loadVaccineRecords = async () => {
         setVaccineLoading(true);
+        setVaccineLoadError(null);
         try {
             const records = await fetchVaccineRecords(patient.id);
             setVaccineRecords(records);
         } catch (err) {
             console.error('Failed to load vaccine records:', err);
-            showToast('Failed to load vaccine records: ' + getErrorMessage(err), true);
+            const message = getErrorMessage(err);
+            setVaccineLoadError(message);
+            showToast('Failed to load vaccine records: ' + message, true);
         } finally {
             setVaccineLoading(false);
         }
@@ -151,29 +172,61 @@ export function PatientDetailModal({
         loadVaccineRecords();
     }, [patient.id]);
 
+    const updateNewVaccine = (field: keyof VaccineRecord, value: string) => {
+        setNewVaccine(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'vaccine_name') {
+                next.vaccine_category = getVaccineCategory(value);
+                if (value !== OTHER_VACCINE_NAME) next.other_vaccine_name = '';
+            }
+            return next;
+        });
+    };
+
     const handleAddVaccine = async () => {
-        if (!newVaccine.vaccine_name.trim() || !newVaccine.date_given) {
+        if (!navigator.onLine) {
+            showToast('You are offline. Vaccine records cannot be saved until the connection is restored.', true);
+            return;
+        }
+
+        const cleanRecord = cleanVaccineRecord(newVaccine);
+        if (!cleanRecord.vaccine_name || !cleanRecord.date_given) {
             showToast('Vaccine name and date are required.', true);
             return;
         }
+        if (cleanRecord.vaccine_name === OTHER_VACCINE_NAME && !cleanRecord.other_vaccine_name) {
+            showToast('Specify the vaccine name for Others / Specify.', true);
+            return;
+        }
         try {
-            await saveVaccineRecord(patient.id, newVaccine);
+            setVaccineSaving(true);
+            await saveVaccineRecord(patient.id, cleanRecord);
             showToast('Vaccine record saved successfully.', false);
             setShowAddVaccine(false);
-            setNewVaccine({ vaccine_name: '', dose_label: '', date_given: '', remarks: '' });
+            setNewVaccine(createVaccineRecord());
             await loadVaccineRecords();
         } catch (err) {
             showToast('Failed to save vaccine record: ' + getErrorMessage(err), true);
+        } finally {
+            setVaccineSaving(false);
         }
     };
 
-    const handleRemoveVaccine = async (index: number) => {
+    const handleRemoveVaccine = async (record: VaccineRecord) => {
+        if (!navigator.onLine) {
+            showToast('You are offline. Vaccine records cannot be removed until the connection is restored.', true);
+            return;
+        }
         try {
-            await removeVaccineRecord(patient.id, index);
+            setRemovingVaccineId(record.id);
+            await removeVaccineRecord(patient.id, record.id);
             showToast('Vaccine record removed.', false);
+            setPendingRemoveVaccine(null);
             await loadVaccineRecords();
         } catch (err) {
             showToast('Failed to remove vaccine record: ' + getErrorMessage(err), true);
+        } finally {
+            setRemovingVaccineId(null);
         }
     };
 
@@ -369,12 +422,36 @@ export function PatientDetailModal({
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                                     <div>
                                                         <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Vaccine Name *</label>
+                                                        <select
+                                                            value={newVaccine.vaccine_name}
+                                                            onChange={(e) => updateNewVaccine('vaccine_name', e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        >
+                                                            <option value="">Select vaccine...</option>
+                                                            {VACCINE_OPTIONS.map(option => (
+                                                                <option key={`${option.category}-${option.name}`} value={option.name}>{option.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    {newVaccine.vaccine_name === OTHER_VACCINE_NAME && (
+                                                        <div>
+                                                            <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Specify Vaccine *</label>
+                                                            <input
+                                                                type="text"
+                                                                value={newVaccine.other_vaccine_name || ''}
+                                                                onChange={(e) => updateNewVaccine('other_vaccine_name', e.target.value)}
+                                                                placeholder="Enter vaccine name"
+                                                                className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Category</label>
                                                         <input
                                                             type="text"
-                                                            value={newVaccine.vaccine_name}
-                                                            onChange={(e) => setNewVaccine(p => ({ ...p, vaccine_name: e.target.value }))}
-                                                            placeholder="e.g. BCG, OPV, DPT"
-                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                            value={newVaccine.vaccine_category || 'Select a vaccine'}
+                                                            readOnly
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-100 bg-teal-100/50 text-sm font-medium text-teal-800"
                                                         />
                                                     </div>
                                                     <div>
@@ -382,7 +459,7 @@ export function PatientDetailModal({
                                                         <input
                                                             type="text"
                                                             value={newVaccine.dose_label}
-                                                            onChange={(e) => setNewVaccine(p => ({ ...p, dose_label: e.target.value }))}
+                                                            onChange={(e) => updateNewVaccine('dose_label', e.target.value)}
                                                             placeholder="e.g. Dose 1, Booster"
                                                             className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
                                                         />
@@ -392,7 +469,46 @@ export function PatientDetailModal({
                                                         <input
                                                             type="date"
                                                             value={newVaccine.date_given}
-                                                            onChange={(e) => setNewVaccine(p => ({ ...p, date_given: e.target.value }))}
+                                                            onChange={(e) => updateNewVaccine('date_given', e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Next Due Date</label>
+                                                        <input
+                                                            type="date"
+                                                            value={newVaccine.next_due_date || ''}
+                                                            onChange={(e) => updateNewVaccine('next_due_date', e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Administered By</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.administered_by || ''}
+                                                            onChange={(e) => updateNewVaccine('administered_by', e.target.value)}
+                                                            placeholder="Staff name"
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Facility</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.facility || ''}
+                                                            onChange={(e) => updateNewVaccine('facility', e.target.value)}
+                                                            placeholder="RHU / barangay"
+                                                            className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[0.65rem] font-bold text-teal-700 uppercase tracking-widest mb-1 block">Lot Number</label>
+                                                        <input
+                                                            type="text"
+                                                            value={newVaccine.lot_number || ''}
+                                                            onChange={(e) => updateNewVaccine('lot_number', e.target.value)}
+                                                            placeholder="Optional"
                                                             className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
                                                         />
                                                     </div>
@@ -401,7 +517,7 @@ export function PatientDetailModal({
                                                         <input
                                                             type="text"
                                                             value={newVaccine.remarks || ''}
-                                                            onChange={(e) => setNewVaccine(p => ({ ...p, remarks: e.target.value }))}
+                                                            onChange={(e) => updateNewVaccine('remarks', e.target.value)}
                                                             placeholder="Optional notes"
                                                             className="w-full px-3 py-2 rounded-lg border border-teal-200 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-400"
                                                         />
@@ -409,14 +525,23 @@ export function PatientDetailModal({
                                                 </div>
                                                 <button
                                                     onClick={handleAddVaccine}
+                                                    disabled={vaccineSaving || !navigator.onLine}
                                                     className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs uppercase tracking-wider px-5 py-2 rounded-lg transition-colors"
                                                 >
-                                                    Save Vaccine Record
+                                                    {vaccineSaving ? 'Saving...' : 'Save Vaccine Record'}
                                                 </button>
                                             </div>
                                         )}
 
-                                        {vaccineLoading ? (
+                                        {vaccineLoadError ? (
+                                            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                <div className="font-bold">Vaccine records could not be loaded.</div>
+                                                <div className="mt-1">{vaccineLoadError}</div>
+                                                <button type="button" onClick={loadVaccineRecords} className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">
+                                                    Retry
+                                                </button>
+                                            </div>
+                                        ) : vaccineLoading ? (
                                             <div className="py-4 flex justify-center">
                                                 <svg className="animate-spin w-5 h-5 text-teal-500" fill="none" viewBox="0 0 24 24">
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -429,19 +554,24 @@ export function PatientDetailModal({
                                             </p>
                                         ) : (
                                             <div className="flex flex-col gap-2">
-                                                {vaccineRecords.map((vr, i) => (
-                                                    <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors relative">
+                                                {vaccineRecords.map((vr) => (
+                                                    <div key={vr.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-teal-300 transition-colors relative">
                                                         <button
-                                                            onClick={() => handleRemoveVaccine(i)}
+                                                            onClick={() => setPendingRemoveVaccine(vr)}
+                                                            disabled={removingVaccineId === vr.id}
                                                             className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors text-xs font-bold"
                                                             title="Remove vaccine record"
                                                         >
                                                             ✕
                                                         </button>
-                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pr-6">
                                                             <div>
                                                                 <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaccine</div>
-                                                                <div className="text-sm font-bold text-slate-800">{vr.vaccine_name}</div>
+                                                                <div className="text-sm font-bold text-slate-800">{getVaccineDisplayName(vr)}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Category</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.vaccine_category || '-'}</div>
                                                             </div>
                                                             <div>
                                                                 <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Dose</div>
@@ -454,6 +584,22 @@ export function PatientDetailModal({
                                                             <div>
                                                                 <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Remarks</div>
                                                                 <div className="text-sm font-semibold text-slate-700">{vr.remarks || '—'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Next Due</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.next_due_date || '-'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Administered By</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.administered_by || '-'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Facility</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.facility || '-'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Lot No.</div>
+                                                                <div className="text-sm font-semibold text-slate-700">{vr.lot_number || '-'}</div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -529,7 +675,13 @@ export function PatientDetailModal({
                                         <div className={headerCls}>
                                             <span>📋</span> Complete Patient History ({transactions.length} events)
                                         </div>
-                                        <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
+                                        <PatientTransactionHistory
+                                            transactions={transactions}
+                                            isLoading={historyLoading}
+                                            warnings={historyWarnings}
+                                            error={historyError}
+                                            onRetry={loadHistory}
+                                        />
                                     </div>
                                 )}
                             </>
@@ -537,6 +689,34 @@ export function PatientDetailModal({
                     </div>
                 </div>
             </div>
+            {pendingRemoveVaccine && (
+                <div className="fixed inset-0 z-[260] flex items-center justify-center bg-slate-900/50 p-4">
+                    <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-lg font-extrabold text-slate-900">Remove Vaccine Record?</h3>
+                        <p className="mt-2 text-sm font-medium text-slate-600">
+                            This will remove {getVaccineDisplayName(pendingRemoveVaccine)} from this patient record.
+                        </p>
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setPendingRemoveVaccine(null)}
+                                disabled={Boolean(removingVaccineId)}
+                                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveVaccine(pendingRemoveVaccine)}
+                                disabled={Boolean(removingVaccineId)}
+                                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                            >
+                                {removingVaccineId ? 'Removing...' : 'Remove'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

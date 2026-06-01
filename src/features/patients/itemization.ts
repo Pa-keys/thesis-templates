@@ -1,12 +1,7 @@
 import { parsePrescriptionContent } from '../pharmacy/prescriptionParser';
 import type { Medication } from '../../types/prescription';
-
-export interface VaccineRecord {
-    vaccine_name: string;
-    dose_label?: string;
-    date_given?: string;
-    remarks?: string;
-}
+import { createVaccineRecord, getVaccineCategory, type VaccineRecord } from '../vaccines/vaccineOptions';
+export type { VaccineRecord } from '../vaccines/vaccineOptions';
 
 const TEST_LABELS: Record<string, string> = {
     is_cbc: 'Complete Blood Count (CBC)',
@@ -47,6 +42,14 @@ export function itemizePrescription(rxContent?: string | null): Medication[] {
     return parsePrescriptionContent(rxContent).medications;
 }
 
+export function itemizePrescriptionDisplay(rxContent?: string | null): string[] {
+    const parsed = parsePrescriptionContent(rxContent);
+    if (parsed.malformed) return ['Prescription content could not be parsed. Review the original prescription record.'];
+    return parsed.medications
+        .map(med => [med.name, med.dosage, med.frequency, med.duration, med.quantity].filter(Boolean).join(' | '))
+        .filter(Boolean);
+}
+
 export function normalizeVaccineRecords(dataFields: Record<string, unknown> | null | undefined): VaccineRecord[] {
     if (!dataFields) return [];
     const fromArray = Array.isArray(dataFields.vaccine_records)
@@ -57,9 +60,16 @@ export function normalizeVaccineRecords(dataFields: Record<string, unknown> | nu
                 const vaccineName = String(raw.vaccine_name || '').trim();
                 if (!vaccineName) return null;
                 return {
+                    id: String(raw.id || crypto.randomUUID()),
+                    vaccine_category: String(raw.vaccine_category || getVaccineCategory(vaccineName)) as VaccineRecord['vaccine_category'],
                     vaccine_name: vaccineName,
+                    other_vaccine_name: String(raw.other_vaccine_name || '').trim() || undefined,
                     dose_label: String(raw.dose_label || '').trim() || undefined,
                     date_given: String(raw.date_given || '').trim() || undefined,
+                    next_due_date: String(raw.next_due_date || '').trim() || undefined,
+                    administered_by: String(raw.administered_by || '').trim() || undefined,
+                    facility: String(raw.facility || '').trim() || undefined,
+                    lot_number: String(raw.lot_number || '').trim() || undefined,
                     remarks: String(raw.remarks || '').trim() || undefined,
                 };
             })
@@ -68,12 +78,13 @@ export function normalizeVaccineRecords(dataFields: Record<string, unknown> | nu
 
     const bcgDate = typeof dataFields.bcg_date === 'string' ? dataFields.bcg_date.trim() : '';
     if (bcgDate && !fromArray.some(record => record.vaccine_name.toLowerCase() === 'bcg')) {
-        fromArray.unshift({
+        fromArray.unshift(createVaccineRecord({
             vaccine_name: 'BCG',
+            vaccine_category: 'Child Care / Core RHU Immunization',
             dose_label: 'Birth dose',
             date_given: bcgDate,
             remarks: typeof dataFields.bcg_age_category === 'string' ? dataFields.bcg_age_category : undefined,
-        });
+        }));
     }
 
     return fromArray;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
-import { requireRole } from '../../lib/auth/roles';
+import { getDashboardPath, requireRole } from '../../lib/auth/roles';
+import type { Role } from '../../types/user';
 import { Sidebar } from '../../components/layout/Sidebar';
 import SignatureCanvas from 'react-signature-canvas';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../../hooks/useNetworkSync';
@@ -25,7 +26,7 @@ const EMPTY_FORM: FollowUpData = {
 };
 
 export default function FollowUp() {
-    const [role, setRole] = useState<string | null>(null);
+    const [role, setRole] = useState<Role | null>(null);
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('');
     const [patient, setPatient] = useState<any>(null);
@@ -157,7 +158,7 @@ export default function FollowUp() {
                 userRole={role === 'doctor' ? 'General Practitioner' : 'Registered Nurse'}
                 navItems={navItems}
                 onNavigate={(pageId) => {
-                    if (pageId === 'dashboard') window.location.href = `/pages/${role}.html`;
+                    if (pageId === 'dashboard') window.location.href = getDashboardPath(role);
                     if (pageId === 'records') window.location.href = '/pages/records.html';
                     if (pageId === 'new-record') window.location.href = '/pages/templates.html';
                     if (pageId === 'consultation') window.location.href = role === 'doctor' ? '/pages/consultation.html' : '/pages/initial_consultation.html';

@@ -1,16 +1,5 @@
 import { supabase } from '../../lib/supabase/client';
-
-type Role = 'doctor' | 'nurse' | 'BHW' | 'pharmacist' | 'labaratory' | 'admin' | 'midwives';
-
-const ROLE_DASHBOARD: Record<Role, string> = {
-    doctor:     '/pages/doctor.html',
-    nurse:      '/pages/nurse.html',
-    BHW:        '/pages/bhw.html',
-    pharmacist: '/pages/pharmacist.html',
-    labaratory: '/pages/laboratory.html',
-    admin:      '/pages/admin.html',
-   midwives:    '/pages/midwife.html', 
-};
+import { getDashboardPath, isRole } from '../../lib/auth/roles';
 
 // If already logged in, redirect immediately
 const { data: { session } } = await supabase.auth.getSession();
@@ -62,9 +51,8 @@ async function redirectByRole(userId: string): Promise<void> {
         return;
     }
 
-    const dashboard = ROLE_DASHBOARD[profile.role as Role];
-    if (dashboard) {
-        window.location.href = dashboard;
+    if (isRole(profile.role)) {
+        window.location.href = getDashboardPath(profile.role);
     } else {
         stopLoading();
         showError(`Unknown role "${profile.role}". Contact your administrator.`);

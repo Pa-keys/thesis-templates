@@ -6,8 +6,10 @@ import { useNetworkSync } from '../../hooks/useNetworkSync';
 import { OfflineBanner } from '../../components/feedback/OfflineBanner';
 import PatientConsent from '../patients/patient-consent';
 import { useToast } from '../../components/feedback/Toast';
-import { fetchPatientTransactions, type PatientTransaction } from '../../features/patients/history';
+import { fetchPatientTransactions, type PatientHistoryWarning, type PatientTransaction } from '../../features/patients/history';
 import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
+import { getDashboardPath, requireAnyRole } from '../../lib/auth/roles';
+import type { Role } from '../../types/user';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,6 +25,7 @@ interface Patient {
 }
 
 interface EditForm extends Omit<Patient, 'id' | 'age' | 'consent_signed'> { age: string; }
+interface NavItem { id: string; label: string; icon: string; }
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as const;
 const EDUCATION_LEVELS = [
@@ -31,6 +34,31 @@ const EDUCATION_LEVELS = [
 const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student', 'Retired'] as const;
 
 const patientId = new URLSearchParams(window.location.search).get('id');
+const PATIENT_DETAILS_ROLES = ['BHW', 'nurse', 'doctor', 'midwives'] as const satisfies readonly Role[];
+
+const PATIENT_DETAILS_NAV_ITEMS: Record<(typeof PATIENT_DETAILS_ROLES)[number], NavItem[]> = {
+    doctor: [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'records', label: 'Patient Records', icon: '📁' },
+        { id: 'consultation', label: 'Consultation', icon: '📋' },
+    ],
+    nurse: [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'records', label: 'Patient Records', icon: '📁' },
+        { id: 'new-record', label: 'New Record', icon: '➕' },
+        { id: 'consultation', label: 'Initial Consultation', icon: '📝' },
+    ],
+    midwives: [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'records', label: 'Patient Census', icon: '📁' },
+        { id: 'reports', label: 'Generate Reports', icon: '📊' },
+    ],
+    BHW: [
+        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+        { id: 'records', label: 'Records', icon: '📁' },
+        { id: 'new-record', label: 'New Record', icon: '➕' },
+    ],
+};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
@@ -69,8 +97,10 @@ function DetailsPage() {
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
+    const [historyWarnings, setHistoryWarnings] = useState<PatientHistoryWarning[]>([]);
+    const [historyError, setHistoryError] = useState<string | null>(null);
 
-    const [role, setRole] = useState<string | null>(null);
+    const [role, setRole] = useState<Role | null>(null);
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -81,19 +111,30 @@ function DetailsPage() {
     });
 
     useEffect(() => {
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (session?.user) {
-                const { data } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
-                if (data) {
-                    setRole(data.role);
-                    setUserName(data.full_name);
-                    setUserInitials(data.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
-                }
-            }
-        });
+        let isMounted = true;
 
-        if (!patientId) { setError('No patient ID provided in URL.'); return; }
-        loadPatient();
+        async function bootstrap() {
+            try {
+                const profile = await requireAnyRole(PATIENT_DETAILS_ROLES);
+                if (!isMounted) return;
+
+                setRole(profile.role);
+                setUserName(profile.fullName || 'MEDISENS User');
+                setUserInitials(profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
+
+                if (!patientId) {
+                    setError('No patient ID provided in URL.');
+                    return;
+                }
+
+                await loadPatient();
+            } catch (err) {
+                if (isMounted) setError('Access denied. Redirecting to your dashboard.');
+            }
+        }
+
+        bootstrap();
+        return () => { isMounted = false; };
     }, []);
 
     async function loadPatient() {
@@ -116,14 +157,23 @@ function DetailsPage() {
     const handleOpenHistory = async () => {
         setHistoryModalOpen(true);
         setHistoryLoading(true);
+        setHistoryWarnings([]);
+        setHistoryError(null);
 
         try {
-            const txns = await fetchPatientTransactions(patientId!);
-            setTransactions(txns);
+            const history = await fetchPatientTransactions(patientId!);
+            setTransactions(history.transactions);
+            setHistoryWarnings(history.warnings);
+            if (history.warnings.length > 0) {
+                showToast('Partial history loaded. Retry if clinical records are missing.', true);
+            }
         } catch (err) {
             console.error('Failed to load transaction history:', err);
-            showToast('Failed to load complete transaction history.', true);
+            const message = err instanceof Error ? err.message : 'Failed to load complete transaction history.';
+            setHistoryError(message);
+            showToast(message, true);
             setTransactions([]);
+            setHistoryWarnings([]);
         }
 
         setHistoryLoading(false);
@@ -161,14 +211,10 @@ function DetailsPage() {
 
     if (!role) return null;
 
-    let navItems: any[] = [];
-    if (role === 'doctor') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'consultation', label: 'Consultation', icon: '📋' }];
-    else if (role === 'nurse') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Initial Consultation', icon: '📝' }];
-    else if (role === 'midwife') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Census', icon: '📁' }, { id: 'reports', label: 'Generate Reports', icon: '📊' }];
-    else if (role === 'bhw') navItems = [{ id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Records', icon: '📁' }, { id: 'new-record', label: 'New Record', icon: '➕' }];
+    const navItems = PATIENT_DETAILS_NAV_ITEMS[role as (typeof PATIENT_DETAILS_ROLES)[number]] ?? [];
 
     const handleNavigate = (id: string) => {
-        if (id === 'dashboard') window.location.href = `/pages/${role}.html`;
+        if (id === 'dashboard') window.location.href = getDashboardPath(role);
         else if (id === 'records') window.location.href = '/pages/records.html';
         else if (id === 'new-record') window.location.href = '/pages/templates.html';
         else if (id === 'consultation') window.location.href = role === 'doctor' ? '/pages/consultation.html' : '/pages/initial_consultation.html';
@@ -419,7 +465,13 @@ function DetailsPage() {
                         </div>
 
                         <div className="p-6 overflow-y-auto bg-[#F8FAFC] flex-1 scrollbar-thin">
-                            <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
+                            <PatientTransactionHistory
+                                transactions={transactions}
+                                isLoading={historyLoading}
+                                warnings={historyWarnings}
+                                error={historyError}
+                                onRetry={handleOpenHistory}
+                            />
                         </div>
                     </div>
                 </div>

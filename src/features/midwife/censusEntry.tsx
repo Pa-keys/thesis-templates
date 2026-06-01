@@ -2,6 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { midwifeAPI } from './api';
 import { useToast } from '../../components/feedback/Toast';
 import type { VaccineRecord } from '../patients/itemization';
+import {
+    OTHER_VACCINE_NAME,
+    VACCINE_OPTIONS,
+    cleanVaccineRecord,
+    createVaccineRecord,
+    getVaccineCategory,
+    isMeaningfulVaccineRecord,
+} from '../vaccines/vaccineOptions';
 
 interface Props {
     patients: any[];
@@ -18,7 +26,11 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [formData, setFormData] = useState<any>({});
     const [vaccineRows, setVaccineRows] = useState<VaccineRecord[]>([
-        { vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' },
+        createVaccineRecord({
+            vaccine_category: 'Child Care / Core RHU Immunization',
+            vaccine_name: 'BCG',
+            dose_label: 'Birth dose',
+        }),
     ]);
     
     // Global UI Requirement states
@@ -47,7 +59,15 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
 
     const updateVaccineRow = (index: number, field: keyof VaccineRecord, value: string) => {
         setVaccineRows(prev => {
-            const next = prev.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row);
+            const next = prev.map((row, rowIndex) => {
+                if (rowIndex !== index) return row;
+                const updated = { ...row, [field]: value };
+                if (field === 'vaccine_name') {
+                    updated.vaccine_category = getVaccineCategory(value);
+                    if (value !== OTHER_VACCINE_NAME) updated.other_vaccine_name = '';
+                }
+                return updated;
+            });
             const bcgRecord = next.find(row => row.vaccine_name.toLowerCase() === 'bcg');
             setFormData((current: any) => ({ ...current, bcg_date: bcgRecord?.date_given || '' }));
             return next;
@@ -55,7 +75,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     };
 
     const addVaccineRow = () => {
-        setVaccineRows(prev => [...prev, { vaccine_name: '', dose_label: '', date_given: '', remarks: '' }]);
+        setVaccineRows(prev => [...prev, createVaccineRecord()]);
     };
 
     const removeVaccineRow = (index: number) => {
@@ -116,16 +136,25 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
 
         if (activeLogbook === 'child') {
             const cleanedVaccines = vaccineRows
-                .map(row => ({
-                    vaccine_name: row.vaccine_name.trim(),
-                    dose_label: row.dose_label?.trim() || '',
-                    date_given: row.date_given?.trim() || '',
-                    remarks: row.remarks?.trim() || '',
-                }))
-                .filter(row => row.vaccine_name || row.date_given || row.dose_label || row.remarks);
+                .map(cleanVaccineRecord)
+                .filter(isMeaningfulVaccineRecord);
 
             if (cleanedVaccines.length === 0) {
                 showToast('Add at least one vaccine record or remove the child care vaccine entry.', true);
+                setIsSubmitting(false);
+                return;
+            }
+
+            const incompleteVaccines = cleanedVaccines.some(row => !row.vaccine_name || !row.date_given);
+            if (incompleteVaccines) {
+                showToast('Each vaccine record needs a selected vaccine and date given.', true);
+                setIsSubmitting(false);
+                return;
+            }
+
+            const incompleteOther = cleanedVaccines.some(row => row.vaccine_name === OTHER_VACCINE_NAME && !row.other_vaccine_name);
+            if (incompleteOther) {
+                showToast('Specify the vaccine name for every Others / Specify record.', true);
                 setIsSubmitting(false);
                 return;
             }
@@ -161,7 +190,11 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             
             setTimeout(async () => {
                 setFormData({}); 
-                setVaccineRows([{ vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' }]);
+                setVaccineRows([createVaccineRecord({
+                    vaccine_category: 'Child Care / Core RHU Immunization',
+                    vaccine_name: 'BCG',
+                    dose_label: 'Birth dose',
+                })]);
                 setSelectedPatient(null);
                 setSearchQuery('');
                 setIsAddingEntry(false);
@@ -199,7 +232,11 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 setActiveLogbook(log.id); 
                                 setIsAddingEntry(false);
                                 setFormData({});
-                                setVaccineRows([{ vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' }]);
+                                setVaccineRows([createVaccineRecord({
+                                    vaccine_category: 'Child Care / Core RHU Immunization',
+                                    vaccine_name: 'BCG',
+                                    dose_label: 'Birth dose',
+                                })]);
                                 setSelectedPatient(null);
                             }}
                             className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
@@ -351,12 +388,23 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                 </div>
                                                 <div className="space-y-3">
                                                     {vaccineRows.map((row, index) => (
-                                                        <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                                        <div key={row.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                                                 <div>
                                                                     <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Vaccine</label>
-                                                                    <input value={row.vaccine_name} onChange={e => updateVaccineRow(index, 'vaccine_name', e.target.value)} placeholder="BCG, Hep B, OPV..." className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                    <select value={row.vaccine_name} onChange={e => updateVaccineRow(index, 'vaccine_name', e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm">
+                                                                        <option value="">Select vaccine...</option>
+                                                                        {VACCINE_OPTIONS.map(option => (
+                                                                            <option key={`${option.category}-${option.name}`} value={option.name}>{option.name}</option>
+                                                                        ))}
+                                                                    </select>
                                                                 </div>
+                                                                {row.vaccine_name === OTHER_VACCINE_NAME && (
+                                                                    <div>
+                                                                        <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Specify Vaccine</label>
+                                                                        <input value={row.other_vaccine_name || ''} onChange={e => updateVaccineRow(index, 'other_vaccine_name', e.target.value)} placeholder="Enter vaccine name" className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                    </div>
+                                                                )}
                                                                 <div>
                                                                     <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Dose</label>
                                                                     <input value={row.dose_label || ''} onChange={e => updateVaccineRow(index, 'dose_label', e.target.value)} placeholder="Birth dose, Dose 1..." className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
@@ -364,6 +412,22 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                                 <div>
                                                                     <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Date Given</label>
                                                                     <input type="date" value={row.date_given || ''} onChange={e => updateVaccineRow(index, 'date_given', e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Next Due Date</label>
+                                                                    <input type="date" value={row.next_due_date || ''} onChange={e => updateVaccineRow(index, 'next_due_date', e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Administered By</label>
+                                                                    <input value={row.administered_by || ''} onChange={e => updateVaccineRow(index, 'administered_by', e.target.value)} placeholder="Staff name" className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Facility</label>
+                                                                    <input value={row.facility || ''} onChange={e => updateVaccineRow(index, 'facility', e.target.value)} placeholder="RHU / barangay" className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Lot Number</label>
+                                                                    <input value={row.lot_number || ''} onChange={e => updateVaccineRow(index, 'lot_number', e.target.value)} placeholder="Optional" className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
                                                                 </div>
                                                                 <div className="flex items-end gap-2">
                                                                     <div className="flex-1">

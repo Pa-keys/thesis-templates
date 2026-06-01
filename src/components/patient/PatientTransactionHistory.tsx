@@ -1,4 +1,4 @@
-import type { PatientTransaction } from '../../features/patients/history';
+import type { PatientHistoryWarning, PatientTransaction } from '../../features/patients/history';
 import { EmptyState } from '../shared/EmptyState';
 import { LoadingState } from '../shared/LoadingState';
 import { StatusBadge } from '../shared/StatusBadge';
@@ -6,6 +6,9 @@ import { StatusBadge } from '../shared/StatusBadge';
 interface PatientTransactionHistoryProps {
     transactions: PatientTransaction[];
     isLoading: boolean;
+    warnings?: PatientHistoryWarning[];
+    error?: string | null;
+    onRetry?: () => void;
 }
 
 const TYPE_LABEL: Record<PatientTransaction['type'], string> = {
@@ -85,10 +88,65 @@ function ItemsGrid({ items }: { items: PatientTransaction['items'] }) {
     );
 }
 
-export function PatientTransactionHistory({ transactions, isLoading }: PatientTransactionHistoryProps) {
+function RetryButton({ onRetry }: { onRetry?: () => void }) {
+    if (!onRetry) return null;
+    return (
+        <button
+            type="button"
+            onClick={onRetry}
+            className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-white transition-colors hover:bg-slate-700"
+        >
+            Retry
+        </button>
+    );
+}
+
+function HistoryWarning({ warnings, onRetry }: { warnings: PatientHistoryWarning[]; onRetry?: () => void }) {
+    if (warnings.length === 0) return null;
+
+    return (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="font-extrabold">Partial history loaded</div>
+            <p className="mt-1 font-medium text-amber-800">
+                Some medical record sections could not be loaded. Review the visible records with caution.
+            </p>
+            <ul className="mt-3 space-y-1">
+                {warnings.map(warning => (
+                    <li key={warning.label} className="font-semibold">
+                        {warning.label}: <span className="font-medium">{warning.message}</span>
+                    </li>
+                ))}
+            </ul>
+            <RetryButton onRetry={onRetry} />
+        </div>
+    );
+}
+
+export function PatientTransactionHistory({ transactions, isLoading, warnings = [], error, onRetry }: PatientTransactionHistoryProps) {
     if (isLoading) return <LoadingState label="Loading complete transaction history..." />;
 
+    if (error) {
+        return (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+                <div className="font-extrabold">Patient history could not be loaded</div>
+                <p className="mt-1 font-medium">{error}</p>
+                <RetryButton onRetry={onRetry} />
+            </div>
+        );
+    }
+
     if (transactions.length === 0) {
+        if (warnings.length > 0) {
+            return (
+                <div>
+                    <HistoryWarning warnings={warnings} onRetry={onRetry} />
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-600">
+                        No history records can be shown until the failed sections are retried or checked.
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <EmptyState
                 title="No transactions found"
@@ -99,6 +157,8 @@ export function PatientTransactionHistory({ transactions, isLoading }: PatientTr
 
     return (
         <div className="relative">
+            <HistoryWarning warnings={warnings} onRetry={onRetry} />
+
             {/* Vertical timeline line */}
             <div className="absolute left-[18px] top-3 bottom-3 w-0.5 bg-slate-200 hidden sm:block" />
 

@@ -1,25 +1,45 @@
 import { supabase } from '../../lib/supabase/client';
-import type { VaccineRecord } from './itemization';
+import { cleanVaccineRecord, type VaccineRecord } from '../vaccines/vaccineOptions';
+import { normalizeVaccineRecords } from './itemization';
 
-export async function saveVaccineRecord(patientId: string, record: VaccineRecord): Promise<void> {
-    const now = new Date().toISOString().substring(0, 7);
+interface VaccinationLog {
+    id: number | string;
+    data_fields: Record<string, unknown> | null;
+}
 
-    const { data: existingLog } = await supabase
+async function getVaccinationLog(patientId: string): Promise<VaccinationLog | null> {
+    const { data, error } = await supabase
         .from('fhsis_logs')
         .select('id, data_fields')
         .eq('patient_id', patientId)
         .eq('category', 'vaccination')
         .maybeSingle();
 
+    if (error) throw error;
+    if (!data) return null;
+    return {
+        id: data.id as number | string,
+        data_fields: (data.data_fields || {}) as Record<string, unknown>,
+    };
+}
+
+export async function saveVaccineRecord(patientId: string, record: VaccineRecord): Promise<void> {
+    const now = new Date().toISOString().substring(0, 7);
+    const cleanRecord = cleanVaccineRecord(record);
+
+    const existingLog = await getVaccinationLog(patientId);
+
     if (existingLog) {
         const currentFields = (existingLog.data_fields || {}) as Record<string, unknown>;
-        const existingRecords = Array.isArray(currentFields.vaccine_records)
-            ? currentFields.vaccine_records as VaccineRecord[]
-            : [];
+        const existingRecords = normalizeVaccineRecords(currentFields);
+        const existingIndex = existingRecords.findIndex(item => item.id === cleanRecord.id);
+        const vaccineRecords = existingIndex >= 0
+            ? existingRecords.map(item => item.id === cleanRecord.id ? cleanRecord : item)
+            : [...existingRecords, cleanRecord];
 
         const updatedFields = {
             ...currentFields,
-            vaccine_records: [...existingRecords, record],
+            vaccine_records: vaccineRecords,
         };
 
         const { error } = await supabase
@@ -36,7 +56,7 @@ export async function saveVaccineRecord(patientId: string, record: VaccineRecord
             .insert([{
                 patient_id: patientId,
                 category: 'vaccination',
-                data_fields: { vaccine_records: [record] },
+                data_fields: { vaccine_records: [cleanRecord] },
                 report_month: now,
                 encoded_by: user?.user?.id || null,
             }]);
@@ -46,41 +66,25 @@ export async function saveVaccineRecord(patientId: string, record: VaccineRecord
 }
 
 export async function fetchVaccineRecords(patientId: string): Promise<VaccineRecord[]> {
-    const { data, error } = await supabase
-        .from('fhsis_logs')
-        .select('data_fields')
-        .eq('patient_id', patientId)
-        .eq('category', 'vaccination')
-        .maybeSingle();
+    const existingLog = await getVaccinationLog(patientId);
 
-    if (error || !data) return [];
+    if (!existingLog) return [];
 
-    const fields = data.data_fields as Record<string, unknown> | null;
+    const fields = existingLog.data_fields;
     if (!fields) return [];
 
-    const records = Array.isArray(fields.vaccine_records)
-        ? fields.vaccine_records as VaccineRecord[]
-        : [];
-
-    return records.filter(r => r && typeof r.vaccine_name === 'string' && r.vaccine_name.trim());
+    return normalizeVaccineRecords(fields);
 }
 
-export async function removeVaccineRecord(patientId: string, index: number): Promise<void> {
-    const { data: existingLog } = await supabase
-        .from('fhsis_logs')
-        .select('id, data_fields')
-        .eq('patient_id', patientId)
-        .eq('category', 'vaccination')
-        .maybeSingle();
+export async function removeVaccineRecord(patientId: string, vaccineId: string): Promise<void> {
+    const existingLog = await getVaccinationLog(patientId);
 
     if (!existingLog) return;
 
     const currentFields = (existingLog.data_fields || {}) as Record<string, unknown>;
-    const existingRecords = Array.isArray(currentFields.vaccine_records)
-        ? currentFields.vaccine_records as VaccineRecord[]
-        : [];
+    const existingRecords = normalizeVaccineRecords(currentFields);
 
-    const updatedRecords = existingRecords.filter((_, i) => i !== index);
+    const updatedRecords = existingRecords.filter(record => record.id !== vaccineId);
 
     const { error } = await supabase
         .from('fhsis_logs')
