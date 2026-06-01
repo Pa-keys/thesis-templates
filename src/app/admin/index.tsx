@@ -8,17 +8,33 @@ import { getInitials } from '../../lib/utils/names';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { NetworkBadge } from '../../components/shared/NetworkBadge';
 import { LoadingState } from '../../components/shared/LoadingState';
+import type { Role } from '../../types/user';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
     id: string;
     full_name: string;
-    role: string;
+    role: Role;
     email?: string;
     status?: string; // e.g. 'active'
 }
 
 const ROLES = ['doctor', 'nurse', 'BHW', 'midwives', 'pharmacist', 'labaratory', 'admin'] as const;
+type AdminRole = typeof ROLES[number];
+
+interface CreateUserPayload {
+    email: string;
+    password: string;
+    fullName: string;
+    role: AdminRole;
+}
+
+interface CreateUserResponse {
+    user?: UserProfile;
+    error?: string;
+}
+
+const isAdminRole = (value: string): value is AdminRole => (ROLES as readonly string[]).includes(value);
 
 // ─── Utility Components ───────────────────────────────────────────────────────
 const RoleBadge = ({ role }: { role: string }) => {
@@ -97,7 +113,6 @@ const AdminDashboard = () => {
     const [fEmail, setFEmail] = useState('');
     const [fPassword, setFPassword] = useState('');
     const [fConfirmPassword, setFConfirmPassword] = useState('');
-    const [fAdminPassword, setFAdminPassword] = useState('');
     const [fRole, setFRole] = useState('');
 
     // Confirm Delete Modal
@@ -169,7 +184,6 @@ const AdminDashboard = () => {
         setFEmail('');
         setFPassword('');
         setFConfirmPassword('');
-        setFAdminPassword('');
         setFRole('');
         setIsUserModalOpen(true);
         document.body.style.overflow = 'hidden';
@@ -203,7 +217,7 @@ const AdminDashboard = () => {
         const role = fRole;
 
         if (!fullName) { showToast('Please enter a full name.', true); return; }
-        if (!role) { showToast('Please select a role.', true); return; }
+        if (!isAdminRole(role)) { showToast('Please select a valid role.', true); return; }
 
         setIsSaving(true);
 
@@ -232,43 +246,22 @@ const AdminDashboard = () => {
             const email = fEmail.trim();
             const password = fPassword;
             const confirmPassword = fConfirmPassword;
-            const adminPassword = fAdminPassword;
-
             if (!email) { showToast('Please enter an email.', true); setIsSaving(false); return; }
             if (password.length < 6) { showToast('Password must be at least 6 characters.', true); setIsSaving(false); return; }
             if (password !== confirmPassword) { showToast('Passwords do not match.', true); setIsSaving(false); return; }
-            if (!adminPassword) { showToast('Please enter your admin password to authorize this action.', true); setIsSaving(false); return; }
 
-            const { data: { session: adminSession } } = await supabase.auth.getSession();
-            const adminEmail = adminSession?.user?.email || '';
-
-            const { error: authError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: { data: { full_name: fullName, role } }
-            });
-
-            if (authError) {
-                setIsSaving(false);
-                showToast('Error creating account: ' + authError.message, true);
-                return;
-            }
-
-            // Restore Admin Session
-            const { error: reLoginError } = await supabase.auth.signInWithPassword({
-                email: adminEmail,
-                password: adminPassword,
-            });
+            const payload: CreateUserPayload = { email, password, fullName, role };
+            const { data, error } = await supabase.functions.invoke<CreateUserResponse>('create-user', { body: payload });
 
             setIsSaving(false);
 
-            if (reLoginError) {
-                showToast('User created, but failed to restore your admin session. Please log in again.', true);
-                setTimeout(() => { window.location.href = '/pages/login.html'; }, 2000);
+            if (error || data?.error || !data?.user) {
+                showToast('Error creating user: ' + (data?.error || error?.message || 'Create-user function failed.'), true);
                 return;
             }
 
             showToast(`User ${fullName} created successfully.`);
+            setAllUsers(prev => [data.user as UserProfile, ...prev]);
             closeUserModal();
             loadUsers();
         }
@@ -536,9 +529,10 @@ const AdminDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-2">
-                                        <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Confirm Admin Identity</label>
-                                        <p className="text-[10px] text-amber-700 font-medium leading-tight">For security, please enter your admin password to authorize the creation of this new account.</p>
-                                        <input type="password" value={fAdminPassword} onChange={e => setFAdminPassword(e.target.value)} placeholder="Your Admin Password" className="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all" />
+                                        <div className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Secure Account Creation</div>
+                                        <p className="text-[11px] text-amber-800 font-medium leading-snug">
+                                            New accounts are created through the Supabase create-user Edge Function. The service role key must stay server-side in Edge Function secrets.
+                                        </p>
                                     </div>
                                 </>
                             )}
@@ -560,7 +554,7 @@ const AdminDashboard = () => {
                         <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
                             <button onClick={closeUserModal} disabled={isSaving} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
                             <button onClick={handleSaveUser} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 transition-all disabled:opacity-50 min-w-[140px] justify-center text-center">
-                                {isSaving ? '⏳ Saving...' : isEditMode ? '💾 Save Changes' : '➕ Create User'}
+                                {isSaving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create User'}
                             </button>
                         </div>
                     </div>
@@ -580,7 +574,7 @@ const AdminDashboard = () => {
                         <div className="flex w-full gap-3">
                             <button onClick={closeConfirmModal} disabled={isSaving} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors disabled:opacity-50">Cancel</button>
                             <button onClick={handleDeleteUser} disabled={isSaving} className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 shadow-md shadow-red-500/20 transition-all disabled:opacity-50">
-                                {isSaving ? '⏳ Deleting...' : 'Delete'}
+                                {isSaving ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -9,9 +9,9 @@ import { getInitials } from '../../lib/utils/names';
 // ─── Imported Pure Components ────────────────────────────────────────────────
 import { RecordsComponent } from '../patients/records';
 import { TemplatesComponent } from '../patients/templates';
-import ReportGenerator from '../../features/midwife/reportGenerator'; // Imported OCR Report Component
-
 import { PatientDetailModal, Patient } from '../../components/patient/PatientDetailModal';
+
+const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
 
 const BhwDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -278,7 +278,9 @@ const BhwDashboard = () => {
                         {activePage === 'reports' && (
                             <div className="w-full bg-[#F8FAFC] rounded-2xl min-h-[500px]">
                                 {/* Pass the newly fetched FHSIS logs down to the generator */}
-                                <ReportGenerator records={records} />
+                                <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">Loading report generator...</div>}>
+                                    <ReportGenerator records={records} />
+                                </Suspense>
                             </div>
                         )}
 

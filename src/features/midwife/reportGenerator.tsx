@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useRef } from 'react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { useToast } from '../../components/feedback/Toast';
 
 interface Props {
@@ -137,6 +135,10 @@ const ReportGenerator = ({ records, isLoading = false }: Props) => {
         setIsExporting(true);
 
         try {
+            const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+                import('html2canvas'),
+                import('jspdf'),
+            ]);
             const canvas = await html2canvas(reportRef.current, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('l', 'in', [8.5, 13]);

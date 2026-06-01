@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -8,9 +8,10 @@ import { getInitials } from '../../lib/utils/names';
 import Dashboard from '../../features/midwife/dashboard';
 import PatientRecords from '../../features/midwife/patientRecords';
 import CensusEntry from '../../features/midwife/censusEntry';
-import ReportGenerator from '../../features/midwife/reportGenerator';
 import PatientConsent from '../patients/patient-consent';
 import { useMidwifeData } from '../../features/midwife/useMidwifeData';
+
+const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
 
 // ─── Detail Item ──────────────────────────────────────────────────────────────
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
@@ -344,7 +345,9 @@ const MidwifeApp = () => {
                                 />
                             )}
                             {activeTab === 'reports' && (
-                                <ReportGenerator records={records} isLoading={isLoading} />
+                                <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">Loading report generator...</div>}>
+                                    <ReportGenerator records={records} isLoading={isLoading} />
+                                </Suspense>
                             )}
                         </div>
                     </div>
