@@ -25,7 +25,7 @@ export function useToast() {
         if (!toast.show) return null;
 
         return (
-            <div className={`fixed top-6 right-6 z-[100] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-8 fade-in duration-300 ${toast.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+            <div className={`fixed top-6 right-6 z-[9999] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-8 fade-in duration-300 ${toast.isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
                 <div className="w-8 h-8 flex-shrink-0 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold">
                     {toast.isError ? '✕' : '✓'}
                 </div>

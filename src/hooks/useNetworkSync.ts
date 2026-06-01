@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase/client';
+
+interface OfflineRecord {
+    id: string | number;
+    data: Record<string, unknown>;
+}
 
 export function useNetworkSync() {
     // Initialize state based on current browser status
@@ -88,14 +93,14 @@ export function useNetworkSync() {
 // ─── INDEXED DB INITIALIZATION & WRITE ───
 
 // 1. Creates the database if it doesn't exist yet
-export async function initIndexedDB(dbName: string, storeName: string) {
+export async function initIndexedDB(dbName: string, storeName: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         // The "1" is the database version. 
         const request = indexedDB.open(dbName, 1);
         
         // This ONLY runs if the database doesn't exist or the version number increases
-        request.onupgradeneeded = (event: any) => {
-            const db = event.target.result;
+        request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains(storeName)) {
                 // Create the store and tell it to look for the 'id' property as the unique key
                 db.createObjectStore(storeName, { keyPath: 'id' });
@@ -108,12 +113,12 @@ export async function initIndexedDB(dbName: string, storeName: string) {
 }
 
 // 2. The missing function from Step 3 used to save the form while offline
-export async function saveToIndexedDB(dbName: string, storeName: string, payload: any) {
+export async function saveToIndexedDB(dbName: string, storeName: string, payload: OfflineRecord): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(dbName);
         
-        request.onsuccess = (event: any) => {
-            const db = event.target.result;
+        request.onsuccess = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
             
@@ -126,11 +131,11 @@ export async function saveToIndexedDB(dbName: string, storeName: string, payload
     });
 }
 
-async function getOfflineData(dbName: string, storeName: string): Promise<any[]> {
+async function getOfflineData(dbName: string, storeName: string): Promise<OfflineRecord[]> {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(dbName);
-        request.onsuccess = (event: any) => {
-            const db = event.target.result;
+        request.onsuccess = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
             const transaction = db.transaction(storeName, 'readonly');
             const store = transaction.objectStore(storeName);
             const getAll = store.getAll();
@@ -140,11 +145,11 @@ async function getOfflineData(dbName: string, storeName: string): Promise<any[]>
     });
 }
 
-async function deleteOfflineData(dbName: string, storeName: string, id: string | number) {
+async function deleteOfflineData(dbName: string, storeName: string, id: string | number): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(dbName);
-        request.onsuccess = (event: any) => {
-            const db = event.target.result;
+        request.onsuccess = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
             const deleteReq = store.delete(id);

@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { useToast } from '../../components/feedback/Toast';
 
 interface Props {
     records: any[];
+    isLoading?: boolean;
 }
 
 const MALVAR_BARANGAYS = [
@@ -12,10 +14,11 @@ const MALVAR_BARANGAYS = [
     'San Juan', 'San Pedro I', 'San Pedro II', 'San Pioquinto', 'Santiago', 'TOTAL'
 ];
 
-const ReportGenerator = ({ records }: Props) => {
+const ReportGenerator = ({ records, isLoading = false }: Props) => {
     const [selectedReport, setSelectedReport] = useState('maternal');
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().substring(0, 7));
     const [isExporting, setIsExporting] = useState(false);
+    const { showToast, ToastComponent } = useToast();
     
     const reportRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +129,10 @@ const ReportGenerator = ({ records }: Props) => {
 
     // ─── PDF EXPORT LOGIC ───────────────────────────────────────────────────
     const handleExportPDF = async () => {
+        if (isLoading) {
+            showToast('Reports are still loading. Please wait before exporting.', true);
+            return;
+        }
         if (!reportRef.current) return;
         setIsExporting(true);
 
@@ -140,6 +147,7 @@ const ReportGenerator = ({ records }: Props) => {
             pdf.save(`FHSIS_${selectedReport.toUpperCase()}_${reportMonth}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
+            showToast('Failed to generate FHSIS PDF. Please try again.', true);
         } finally {
             setIsExporting(false);
         }
@@ -155,6 +163,7 @@ const ReportGenerator = ({ records }: Props) => {
 
     return (
         <div className="w-full mx-auto animate-in fade-in duration-500 pb-10 px-4">
+            <ToastComponent />
             {/* CONTROLS */}
             <div className="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:hidden">
                 <div className="flex-1">
@@ -173,11 +182,17 @@ const ReportGenerator = ({ records }: Props) => {
                     <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg font-bold outline-none"/>
                 </div>
                 <div className="flex items-end">
-                    <button onClick={handleExportPDF} disabled={isExporting} className="w-full px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition disabled:opacity-70">
-                        {isExporting ? 'Generating...' : 'Download PDF'}
+                    <button onClick={handleExportPDF} disabled={isExporting || isLoading} className="w-full px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition disabled:opacity-70">
+                        {isExporting ? 'Generating...' : isLoading ? 'Loading Data...' : 'Download PDF'}
                     </button>
                 </div>
             </div>
+
+            {isLoading && (
+                <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 print:hidden">
+                    Loading FHSIS records...
+                </div>
+            )}
 
             {/* DOH DOCUMENT RENDER AREA */}
                 <div className="overflow-x-auto bg-slate-200 p-4 md:p-8 rounded-xl shadow-inner flex flex-col items-start">  

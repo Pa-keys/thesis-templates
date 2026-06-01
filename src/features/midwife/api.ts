@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase/client';
 
 // Helper to get the current logged-in user
 const getCurrentUser = async () => {

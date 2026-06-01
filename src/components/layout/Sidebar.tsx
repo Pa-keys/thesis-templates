@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { logout } from '../../lib/auth';
+import { logout } from '../../lib/auth/roles';
 
 interface NavItem {
     id: string;

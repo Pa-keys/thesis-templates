@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { midwifeAPI } from './api';
 import { useToast } from '../../components/feedback/Toast';
+import type { VaccineRecord } from '../patients/itemization';
 
 interface Props {
     patients: any[];
@@ -16,6 +17,9 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const [formData, setFormData] = useState<any>({});
+    const [vaccineRows, setVaccineRows] = useState<VaccineRecord[]>([
+        { vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' },
+    ]);
     
     // Global UI Requirement states
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +43,23 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
         const { name, value, type } = e.target;
         const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
         setFormData((prev: any) => ({ ...prev, [name]: val }));
+    };
+
+    const updateVaccineRow = (index: number, field: keyof VaccineRecord, value: string) => {
+        setVaccineRows(prev => {
+            const next = prev.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row);
+            const bcgRecord = next.find(row => row.vaccine_name.toLowerCase() === 'bcg');
+            setFormData((current: any) => ({ ...current, bcg_date: bcgRecord?.date_given || '' }));
+            return next;
+        });
+    };
+
+    const addVaccineRow = () => {
+        setVaccineRows(prev => [...prev, { vaccine_name: '', dose_label: '', date_given: '', remarks: '' }]);
+    };
+
+    const removeVaccineRow = (index: number) => {
+        setVaccineRows(prev => prev.filter((_, rowIndex) => rowIndex !== index));
     };
 
     // Auto-calculate BMI
@@ -93,6 +114,27 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             payloadData.bcg_age_category = calculatedBCGAge;
         }
 
+        if (activeLogbook === 'child') {
+            const cleanedVaccines = vaccineRows
+                .map(row => ({
+                    vaccine_name: row.vaccine_name.trim(),
+                    dose_label: row.dose_label?.trim() || '',
+                    date_given: row.date_given?.trim() || '',
+                    remarks: row.remarks?.trim() || '',
+                }))
+                .filter(row => row.vaccine_name || row.date_given || row.dose_label || row.remarks);
+
+            if (cleanedVaccines.length === 0) {
+                showToast('Add at least one vaccine record or remove the child care vaccine entry.', true);
+                setIsSubmitting(false);
+                return;
+            }
+
+            payloadData.vaccine_records = cleanedVaccines;
+            const bcgRecord = cleanedVaccines.find(row => row.vaccine_name.toLowerCase() === 'bcg');
+            if (bcgRecord?.date_given) payloadData.bcg_date = bcgRecord.date_given;
+        }
+
         if (activeLogbook === 'family_planning') {
             const age = Number(selectedPatient.age);
             payloadData.fp_age_bracket = age >= 10 && age <= 14 ? "10-14" : (age >= 15 && age <= 19 ? "15-19" : "20-49");
@@ -119,6 +161,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             
             setTimeout(async () => {
                 setFormData({}); 
+                setVaccineRows([{ vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' }]);
                 setSelectedPatient(null);
                 setSearchQuery('');
                 setIsAddingEntry(false);
@@ -156,6 +199,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 setActiveLogbook(log.id); 
                                 setIsAddingEntry(false);
                                 setFormData({});
+                                setVaccineRows([{ vaccine_name: 'BCG', dose_label: 'Birth dose', date_given: '', remarks: '' }]);
                                 setSelectedPatient(null);
                             }}
                             className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
@@ -248,14 +292,14 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             <form onSubmit={handleSubmit} className={!selectedPatient ? 'opacity-40 pointer-events-none' : ''}>
                                 <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">2. Program Data Input</label>
                                 
-                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-8">
+                                <div className="bg-slate-100/70 border border-slate-200 rounded-xl p-6 mb-8">
                                     
                                     {/* 1. MATERNAL CARE */}
                                     {activeLogbook === 'maternal' && (
                                         <div className="space-y-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Prenatal Checkup Visit</label>
-                                                <select name="prenatal_visit" onChange={handleInputChange} required className="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                                                <select name="prenatal_visit" onChange={handleInputChange} required className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm">
                                                     <option value="">Select Visit...</option>
                                                     <option value="1st Trimester">1st Trimester</option>
                                                     <option value="2nd Trimester">2nd Trimester</option>
@@ -268,11 +312,11 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                 <div className="col-span-2"><h4 className="text-sm font-bold text-slate-800">BMI Assessment</h4></div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-500 mb-1">Height (cm)</label>
-                                                    <input type="number" name="height" onChange={handleInputChange} required className="w-full p-2 border border-slate-300 rounded-lg" />
+                                                    <input type="number" name="height" onChange={handleInputChange} required className="w-full p-2 border border-slate-300 rounded-lg text-left text-slate-900 bg-white shadow-sm" />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-500 mb-1">Weight (kg)</label>
-                                                    <input type="number" name="weight" onChange={handleInputChange} required className="w-full p-2 border border-slate-300 rounded-lg" />
+                                                    <input type="number" name="weight" onChange={handleInputChange} required className="w-full p-2 border border-slate-300 rounded-lg text-left text-slate-900 bg-white shadow-sm" />
                                                 </div>
                                                 {calculatedBMI && (
                                                     <div className="col-span-2 mt-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-100 flex justify-between">
@@ -289,15 +333,53 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                         <div className="space-y-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Child Protected at Birth (CPAB)?</label>
-                                                <select name="cpab" onChange={handleInputChange} required className="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                                                <select name="cpab" onChange={handleInputChange} required className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm">
                                                     <option value="">Select...</option>
                                                     <option value="Yes">Yes</option>
                                                     <option value="No">No</option>
                                                 </select>
                                             </div>
                                             <div className="p-4 bg-white border border-slate-200 rounded-lg">
-                                                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">Date of BCG Vaccination</label>
-                                                <input type="date" name="bcg_date" onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm" />
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase">Multiple Vaccine Records</label>
+                                                        <p className="mt-1 text-xs font-medium text-slate-500">Each vaccine is saved as an item inside this child FHSIS record.</p>
+                                                    </div>
+                                                    <button type="button" onClick={addVaccineRow} className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                                                        Add Vaccine
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {vaccineRows.map((row, index) => (
+                                                        <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Vaccine</label>
+                                                                    <input value={row.vaccine_name} onChange={e => updateVaccineRow(index, 'vaccine_name', e.target.value)} placeholder="BCG, Hep B, OPV..." className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Dose</label>
+                                                                    <input value={row.dose_label || ''} onChange={e => updateVaccineRow(index, 'dose_label', e.target.value)} placeholder="Birth dose, Dose 1..." className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Date Given</label>
+                                                                    <input type="date" value={row.date_given || ''} onChange={e => updateVaccineRow(index, 'date_given', e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                </div>
+                                                                <div className="flex items-end gap-2">
+                                                                    <div className="flex-1">
+                                                                        <label className="block text-[0.65rem] font-bold text-slate-500 mb-1 uppercase">Remarks</label>
+                                                                        <input value={row.remarks || ''} onChange={e => updateVaccineRow(index, 'remarks', e.target.value)} placeholder="Optional" className="w-full p-2.5 border border-slate-300 rounded-lg text-left text-sm text-slate-900 bg-white shadow-sm" />
+                                                                    </div>
+                                                                    {vaccineRows.length > 1 && (
+                                                                        <button type="button" onClick={() => removeVaccineRow(index)} className="mb-0.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50">
+                                                                            Remove
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                                 {calculatedBCGAge && (
                                                     <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm border border-blue-100 font-semibold text-blue-800">
                                                         Auto-tagged Category: {calculatedBCGAge}

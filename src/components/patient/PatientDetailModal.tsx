@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase/client';
+import { useToast } from '../feedback/Toast';
+import { updatePatientRecord } from '../../features/patients/services';
+import { getErrorMessage } from '../../lib/utils/errors';
+import { fetchPatientTransactions, type PatientTransaction } from '../../features/patients/history';
+import { PatientTransactionHistory } from './PatientTransactionHistory';
 
 export interface Patient {
     id: string;
@@ -78,10 +83,12 @@ export function PatientDetailModal({
     const [historyLoading, setHistoryLoading] = useState(false);
     const [initialConsults, setInitialConsults] = useState<InitialConsultation[]>([]);
     const [consultations, setConsultations] = useState<Consultation[]>([]);
+    const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editForm, setEditForm] = useState<Patient>({ ...initialPatient });
+    const { showToast, ToastComponent } = useToast();
 
     // Sync local state if prop changes (though usually initialPatient won't change while modal is open)
     useEffect(() => {
@@ -93,7 +100,7 @@ export function PatientDetailModal({
         setShowHistory(true);
         setHistoryLoading(true);
         try {
-            const [{ data: icData }, { data: cData }] = await Promise.all([
+            const [{ data: icData }, { data: cData }, transactionData] = await Promise.all([
                 supabase
                     .from('initial_consultation')
                     .select('*')
@@ -104,11 +111,14 @@ export function PatientDetailModal({
                     .select('*')
                     .eq('patient_id', patient.id)
                     .order('consultation_id', { ascending: false }),
+                fetchPatientTransactions(patient.id),
             ]);
             setInitialConsults(icData || []);
             setConsultations(cData || []);
+            setTransactions(transactionData);
         } catch (err) {
             console.error('Failed to load history:', err);
+            showToast('Failed to load complete transaction history: ' + getErrorMessage(err), true);
         } finally {
             setHistoryLoading(false);
         }
@@ -138,20 +148,16 @@ export function PatientDetailModal({
             // Remove fields that shouldn't be updated or cause issues
             const { id, createdAt, created_at, ...updateData } = payload as any;
 
-            const { error } = await supabase
-                .from('patients')
-                .update(updateData)
-                .eq('id', patient.id);
-
-            if (error) throw error;
+            await updatePatientRecord(patient.id, updateData);
 
             setPatient(payload);
             setIsEditing(false);
             if (onPatientUpdate) {
                 onPatientUpdate(payload);
             }
-        } catch (err: any) {
-            alert('Failed to save changes: ' + err.message);
+            showToast('Patient details updated.', false);
+        } catch (err) {
+            showToast('Failed to save changes: ' + getErrorMessage(err), true);
         } finally {
             setIsSaving(false);
         }
@@ -169,13 +175,13 @@ export function PatientDetailModal({
         if (isEditing) {
             return (
                 <div className="flex flex-col gap-1">
-                    <label className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">{label}</label>
+                    <label className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-500">{label}</label>
                     {type === "select" ? (
                         <select
                             name={name}
                             value={editForm[name] as string || ''}
                             onChange={handleInputChange}
-                            className="text-sm font-semibold border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900"
+                            className="text-left text-sm font-semibold border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900 shadow-sm"
                         >
                             <option value="">Select...</option>
                             {options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -186,7 +192,7 @@ export function PatientDetailModal({
                             name={name}
                             value={editForm[name] as string | number || ''}
                             onChange={handleInputChange}
-                            className="text-sm font-semibold border border-slate-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900"
+                            className="text-left text-sm font-semibold border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 outline-none bg-white text-slate-900 shadow-sm"
                         />
                     )}
                 </div>
@@ -196,7 +202,7 @@ export function PatientDetailModal({
         return (
             <div className="flex flex-col gap-1">
                 <div className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">{label}</div>
-                <div className={`text-sm font-semibold ${isEmpty ? 'text-slate-400 italic' : 'text-slate-800 '}`}>
+                <div className={`min-h-[2.25rem] rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold ${isEmpty ? 'text-slate-500 italic' : 'text-slate-800'}`}>
                     {isEmpty ? 'Not provided' : value}
                 </div>
             </div>
@@ -219,6 +225,7 @@ export function PatientDetailModal({
 
     return (
         <>
+            <ToastComponent />
             {/* Backdrop */}
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]" onClick={onClose} />
 
@@ -355,6 +362,11 @@ export function PatientDetailModal({
                                     </div>
                                 ) : (
                                     <>
+                                        <div className="mb-6">
+                                            <div className={headerCls}><span>Timeline</span> Complete Transaction History ({transactions.length})</div>
+                                            <PatientTransactionHistory transactions={transactions} isLoading={historyLoading} />
+                                        </div>
+
                                         {/* Initial Consultations */}
                                         <div className="mb-6">
                                             <div className={headerCls}><span>📝</span> Initial Consultations ({initialConsults.length})</div>
