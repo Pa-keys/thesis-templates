@@ -17,9 +17,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("PROJECT_URL");
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("ANON_KEY");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY");
+const ADMIN_ROLE = Deno.env.get("ADMIN_ROLE") ?? "admin";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,14 +71,56 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await userClient.auth.getUser();
     if (authError || !authData.user) return jsonResponse({ error: "Invalid session." }, 401);
 
+    const callerUserId = authData.user.id;
+
     const { data: callerProfile, error: callerError } = await adminClient
       .from("profiles")
-      .select("role")
-      .eq("id", authData.user.id)
-      .single();
+      .select("id, role")
+      .eq("id", callerUserId)
+      .maybeSingle();
 
-    if (callerError || callerProfile?.role !== "admin") {
-      return jsonResponse({ error: "Only administrators can create users." }, 403);
+    if (callerError) {
+      return jsonResponse({
+        error: "Admin authorization failed: caller profile lookup failed.",
+        details: {
+          reason: "profile_lookup_error",
+          message: callerError.message,
+          caller_user_id: callerUserId,
+        },
+      }, 403);
+    }
+
+    if (!callerProfile) {
+      return jsonResponse({
+        error: "Admin authorization failed: no profile found for authenticated user.",
+        details: {
+          reason: "profile_not_found",
+          caller_user_id: callerUserId,
+        },
+      }, 403);
+    }
+
+    if (callerProfile.id !== callerUserId) {
+      return jsonResponse({
+        error: "Admin authorization failed: profile user mismatch.",
+        details: {
+          reason: "profile_user_mismatch",
+          caller_user_id: callerUserId,
+          profile_id: callerProfile.id,
+        },
+      }, 403);
+    }
+
+    if (callerProfile.role !== ADMIN_ROLE) {
+      return jsonResponse({
+        error: "Admin authorization failed: authenticated user is not an administrator.",
+        details: {
+          reason: "role_mismatch",
+          expected_role: ADMIN_ROLE,
+          actual_role: callerProfile.role ?? null,
+          caller_user_id: callerUserId,
+        },
+      }, 403);
     }
 
     const payload = validatePayload(await req.json());

@@ -32,9 +32,34 @@ interface CreateUserPayload {
 interface CreateUserResponse {
     user?: UserProfile;
     error?: string;
+    details?: Record<string, unknown>;
 }
 
 const isAdminRole = (value: string): value is AdminRole => (ROLES as readonly string[]).includes(value);
+
+async function getFunctionErrorMessage(error: unknown, data?: CreateUserResponse | null): Promise<string> {
+    if (data?.error) return data.error;
+
+    const context = error && typeof error === 'object' && 'context' in error
+        ? (error as { context?: unknown }).context
+        : null;
+
+    if (context instanceof Response) {
+        try {
+            const body = await context.clone().json() as CreateUserResponse;
+            if (body.error) return body.error;
+        } catch {
+            try {
+                const text = await context.clone().text();
+                if (text) return text;
+            } catch {
+                // Fall through to default message.
+            }
+        }
+    }
+
+    return error instanceof Error ? error.message : 'Create-user function failed.';
+}
 
 // ─── Utility Components ───────────────────────────────────────────────────────
 const RoleBadge = ({ role }: { role: string }) => {
@@ -256,7 +281,8 @@ const AdminDashboard = () => {
             setIsSaving(false);
 
             if (error || data?.error || !data?.user) {
-                showToast('Error creating user: ' + (data?.error || error?.message || 'Create-user function failed.'), true);
+                const message = await getFunctionErrorMessage(error, data);
+                showToast('Error creating user: ' + message, true);
                 return;
             }
 
