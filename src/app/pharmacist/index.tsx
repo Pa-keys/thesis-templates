@@ -391,9 +391,9 @@ function PharmacyDashboard() {
                         </div>
 
                         <div className="p-5 md:p-6 overflow-y-auto">
-                            <div className="flex justify-between items-end mb-4">
-                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prescribed Medications</h3>
-                                <span className="text-xs text-slate-400 italic">Check the box if medication is dispensed</span>
+                            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Prescribed Medications</h3>
+                                <span className="text-xs font-medium text-slate-500">Check each medication that can be dispensed.</span>
                             </div>
 
                             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -410,7 +410,7 @@ function PharmacyDashboard() {
                                         </thead>
                                         <tbody>
                                             {medsToDispense.map((med: Medication, i: number) => (
-                                                <tr key={i} className={`border-b border-slate-100 last:border-0 transition-colors ${dispenseChecklist[i] ? 'bg-white' : 'bg-red-50/50 opacity-60'}`}>
+                                                <tr key={i} className={`border-b border-slate-200 last:border-0 transition-colors ${dispenseChecklist[i] ? 'bg-white hover:bg-blue-50/40' : 'bg-red-50/70 text-slate-600'}`}>
                                                     <td className="p-4 text-center">
                                                         <input
                                                             type="checkbox"

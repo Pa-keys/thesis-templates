@@ -6,7 +6,6 @@ import { useNetworkSync } from '../../hooks/useNetworkSync';
 import { OfflineBanner } from '../../components/feedback/OfflineBanner';
 import PatientConsent from '../patients/patient-consent';
 import { useToast } from '../../components/feedback/Toast';
-import { fetchPatientTransactions, type PatientHistoryWarning, type PatientTransaction } from '../../features/patients/history';
 import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
 import { getDashboardPath, requireAnyRole } from '../../lib/auth/roles';
 import type { Role } from '../../types/user';
@@ -95,10 +94,6 @@ function DetailsPage() {
     const { showToast, ToastComponent } = useToast();
 
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
-    const [historyWarnings, setHistoryWarnings] = useState<PatientHistoryWarning[]>([]);
-    const [historyError, setHistoryError] = useState<string | null>(null);
 
     const [role, setRole] = useState<Role | null>(null);
     const [userName, setUserName] = useState('Loading...');
@@ -154,30 +149,7 @@ function DetailsPage() {
         });
     }
 
-    const handleOpenHistory = async () => {
-        setHistoryModalOpen(true);
-        setHistoryLoading(true);
-        setHistoryWarnings([]);
-        setHistoryError(null);
-
-        try {
-            const history = await fetchPatientTransactions(patientId!);
-            setTransactions(history.transactions);
-            setHistoryWarnings(history.warnings);
-            if (history.warnings.length > 0) {
-                showToast('Partial history loaded. Retry if clinical records are missing.', true);
-            }
-        } catch (err) {
-            console.error('Failed to load transaction history:', err);
-            const message = err instanceof Error ? err.message : 'Failed to load complete transaction history.';
-            setHistoryError(message);
-            showToast(message, true);
-            setTransactions([]);
-            setHistoryWarnings([]);
-        }
-
-        setHistoryLoading(false);
-    };
+    const handleOpenHistory = () => setHistoryModalOpen(true);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
@@ -223,8 +195,8 @@ function DetailsPage() {
 
     const sectionCls = "bg-white border border-slate-200 rounded-xl p-6 md:p-8 shadow-sm mb-6";
     const headerCls = "flex items-center gap-3 text-sm font-extrabold text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-3 mb-5";
-    const inputCls = "w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all";
-    const labelCls = "block text-[0.68rem] font-bold uppercase tracking-widest text-slate-500 mb-1.5";
+    const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all";
+    const labelCls = "block text-[0.7rem] font-bold uppercase tracking-wider text-slate-600 mb-2";
 
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
@@ -465,13 +437,7 @@ function DetailsPage() {
                         </div>
 
                         <div className="p-6 overflow-y-auto bg-[#F8FAFC] flex-1 scrollbar-thin">
-                            <PatientTransactionHistory
-                                transactions={transactions}
-                                isLoading={historyLoading}
-                                warnings={historyWarnings}
-                                error={historyError}
-                                onRetry={handleOpenHistory}
-                            />
+                            {patientId && <PatientTransactionHistory patientId={patientId} />}
                         </div>
                     </div>
                 </div>

@@ -287,28 +287,28 @@ function LabRequestDetail({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Performed By</label>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Performed By</label>
                             <input
                                 type="text"
                                 value={currentUserName}
                                 disabled
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700"
+                                className="w-full bg-slate-100 border border-slate-300 rounded-lg p-3 text-sm font-semibold text-slate-600 cursor-not-allowed"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Date Performed</label>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Date Performed</label>
                             <input
                                 type="datetime-local"
                                 value={datePerformed}
                                 onChange={e => setDatePerformed(e.target.value)}
                                 disabled={request.status === 'Completed'}
-                                className="w-full bg-white border border-slate-200 rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 disabled:bg-slate-50 disabled:text-slate-500"
+                                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-left focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-semibold disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">
                             Lab Results / Findings
                             {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold">✓ Submitted</span>}
                             {loadingLabResult && <span className="ml-2 text-blue-600 normal-case font-semibold">Loading saved result...</span>}
@@ -318,7 +318,7 @@ function LabRequestDetail({
                             value={results}
                             onChange={e => setResults(e.target.value)}
                             disabled={request.status === 'Completed'}
-                            className="w-full bg-white border border-slate-200 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-y disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                            className="w-full bg-white border border-slate-300 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm leading-relaxed text-slate-800 resize-y disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-medium disabled:cursor-not-allowed"
                             placeholder="Enter lab results, findings, or notes here..."
                         />
                     </div>

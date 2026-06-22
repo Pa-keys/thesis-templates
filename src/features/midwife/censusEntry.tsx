@@ -79,7 +79,12 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     };
 
     const removeVaccineRow = (index: number) => {
-        setVaccineRows(prev => prev.filter((_, rowIndex) => rowIndex !== index));
+        setVaccineRows(prev => {
+            const next = prev.filter((_, rowIndex) => rowIndex !== index);
+            const bcgRecord = next.find(row => row.vaccine_name.toLowerCase() === 'bcg');
+            setFormData((current: any) => ({ ...current, bcg_date: bcgRecord?.date_given || '' }));
+            return next;
+        });
     };
 
     // Auto-calculate BMI

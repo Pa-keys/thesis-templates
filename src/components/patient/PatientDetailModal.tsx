@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../feedback/Toast';
 import { updatePatientRecord } from '../../features/patients/services';
 import { getErrorMessage } from '../../lib/utils/errors';
-import { fetchPatientTransactions, type PatientHistoryWarning, type PatientTransaction } from '../../features/patients/history';
 import { PatientTransactionHistory } from './PatientTransactionHistory';
 import { saveVaccineRecord, fetchVaccineRecords, removeVaccineRecord } from '../../features/patients/vaccineService';
 import type { VaccineRecord } from '../../features/patients/itemization';
@@ -89,10 +88,6 @@ export function PatientDetailModal({
 }: PatientDetailModalProps) {
     const [patient, setPatient] = useState<Patient>(initialPatient);
     const [showHistory, setShowHistory] = useState(false);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [transactions, setTransactions] = useState<PatientTransaction[]>([]);
-    const [historyWarnings, setHistoryWarnings] = useState<PatientHistoryWarning[]>([]);
-    const [historyError, setHistoryError] = useState<string | null>(null);
 
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -114,29 +109,7 @@ export function PatientDetailModal({
         setEditForm({ ...initialPatient });
     }, [initialPatient]);
 
-    const loadHistory = async () => {
-        setShowHistory(true);
-        setHistoryLoading(true);
-        setHistoryError(null);
-        setHistoryWarnings([]);
-        try {
-            const history = await fetchPatientTransactions(patient.id);
-            setTransactions(history.transactions);
-            setHistoryWarnings(history.warnings);
-            if (history.warnings.length > 0) {
-                showToast('Partial history loaded. Retry if clinical records are missing.', true);
-            }
-        } catch (err) {
-            console.error('Failed to load history:', err);
-            const message = getErrorMessage(err);
-            setHistoryError(message);
-            showToast('Failed to load complete transaction history: ' + message, true);
-            setTransactions([]);
-            setHistoryWarnings([]);
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
+    const loadHistory = () => setShowHistory(true);
 
     const loadVaccineRecords = async () => {
         setVaccineLoading(true);
@@ -659,28 +632,10 @@ export function PatientDetailModal({
                                     Back to Details
                                 </button>
 
-                                {historyLoading ? (
-                                    <div className="py-16 flex flex-col items-center text-slate-400">
-                                        <svg className="animate-spin w-10 h-10 text-teal-500 mb-4" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                        </svg>
-                                        <span className="text-sm font-bold">Loading complete patient history...</span>
-                                    </div>
-                                ) : (
-                                    <div className="mb-6">
-                                        <div className={headerCls}>
-                                            Complete Patient History ({transactions.length} events)
-                                        </div>
-                                        <PatientTransactionHistory
-                                            transactions={transactions}
-                                            isLoading={historyLoading}
-                                            warnings={historyWarnings}
-                                            error={historyError}
-                                            onRetry={loadHistory}
-                                        />
-                                    </div>
-                                )}
+                                <div className="mb-6">
+                                    <div className={headerCls}>Complete Patient History</div>
+                                    <PatientTransactionHistory patientId={patient.id} />
+                                </div>
                             </>
                         )}
                     </div>

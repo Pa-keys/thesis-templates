@@ -1,430 +1,345 @@
-# MEDISENS Panel Revision Sprint Plan
+# MEDISENS Panel Revision Sprint
 
-> **For agentic workers:** Use `superpowers:executing-plans` when this plan is approved for implementation. Do not implement patient accounts in this sprint.
+## Sprint Status
 
-**Goal:** Address panel feedback for the medical staff system while preserving the current Vite multi-page React architecture, Supabase integration, role-based dashboards, and existing database schema.
+Phases 1-8 are complete.
 
-**Scope Decision:** Patient accounts are ON HOLD. The priority is to finalize medical staff workflows for registration, consent, triage, consultation, laboratory, pharmacy, midwife/FHSIS, and patient history.
+The sprint implemented itemized medical history, unified patient transactions, multiple Midwife vaccine records, and targeted clinical-form usability improvements while preserving the existing Vite multi-page React architecture and Supabase data model.
 
----
-
-## Panel Feedback Covered By This Plan
-
-- Itemize ailments, findings, treatments, tests, and prescriptions.
-- Itemize multiple vaccines per patient.
-- Provide a complete transaction/history view per patient.
-- Improve usability issues:
-  - birthday/date fields aligned left,
-  - grey textbox readability,
-  - disabled-field contrast,
-  - clearer spacing and labels,
-  - easier scanning in clinical forms.
-
-## On Hold
-
-### Patient Accounts
-
-Patient accounts are deferred. They should be handled in a separate sprint because they require patient auth design, account-to-patient linking, privacy review, RLS policy updates, password recovery, and a patient-facing portal scope decision.
-
-TODO later:
-- Design patient account roles and permissions.
-- Add secure patient profile linking.
-- Add RLS policies for patient-visible records.
-- Decide which records patients can view.
-- Add patient account onboarding and recovery flow.
+**Final status:** Conditional go pending authenticated end-to-end testing with real or demo Supabase accounts.
 
 ---
 
-## Current Storage Audit
+## Preserved Scope
 
-The current code already stores the relevant medical staff data, but it is spread across existing tables and sometimes stored as text or JSON.
+The following boundaries were maintained throughout the sprint:
 
-### Ailments / Complaints
+- No patient accounts were implemented.
+- No database schema migration was created or applied.
+- No existing tables or columns were renamed or removed.
+- Existing role strings and role-based routing were preserved.
+- Existing Supabase authentication and workflow logic were preserved.
+- Existing FHSIS report generation and legacy `bcg_date` calculations were preserved.
+- Patient profile editing, consent, consultation, laboratory, pharmacy, and Midwife workflows remain in place.
 
-Current storage:
-- `initial_consultation.chief_complaint`
-- `consultation.chief_complaints`
-- `follow_up.chief_complaint`
+Patient accounts remain a separate future project because they require patient authentication design, account-to-patient linking, privacy review, password recovery, and dedicated RLS policies.
 
-Current issue:
-- Usually stored as combined text. Display is readable but not itemized.
+---
 
-Plan:
-- Parse and display as itemized lists in history views.
-- Keep existing write behavior unless schema migration is approved.
+## Completed Phases
 
-### Findings
+### Phase 1: Itemization Helpers
 
-Current storage:
-- `consultation.assessment`
-- `consultation.diagnosis`
-- `lab_result.findings`
+Implemented shared helpers for converting existing stored data into safe, itemized display data:
 
-Current issue:
-- Lab findings and clinical findings are text fields.
+- `itemizeText()` splits newline, semicolon, and supported comma-separated text.
+- `itemizeLabTests()` maps existing laboratory boolean columns to readable labels and includes `others` entries.
+- `itemizePrescription()` wraps the shared prescription parser.
+- `itemizePrescriptionDisplay()` creates safe medication display rows and returns a warning for malformed JSON.
+- `normalizeVaccineRecords()` normalizes `data_fields.vaccine_records` and supports legacy BCG-only data.
+- Reusable vaccine options, categories, record cleaning, display naming, and record creation helpers are available under `src/features/vaccines/`.
 
-Plan:
-- Display findings as itemized sections.
-- Keep raw text fields as source of truth for now.
+No UI, schema, or account behavior was required for this phase.
 
-### Treatments
+### Phase 2: Unified Patient Transaction Service
 
-Current storage:
-- `consultation.medication_treatment`
-- `consultation.management_treatment`
-- `consultation.plan`
-- `follow_up.medication_treatment`
+`fetchPatientTransactions(patientId)` composes a newest-first patient timeline from existing tables only:
 
-Current issue:
-- Treatment is split across several text columns.
+- `patients`
+- `patient_consent`
+- `initial_consultation`
+- `consultation`
+- `lab_request`
+- `lab_result`
+- `prescription`
+- `follow_up`
+- `fhsis_logs`
 
-Plan:
-- Combine these into an itemized "Treatment" display group in patient history.
-- Do not rename columns.
+The service includes registration, consent, nurse consultation, doctor consultation, laboratory requests/results, prescriptions/pharmacy status, vaccines/FHSIS, and follow-ups.
 
-### Tests
+Each source query fails independently. Successful sections remain visible and failed sources return warnings. A fatal error is returned only when all history queries fail.
 
-Current storage:
-- `lab_request` boolean columns:
-  - `is_cbc`
-  - `is_cbc_platelet`
-  - `is_hgb_hct`
-  - `is_xray`
-  - `is_ultrasound`
-  - `is_rbs`
-  - `is_fbs`
-  - `is_uric_acid`
-  - `is_cholesterol`
-  - `is_urinalysis`
-  - `is_fecalysis`
-  - `is_sputum`
-- `lab_request.others`
+### Phase 3: Reusable Transaction History UI
 
-Current issue:
-- Tests are already structurally stored as boolean flags, but display should be itemized consistently.
+`PatientTransactionHistory` now supports a `patientId` API and loads transactions through `fetchPatientTransactions(patientId)`.
 
-Plan:
-- Add a shared lab-test label mapper.
-- Display requested tests as itemized chips/list items.
+Implemented states:
 
-### Prescriptions
+- Loading
+- Empty history
+- Partial-history warning
+- Fatal error with retry
+- Populated newest-first timeline
 
-Current storage:
-- `prescription.rx_content` JSON string
-- `prescription.status`
-- `prescription.dispensed_at`
+Timeline cards safely display itemized complaints, diagnoses, findings, treatments, laboratory tests, prescriptions, vaccines, pharmacy status, and follow-ups. Empty groups are omitted and malformed prescription data does not crash the component.
 
-Current issue:
-- Prescriptions are itemized inside JSON, but history views need safer parsing and better display.
+### Phase 4: Patient Detail Integration
 
-Plan:
-- Reuse `src/features/pharmacy/prescriptionParser.ts`.
-- Display medication name, dosage, frequency, duration, and quantity as separate itemized rows.
-- Malformed JSON must show a safe warning instead of crashing.
+Unified transaction history is wired into:
 
-### Vaccines
+- The reusable patient detail modal.
+- The dedicated patient details/history page.
 
-Current storage:
-- `fhsis_logs.data_fields.bcg_date`
-- `fhsis_logs.data_fields` also stores child-care program data.
+Both surfaces now use:
 
-Current issue:
-- Multiple vaccines per patient are not cleanly itemized.
-
-Plan without schema change:
-- Add UI support in the Midwife child logbook for multiple vaccine rows.
-- Save rows into `fhsis_logs.data_fields.vaccine_records` as an array:
-
-```json
-[
-  {
-    "vaccine_name": "BCG",
-    "dose_label": "Birth dose",
-    "date_given": "2026-06-01",
-    "remarks": "0 to 28 days old"
-  }
-]
+```tsx
+<PatientTransactionHistory patientId={patientId} />
 ```
 
-Plan with future schema migration:
-- See the migration plan below.
+Duplicated history-fetching state was removed from the parent views. Patient profile editing, consent controls, vaccine management, patient information, modal navigation, and existing clinical content were preserved.
 
+### Phase 5: Multiple Midwife Vaccine Rows
 
-## Vaccine Options To Integrate
-...
-## Vaccine Options To Integrate
+The Midwife child logbook supports repeatable vaccine rows using the reusable vaccine option source.
 
-Codex must use this list as the source of truth for vaccine dropdowns, repeatable vaccine rows, and vaccine history display.
+Supported actions and fields:
 
-### Child Care / Core RHU Immunization
+- Add vaccine row
+- Remove vaccine row
+- Vaccine category
+- Vaccine name
+- Other vaccine name
+- Dose label
+- Date given
+- Next due date
+- Administered by
+- Facility
+- Lot number
+- Remarks
 
-* BCG
-* Hepatitis B Vaccine
-* Pentavalent Vaccine (DPT-HepB-Hib)
-* Oral Polio Vaccine (OPV)
-* Inactivated Polio Vaccine (IPV)
-* Pneumococcal Conjugate Vaccine (PCV)
-* Measles-Containing Vaccine (MCV)
-* Measles-Rubella Vaccine (MR)
-* Measles-Mumps-Rubella Vaccine (MMR)
-* Rotavirus Vaccine
+Child FHSIS records save the following compatible shape inside the existing `data_fields` JSON object:
 
-### Maternal Care / Women of Reproductive Age
+```json
+{
+  "vaccine_records": [
+    {
+      "id": "generated-id",
+      "vaccine_category": "Child Care / Core RHU Immunization",
+      "vaccine_name": "BCG",
+      "dose_label": "Birth dose",
+      "date_given": "2026-06-01",
+      "next_due_date": "",
+      "administered_by": "",
+      "facility": "",
+      "lot_number": "",
+      "remarks": ""
+    }
+  ],
+  "bcg_date": "2026-06-01",
+  "bcg_age_category": "0 to 28 days old"
+}
+```
 
-* Tetanus Toxoid Vaccine (TT)
-* Tetanus-Diphtheria Vaccine (Td)
+The existing `midwifeAPI.saveFHSISLog()` flow remains unchanged. `bcg_date` stays synchronized when BCG is edited or removed, preserving existing report compatibility.
 
-### NCD & Seniors / Adult or Special-Risk Vaccines
+### Phase 6: Midwife FHSIS History
 
-* Influenza Vaccine
-* Pneumococcal Vaccine
-* PCV
-* PPSV23
-* COVID-19 Vaccine
+Midwife patient history continues to show all existing FHSIS log fields. When `data_fields.vaccine_records` exists, every vaccine appears as a separate itemized record.
 
-### Rabies & Leprosy / Post-Exposure and Special Public Health
+Displayed vaccine fields:
 
-* Anti-Rabies Vaccine
-* Tetanus Toxoid / Td
+- Vaccine name
+- Category
+- Dose
+- Date given
+- Next due date
+- Administered by
+- Facility
+- Lot number
+- Remarks
 
-### Optional
+The display reuses `normalizeVaccineRecords()` and `getVaccineDisplayName()`. Generic FHSIS history and legacy `bcg_date` values remain visible. Report generation code was not modified.
 
-* Others / Specify
+### Phase 7: Clinical Form Usability
 
-### Vaccine Record Fields
+Targeted presentation-only improvements were applied without changing handlers or business logic:
 
-Each vaccine record should support:
+- Patient and birthday/date fields explicitly align left.
+- Editable fields use clearer white backgrounds and stronger borders.
+- Labels have improved contrast and spacing.
+- Laboratory completed/read-only fields are visually distinct and readable.
+- Laboratory findings use improved line height and disabled-state contrast.
+- Pharmacy medication guidance is clearer on mobile and desktop.
+- Pharmacy unchecked rows remain readable instead of becoming low-opacity.
+- Existing registration, initial consultation, and doctor consultation styling that already met the requirements was preserved.
 
-* vaccine_category
-* vaccine_name
-* other_vaccine_name
-* dose_label
-* date_given
-* next_due_date
-* administered_by
-* facility
-* lot_number
-* remarks
+### Phase 8: Final Verification
 
-### Implementation Note
+The cumulative Phase 1-7 diff was reviewed for regressions.
 
-Do not hardcode these options directly inside UI components. Create a reusable vaccine options file, such as:
+Results:
 
-`src/features/vaccines/vaccineOptions.ts`
-
-or
-
-`src/features/midwife/vaccineOptions.ts`
-
-Then import the options into the Census Entry form.
-
-
-### Transaction / Patient History
-
-Current storage sources:
-- Registration: `patients`
-- Consent: `patient_consent`
-- Nurse initial consultation: `initial_consultation`, `vital_sign`
-- Doctor consultation: `consultation`
-- Lab requests: `lab_request`
-- Lab results: `lab_result`
-- Prescriptions / pharmacy: `prescription`
-- Vaccines / FHSIS: `fhsis_logs`
-- Follow-ups: `follow_up`
-
-Current issue:
-- Existing patient history mainly shows consultations and FHSIS logs, not one complete timeline.
-
-Plan:
-- Add a patient history service that safely queries these tables and composes a unified timeline.
-- If a table or optional column is missing, fail softly and show available sections.
-- Show loading, empty, and error states.
+- `npm.cmd run build`: passed.
+- Vite transformed 419 modules successfully.
+- `git diff --check`: passed with Windows LF-to-CRLF notices only.
+- No schema or patient-account changes were introduced.
+- Static flow review found no clear regression requiring a Phase 8 code change.
+- Authenticated E2E testing could not be completed because the repository does not include demo credentials and no authenticated browser session was available.
 
 ---
 
-## Affected Files
+## Files Changed
 
-### Planning
+### Shared Patient History
 
-- Create/update: `REVISION.md`
+- `src/features/patients/itemization.ts`
+- `src/features/patients/history.ts`
+- `src/features/pharmacy/prescriptionParser.ts`
+- `src/features/vaccines/vaccineOptions.ts`
+- `src/components/patient/PatientTransactionHistory.tsx`
+- `src/components/patient/PatientDetailModal.tsx`
+- `src/app/patients/details.tsx`
 
-### Shared Patient Itemization
+### Midwife and Vaccines
 
-- Create: `src/features/patients/itemization.ts`
-  - `itemizeText()`
-  - `itemizeLabTests()`
-  - `itemizePrescription()`
-  - `normalizeVaccineRecords()`
-
-- Create: `src/features/patients/history.ts`
-  - `fetchPatientTransactions(patientId)`
-  - transaction typing for registration, consent, consultations, lab, pharmacy, vaccines, follow-ups
-
-- Create: `src/types/history.ts`
-  - shared transaction/item interfaces if the helper grows beyond one file
-
-### Patient History UI
-
-- Create: `src/components/patient/PatientTransactionHistory.tsx`
-  - medical timeline cards
-  - itemized groups for ailments, findings, treatments, tests, prescriptions, vaccines
-
-- Update: `src/components/patient/PatientDetailModal.tsx`
-  - add complete transaction/history tab or section
-  - keep existing detail editing
-  - preserve current consultation history display if useful
-
-- Update: `src/app/patients/details.tsx`
-  - replace narrow consultation-only history modal with unified transaction history
-  - improve birthday/date input alignment
-
-### Midwife Multiple Vaccines
-
-- Update: `src/features/midwife/censusEntry.tsx`
-  - replace single BCG-only input with repeatable vaccine rows for child logbook
-  - keep `bcg_date` compatibility for reports
-  - additionally save `vaccine_records` array in `data_fields`
-
-- Update: `src/features/midwife/patientRecords.tsx`
-  - display vaccine records from `data_fields.vaccine_records`
-  - keep existing FHSIS log history
-
-- Update: `src/features/midwife/reportGenerator.tsx`
-  - preserve existing FHSIS BCG/report calculations
-  - do not break report generation
+- `src/features/midwife/censusEntry.tsx`
+- `src/features/midwife/patientRecords.tsx`
 
 ### Usability Polish
 
-- Update: `src/app/patients/templates.tsx`
-  - align birthday/date inputs left
-  - improve date field readability
-  - improve grey textbox contrast
+- `src/app/patients/templates.tsx`
+- `src/app/initial-consultation/index.tsx`
+- `src/app/consultation/index.tsx`
+- `src/app/laboratory/index.tsx`
+- `src/app/pharmacist/index.tsx`
 
-- Update: `src/app/initial-consultation/index.tsx`
-  - improve date input alignment
-  - improve disabled/read-only field contrast
-
-- Update: `src/app/consultation/index.tsx`
-  - improve grey panels/textboxes
-  - itemize prescription and lab-test display where shown
-
-- Update: `src/app/laboratory/index.tsx`
-  - itemize lab findings display
-  - keep existing result save logic
-
-- Update: `src/app/pharmacist/index.tsx`
-  - ensure parsed prescription rows remain itemized and malformed JSON stays safe
+Some listed files contained completed sprint work before the final phased verification pass. The current working-tree changes are limited to the files reported by `git status`.
 
 ---
 
-## Safe Migration Plan
+## Remaining Risks and TODOs
 
-No schema change should be applied until approved.
+### Required Before Final Approval
 
-The frontend-only plan can work with current storage by itemizing existing text, booleans, and JSON fields.
+- Run authenticated E2E testing with real or dedicated demo accounts for BHW, Nurse, Doctor, Laboratory, Pharmacist, and Midwife.
+- Verify created data directly in Supabase to ensure no duplicate or corrupted patient, consultation, lab, prescription, or FHSIS rows.
+- Verify the complete request chain: Doctor lab request to Laboratory result to Doctor history.
+- Verify the complete prescription chain: Doctor prescription to Pharmacist dispense to patient history.
+- Generate a Midwife report containing a new multiple-vaccine record and confirm legacy BCG totals remain correct.
 
-If normalized storage is approved later, add new tables instead of renaming existing tables:
+### Compatibility and Edge Cases
 
-```sql
--- proposed only; do not apply without approval
-create table patient_ailments (
-  id bigint generated by default as identity primary key,
-  patient_id bigint not null references patients(id),
-  source_table text not null,
-  source_id bigint,
-  label text not null,
-  notes text,
-  recorded_at timestamptz default now()
-);
+- Confirm the deployed `fhsis_logs.data_fields` column accepts JSON arrays.
+- Test legacy child records containing only `bcg_date` and no `vaccine_records`.
+- Test malformed `prescription.rx_content` JSON in transaction history and Pharmacy views.
+- Test a patient whose optional history tables or columns are missing or inaccessible.
+- Confirm actual deployed column names match the transaction-history select lists.
+- Confirm RLS permits each authorized staff role to read the history sources it needs.
 
-create table patient_findings (
-  id bigint generated by default as identity primary key,
-  patient_id bigint not null references patients(id),
-  source_table text not null,
-  source_id bigint,
-  finding_type text not null,
-  description text not null,
-  recorded_at timestamptz default now()
-);
+### Engineering Follow-Up
 
-create table patient_treatments (
-  id bigint generated by default as identity primary key,
-  patient_id bigint not null references patients(id),
-  consultation_id bigint,
-  treatment_type text not null,
-  description text not null,
-  recorded_at timestamptz default now()
-);
+- Add automated unit tests for itemization, prescription parsing, and vaccine normalization.
+- Add service tests for partial-query warnings and newest-first sorting.
+- Add component tests for loading, empty, warning, error, retry, and populated states.
+- Add authenticated workflow tests for the cross-role clinical lifecycle.
+- Install and configure the TypeScript compiler as a local development dependency if standalone `tsc --noEmit` verification is required.
 
-create table patient_vaccines (
-  id bigint generated by default as identity primary key,
-  patient_id bigint not null references patients(id),
-  vaccine_name text not null,
-  dose_label text,
-  date_given date,
-  remarks text,
-  source_log_id bigint,
-  recorded_at timestamptz default now()
-);
+---
+
+## Final Go/No-Go Status
+
+**Conditional go.**
+
+The implementation builds successfully and the cumulative code review found no clear regression. It is suitable for continued demo preparation, but it is not an unconditional production or defense-day go until authenticated E2E testing confirms the deployed Supabase schema, RLS policies, role workflows, row integrity, and report compatibility.
+
+---
+
+## How to Test / See the Changes
+
+### Start the Application
+
+From the repository root:
+
+```powershell
+npm.cmd run build
+npm.cmd run preview
 ```
 
-Migration requirements if approved:
-- Add RLS policies before exposing tables.
-- Backfill from existing `initial_consultation`, `consultation`, `lab_result`, `prescription`, and `fhsis_logs`.
-- Keep old columns for compatibility until all workflows are verified.
-- Do not rename `labaratory`, `midwives`, or existing table names.
+Open:
 
----
+```text
+http://127.0.0.1:4173/pages/login.html
+```
 
-## TODOs
+Use dedicated demo data where possible. Record patient IDs, consultation IDs, lab request IDs, prescription IDs, and FHSIS log IDs so the resulting Supabase rows can be inspected for duplicates.
 
-- TODO: Confirm whether `fhsis_logs.data_fields` accepts JSON arrays in the deployed Supabase schema.
-- TODO: Confirm actual primary key types for patient-related tables before writing a migration.
-- TODO: Confirm whether `follow_up` has all expected columns in production.
-- TODO: Confirm if a dedicated immunization table already exists but is not referenced in the current frontend.
-- TODO: Decide whether itemized text parsing should split by comma, semicolon, or newline only.
-- TODO: Add tests or manual QA cases for malformed prescription JSON in patient history.
-- TODO: Add role-based manual checks for BHW, Nurse, Doctor, Lab, Pharmacist, and Midwife after implementation.
+### BHW: Registration and Patient History
 
----
+1. Sign in as a BHW account.
+2. Register a new patient with complete demographics, birthday, address, contact, PhilHealth, and emergency-contact fields.
+3. Confirm the registration succeeds once and the patient appears once in Patient Records.
+4. Open the patient detail modal and confirm profile fields remain readable and editable.
+5. Open **Complete Patient History**.
+6. Confirm the Registration card appears with the correct name, age, contact, address, status, and date.
+7. Confirm loading, empty, warning, and error states remain readable by testing a patient with partial or unavailable history where possible.
+8. Inspect `patients` and confirm only one row was created.
 
-## Implementation Order
+### Nurse: Initial Consultation and Vitals
 
-1. Create itemization helpers.
-   - Add text splitting, lab-test label mapping, prescription parsing wrapper, and vaccine normalization.
+1. Ensure the test patient has signed consent.
+2. Sign in as a Nurse account.
+3. Select the patient from the consented queue.
+4. Enter consultation date/time, complaint, diagnosis, transaction/transfer mode, and valid vital signs.
+5. Confirm BMI, nutritional status, and other read-only fields remain clear.
+6. Save once and confirm the patient advances to the Doctor queue.
+7. Open patient history and confirm the Nurse consultation appears with itemized complaints, diagnosis, modes, and date.
+8. Inspect `initial_consultation` and `vital_sign`; confirm one linked row exists in each table.
 
-2. Create unified patient transaction service.
-   - Query current tables.
-   - Compose registration, consent, initial consultation, doctor consultation, lab request, lab result, prescription/pharmacy, vaccine, and follow-up events.
-   - Sort newest-first.
-   - Fail softly for optional data.
+### Doctor: Consultation, Lab Request, and Prescription
 
-3. Create reusable transaction history UI.
-   - Loading state.
-   - Empty state.
-   - Error-safe display.
-   - Itemized sections for ailments, findings, treatment, tests, prescriptions, and vaccines.
+1. Sign in as a Doctor account.
+2. Open the patient from the active queue.
+3. Confirm the Nurse consultation and vital signs are visible.
+4. Save a Doctor consultation containing multiple complaints, findings, diagnoses, treatments, and a follow-up when applicable.
+5. Create a lab request with several predefined tests and one `others` entry.
+6. Create a prescription with multiple medications and complete dosage, frequency, duration, and quantity fields.
+7. Open patient history and confirm Doctor, lab-request, prescription, and follow-up entries are itemized newest-first.
+8. Inspect `consultation`, `lab_request`, `prescription`, and `follow_up`; confirm expected rows exist once and reference the correct patient/consultation.
 
-4. Wire transaction history into patient detail views.
-   - Update `PatientDetailModal`.
-   - Update patient details page history modal.
-   - Preserve existing patient profile editing and consultation displays.
+### Laboratory: Request and Result
 
-5. Add multiple vaccine rows to Midwife child logbook.
-   - Repeatable vaccine inputs.
-   - Save to `data_fields.vaccine_records`.
-   - Keep `bcg_date` compatibility.
+1. Sign in as a Laboratory account.
+2. Confirm the Doctor's new request appears in Pending requests without a manual data correction.
+3. Open the request and confirm patient, complaint, requested tests, requester, and date are correct.
+4. Enter findings and save the result once.
+5. Confirm the request becomes Completed and completed controls become read-only but readable.
+6. Open patient history from an authorized patient screen and confirm the Laboratory Result card shows itemized findings, performer, date, and status.
+7. Inspect `lab_result` and `lab_request`; confirm one result exists and the request status is `Completed`.
 
-6. Update Midwife patient/FHSIS history display.
-   - Show vaccine records as separate items.
-   - Preserve existing reports.
+### Pharmacist: Prescription and Dispensing
 
-7. Apply usability fixes.
-   - Birthday/date fields left aligned.
-   - Grey textboxes adjusted for contrast.
-   - Disabled fields readable.
-   - Better spacing and labels in touched forms.
+1. Sign in as a Pharmacist account.
+2. Confirm the Doctor's prescription appears once in the pending queue.
+3. Open it and verify medication, dosage, frequency, duration, and quantity display correctly.
+4. Test unavailable medication selection and confirm unchecked rows remain readable.
+5. Mark available medications and dispense the prescription once.
+6. Confirm the queue updates and the prescription status becomes `Dispensed` with `dispensed_at` populated.
+7. Open patient history and confirm the transaction appears as a Pharmacy event.
+8. For malformed-data QA, use a dedicated test prescription with invalid `rx_content` JSON and confirm the UI shows a safe warning instead of crashing.
 
-8. Run verification.
-   - `npm run build`
-   - Manual workflow checks for patient details, consultation, lab, pharmacy, midwife child vaccine entry, and patient history.
+### Midwife: Multiple Vaccines, History, and Reports
+
+1. Sign in as a Midwife account.
+2. Open **Program Logbooks (FHSIS)** and select **Child Care**.
+3. Select the test patient.
+4. Complete the BCG row with a date and dose.
+5. Add at least two more vaccine rows using the reusable dropdown options.
+6. Complete date, next due date, administrator, facility, lot number, and remarks where applicable.
+7. Remove one non-BCG row and confirm the remaining rows stay intact.
+8. Save once and confirm the child FHSIS record appears once.
+9. Open the patient's FHSIS History and confirm every vaccine appears as a separate card with its itemized fields.
+10. Confirm the generic FHSIS fields and legacy `bcg_date` value are still visible.
+11. Generate the relevant report and confirm BCG totals/categories remain correct and the PDF remains readable.
+12. Inspect `fhsis_logs.data_fields`; confirm `vaccine_records` is an array and `bcg_date` matches the BCG row.
+13. Open a legacy record containing `bcg_date` without `vaccine_records` and confirm it remains readable and report-compatible.
+
+### Final Data-Integrity Check
+
+After all role tests:
+
+1. Review Supabase rows for the test patient across all nine history sources.
+2. Confirm patient and consultation foreign keys point to the intended records.
+3. Confirm no action created duplicate rows after one click.
+4. Confirm failed actions did not leave partial rows.
+5. Confirm patient history is newest-first and contains all successful transactions.
+6. Delete or clearly mark demo records according to the team's test-data policy.

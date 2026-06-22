@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { normalizeVaccineRecords } from '../patients/itemization';
+import { getVaccineDisplayName } from '../vaccines/vaccineOptions';
 
 interface Props {
     patients: any[];
@@ -50,9 +51,26 @@ function HistoryModal({ patient, logs, onClose }: { patient: any; logs: any[]; o
                                             {log.category === 'child' && log.data_fields?.vaccine_records && Array.isArray(log.data_fields.vaccine_records) && (
                                                 <div className="mb-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
                                                     <span className="font-bold text-blue-700 uppercase text-[0.6rem] tracking-wider block mb-1">Vaccine Records</span>
-                                                    {normalizeVaccineRecords(log.data_fields).map((v, i) => (
-                                                        <div key={i} className="text-[0.65rem] text-blue-800 ml-1">
-                                                            • {v.vaccine_name}{v.dose_label ? ` (${v.dose_label})` : ''}{v.date_given ? ` — ${v.date_given}` : ''}
+                                                    {normalizeVaccineRecords(log.data_fields).map(vaccine => (
+                                                        <div key={vaccine.id} className="mb-2 rounded-md border border-blue-100 bg-white p-2 last:mb-0">
+                                                            <div className="font-bold text-blue-900">{getVaccineDisplayName(vaccine)}</div>
+                                                            <dl className="mt-1 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2">
+                                                                {[
+                                                                    ['Category', vaccine.vaccine_category],
+                                                                    ['Dose', vaccine.dose_label],
+                                                                    ['Date given', vaccine.date_given],
+                                                                    ['Next due', vaccine.next_due_date],
+                                                                    ['Administered by', vaccine.administered_by],
+                                                                    ['Facility', vaccine.facility],
+                                                                    ['Lot number', vaccine.lot_number],
+                                                                    ['Remarks', vaccine.remarks],
+                                                                ].filter((entry): entry is [string, string] => Boolean(entry[1])).map(([label, value]) => (
+                                                                    <div key={label} className="text-[0.65rem] text-blue-800">
+                                                                        <dt className="inline font-bold">{label}: </dt>
+                                                                        <dd className="inline">{value}</dd>
+                                                                    </div>
+                                                                ))}
+                                                            </dl>
                                                         </div>
                                                     ))}
                                                 </div>

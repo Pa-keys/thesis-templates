@@ -1,11 +1,17 @@
-import type { PatientHistoryWarning, PatientTransaction } from '../../features/patients/history';
+import { useCallback, useEffect, useState } from 'react';
+import {
+    fetchPatientTransactions,
+    type PatientHistoryWarning,
+    type PatientTransaction,
+} from '../../features/patients/history';
 import { EmptyState } from '../shared/EmptyState';
 import { LoadingState } from '../shared/LoadingState';
 import { StatusBadge } from '../shared/StatusBadge';
 
 interface PatientTransactionHistoryProps {
-    transactions: PatientTransaction[];
-    isLoading: boolean;
+    patientId?: string;
+    transactions?: PatientTransaction[];
+    isLoading?: boolean;
     warnings?: PatientHistoryWarning[];
     error?: string | null;
     onRetry?: () => void;
@@ -137,24 +143,56 @@ function HistoryWarning({ warnings, onRetry }: { warnings: PatientHistoryWarning
     );
 }
 
-export function PatientTransactionHistory({ transactions, isLoading, warnings = [], error, onRetry }: PatientTransactionHistoryProps) {
-    if (isLoading) return <LoadingState label="Loading complete transaction history..." />;
+export function PatientTransactionHistory({ patientId, transactions, isLoading, warnings = [], error, onRetry }: PatientTransactionHistoryProps) {
+    const [loadedTransactions, setLoadedTransactions] = useState<PatientTransaction[]>([]);
+    const [loadedWarnings, setLoadedWarnings] = useState<PatientHistoryWarning[]>([]);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isFetching, setIsFetching] = useState(false);
 
-    if (error) {
+    const loadTransactions = useCallback(async () => {
+        if (!patientId) return;
+
+        setIsFetching(true);
+        setLoadError(null);
+        try {
+            const history = await fetchPatientTransactions(patientId);
+            setLoadedTransactions(history.transactions);
+            setLoadedWarnings(history.warnings);
+        } catch (loadFailure) {
+            setLoadedTransactions([]);
+            setLoadedWarnings([]);
+            setLoadError(loadFailure instanceof Error ? loadFailure.message : 'Unable to load patient history.');
+        } finally {
+            setIsFetching(false);
+        }
+    }, [patientId]);
+
+    useEffect(() => {
+        void loadTransactions();
+    }, [loadTransactions]);
+
+    const visibleTransactions = patientId ? loadedTransactions : transactions ?? [];
+    const visibleWarnings = patientId ? loadedWarnings : warnings;
+    const visibleError = patientId ? loadError : error;
+    const retry = patientId ? loadTransactions : onRetry;
+
+    if (isLoading || isFetching) return <LoadingState label="Loading complete transaction history..." />;
+
+    if (visibleError) {
         return (
             <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
                 <div className="font-extrabold">Patient history could not be loaded</div>
-                <p className="mt-1 font-medium">{error}</p>
-                <RetryButton onRetry={onRetry} />
+                <p className="mt-1 font-medium">{visibleError}</p>
+                <RetryButton onRetry={retry} />
             </div>
         );
     }
 
-    if (transactions.length === 0) {
-        if (warnings.length > 0) {
+    if (visibleTransactions.length === 0) {
+        if (visibleWarnings.length > 0) {
             return (
                 <div>
-                    <HistoryWarning warnings={warnings} onRetry={onRetry} />
+                    <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
                     <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-700">
                         No history records can be shown until the failed sections are retried or checked.
                     </div>
@@ -172,12 +210,12 @@ export function PatientTransactionHistory({ transactions, isLoading, warnings = 
 
     return (
         <div className="relative">
-            <HistoryWarning warnings={warnings} onRetry={onRetry} />
+            <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
 
             <div className="absolute bottom-3 left-[18px] top-3 hidden w-0.5 bg-slate-200 sm:block" />
 
             <div className="space-y-4">
-                {transactions.map(transaction => (
+                {visibleTransactions.map(transaction => (
                     <div key={transaction.id} className="relative flex gap-4">
                         <div className="hidden shrink-0 pt-4 sm:flex">
                             <div className={`h-2.5 w-2.5 rounded-full shadow-sm ring-2 ring-white ${
