@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Icon } from '../../components/shared/Icon';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
@@ -197,7 +198,7 @@ function LabRequestDetail({
                         <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusColor(request.status)}`}>
                             {request.status || 'Pending'}
                         </span>
-                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 font-bold text-lg transition-colors">✕</button>
+                        <button onClick={onClose} aria-label="Close laboratory request" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 font-bold text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close laboratory request" /></button>
                     </div>
                 </div>
 
@@ -310,7 +311,7 @@ function LabRequestDetail({
                     <div>
                         <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">
                             Lab Results / Findings
-                            {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold">✓ Submitted</span>}
+                            {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Submitted</span>}
                             {loadingLabResult && <span className="ml-2 text-blue-600 normal-case font-semibold">Loading saved result...</span>}
                         </label>
                         <textarea
@@ -331,7 +332,7 @@ function LabRequestDetail({
                             disabled={saving}
                             className="w-full font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 text-sm"
                         >
-                            {saving ? 'Submitting...' : '✓ Submit Results'}
+                            {saving ? 'Submitting...' : <span className="inline-flex items-center justify-center gap-1.5"><Icon name="check" className="h-4 w-4" /> Submit Results</span>}
                         </button>
                     </div>
                 )}
@@ -354,7 +355,7 @@ const LaboratoryDashboard = () => {
     const { showToast, ToastComponent } = useToast();
 
     const navItems = [
-        { id: 'lab', label: 'Dashboard', icon: '🧪' },
+        { id: 'lab', label: 'Dashboard', icon: 'flask' },
     ];
 
     useEffect(() => {
@@ -552,20 +553,20 @@ const LaboratoryDashboard = () => {
                     <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl">
                         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <h1 className="text-2xl font-extrabold text-slate-800">Lab Requests 🧪</h1>
+                                <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><Icon name="flask" className="h-6 w-6" /> Lab Requests</h1>
                                 <p className="text-sm text-slate-500 mt-1">Process and submit results. Updates automatically.</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             {[
-                                { label: 'Total Requests', value: stats.total, icon: '📋', color: 'bg-blue-50 text-blue-600' },
-                                { label: 'Pending', value: stats.pending, icon: '⏳', color: 'bg-amber-50 text-amber-600' },
-                                { label: 'Completed', value: stats.completed, icon: '✅', color: 'bg-green-50 text-green-600' },
+                                { label: 'Total Requests', value: stats.total, icon: 'clipboard', color: 'bg-blue-50 text-blue-600' },
+                                { label: 'Pending', value: stats.pending, icon: 'clock', color: 'bg-amber-50 text-amber-600' },
+                                { label: 'Completed', value: stats.completed, icon: 'check', color: 'bg-green-50 text-green-600' },
                             ].map(stat => (
                                 <div key={stat.label} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
                                     <div className={`w-12 h-12 rounded-full ${stat.color} flex items-center justify-center text-xl shrink-0`}>
-                                        {stat.icon}
+                                        <Icon name={stat.icon} className="h-5 w-5" />
                                     </div>
                                     <div>
                                         <div className="text-sm font-semibold text-slate-500">{stat.label}</div>
@@ -596,7 +597,7 @@ const LaboratoryDashboard = () => {
 
                             <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                                 <div className="relative max-w-md">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                    <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input
                                         type="text"
                                         placeholder="Search by patient name, lab no, complaint..."

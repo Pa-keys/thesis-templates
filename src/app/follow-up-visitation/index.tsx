@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { getDashboardPath, requireRole } from '../../lib/auth/roles';
 import type { Role } from '../../types/user';
 import { Sidebar } from '../../components/layout/Sidebar';
+import { Icon } from '../../components/shared/Icon';
 import SignatureCanvas from 'react-signature-canvas';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../../hooks/useNetworkSync';
 import { OfflineBanner } from '../../components/feedback/OfflineBanner';
@@ -138,8 +139,8 @@ export default function FollowUp() {
     const headerCls = "text-sm font-extrabold text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-5";
 
     const navItems = role === 'doctor' 
-        ? [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'records', label: 'Patient Records', icon: '📁' }, { id: 'consultation', label: 'Consultation', icon: '📋' } ]
-        : [ { id: 'dashboard', label: 'Dashboard', icon: '🏠' }, { id: 'new-record', label: 'New Record', icon: '➕' }, { id: 'consultation', label: 'Consultation', icon: '📋' } ];
+        ? [ { id: 'dashboard', label: 'Dashboard', icon: 'home' }, { id: 'records', label: 'Patient Records', icon: 'users' }, { id: 'consultation', label: 'Consultation', icon: 'clipboard' } ]
+        : [ { id: 'dashboard', label: 'Dashboard', icon: 'home' }, { id: 'new-record', label: 'New Record', icon: 'user-plus' }, { id: 'consultation', label: 'Consultation', icon: 'clipboard' } ];
 
     const patientFullName = patient ? `${patient.lastName}, ${patient.firstName} ${patient.middleName || ''}`.trim() : 'Loading...';
     const patientInitials = patient ? `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase() : '?';
@@ -148,8 +149,6 @@ export default function FollowUp() {
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden font-sans">
             
             <ToastComponent />
-
-            {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
 
             <Sidebar 
                 activePage="consultation"
@@ -320,7 +319,7 @@ export default function FollowUp() {
                             {/* SUBMIT BUTTON */}
                             <div className="flex justify-end pb-10">
                                 <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-4 bg-blue-600 text-white font-extrabold text-sm rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2">
-                                    {isSubmitting ? <span className="animate-pulse">Saving Record...</span> : '💾 Save Follow-up Record'}
+                                    {isSubmitting ? <span className="animate-pulse">Saving Record...</span> : <><Icon name="save" className="h-4 w-4" /> Save Follow-up Record</>}
                                 </button>
                             </div>
                         </form>

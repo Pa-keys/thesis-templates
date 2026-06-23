@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { normalizeVaccineRecords } from '../patients/itemization';
 import { getVaccineDisplayName } from '../vaccines/vaccineOptions';
+import { Icon } from '../../components/shared/Icon';
 
 interface Props {
     patients: any[];
@@ -13,6 +14,13 @@ interface Props {
 
 // ─── History Modal ────────────────────────────────────────────────────────────
 function HistoryModal({ patient, logs, onClose }: { patient: any; logs: any[]; onClose: () => void; }) {
+    const getLogIcon = (category: string) => {
+        if (category === 'maternal') return 'heart-pulse';
+        if (category === 'child') return 'baby';
+        if (category === 'family_planning') return 'pill';
+        return 'clipboard';
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-8 duration-300">
@@ -26,13 +34,13 @@ function HistoryModal({ patient, logs, onClose }: { patient: any; logs: any[]; o
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">{patient.sex || 'N/A'} • {patient.age || 'N/A'} YRS • {patient.address}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 font-bold transition-colors shrink-0">✕</button>
+                    <button onClick={onClose} aria-label="Close patient history" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 font-bold transition-colors shrink-0"><Icon name="close" className="h-4 w-4" label="Close patient history" /></button>
                 </div>
                 <div className="p-8 overflow-y-auto flex-1">
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Clinical History (FHSIS Logs)</h3>
                     {logs.length === 0 ? (
                         <div className="text-center py-10">
-                            <div className="text-4xl mb-3 opacity-30">📋</div>
+                            <Icon name="clipboard" className="h-10 w-10 mx-auto mb-3 opacity-30" />
                             <p className="text-slate-500 font-medium">No previous records found for this patient.</p>
                         </div>
                     ) : (
@@ -40,7 +48,7 @@ function HistoryModal({ patient, logs, onClose }: { patient: any; logs: any[]; o
                             {logs.map(log => (
                                 <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
                                     <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-500 text-white text-xs shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                                        {log.category === 'maternal' ? '🤰' : log.category === 'child' ? '👶' : '📋'}
+                                        <Icon name={getLogIcon(log.category)} className="h-4 w-4" />
                                     </div>
                                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
                                         <div className="flex items-center justify-between mb-1">
@@ -122,7 +130,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                         <p className="text-sm text-slate-500 font-medium mt-0.5">All registered patients</p>
                     </div>
                     <div className="relative w-full md:max-w-sm">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+                        <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search patient name..."
@@ -141,7 +149,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                         </div>
                     ) : filteredPatients.length === 0 ? (
                         <div className="py-20 text-center">
-                            <div className="text-4xl mb-3 opacity-40">📂</div>
+                            <Icon name="inbox" className="h-10 w-10 mx-auto mb-3 opacity-40" />
                             <div className="font-bold text-slate-700 text-lg">No patients found</div>
                             <div className="text-sm text-slate-400 mt-1">Try adjusting your search query.</div>
                         </div>
@@ -179,9 +187,9 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                                         </span>
                                         {/* ✅ Now reads pre-normalized consent_signed from useMidwifeData */}
                                         {patient.consent_signed ? (
-                                            <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[0.6rem] font-extrabold px-2 py-0.5 rounded-md">✓ SIGNED</span>
+                                            <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[0.6rem] font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> SIGNED</span>
                                         ) : (
-                                            <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[0.6rem] font-extrabold px-2 py-0.5 rounded-md">⚠ PENDING</span>
+                                            <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[0.6rem] font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1"><Icon name="alert-triangle" className="h-3 w-3" /> PENDING</span>
                                         )}
                                     </div>
 
@@ -191,7 +199,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                                         className="text-slate-500 font-bold text-xs bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-600 hover:text-white transition-colors whitespace-nowrap"
                                         title="View FHSIS History"
                                     >
-                                        📋 History
+                                        <Icon name="clipboard" className="inline h-3.5 w-3.5 mr-1" /> History
                                     </button>
 
                                     <div className="text-slate-300 group-hover:text-blue-400 transition-colors text-sm">›</div>

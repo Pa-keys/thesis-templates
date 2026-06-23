@@ -36,6 +36,24 @@
     /* Responsive variables */
     --sidebar-w:   240px;
     --topbar-h:    4rem;
+
+    /* Shared semantic foundation */
+    --surface-muted: #F1F5F9;
+    --surface-subtle: #F8FAFC;
+    --text-muted: #64748B;
+    --focus-ring: rgba(37, 99, 235, 0.28);
+    --focus-color: #2563EB;
+    --disabled-bg: #F1F5F9;
+    --disabled-text: #64748B;
+    --disabled-border: #CBD5E1;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --radius-control: 0.75rem;
+    --motion-fast: 160ms;
+    --motion-base: 220ms;
 }
 
 
@@ -59,6 +77,26 @@ body {
 }
 
 a { text-decoration: none; color: inherit; }
+
+::selection { background: var(--blue-light); color: var(--text); }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+:where(button, input, select, textarea):disabled {
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
 
 /* ══════════════════════════════════════════════════════════════
    LAYOUT: SIDEBAR & MAIN

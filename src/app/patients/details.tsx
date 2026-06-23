@@ -37,25 +37,25 @@ const PATIENT_DETAILS_ROLES = ['BHW', 'nurse', 'doctor', 'midwives'] as const sa
 
 const PATIENT_DETAILS_NAV_ITEMS: Record<(typeof PATIENT_DETAILS_ROLES)[number], NavItem[]> = {
     doctor: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
-        { id: 'records', label: 'Patient Records', icon: 'PT' },
-        { id: 'consultation', label: 'Consultation', icon: 'CX' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'consultation', label: 'Consultation', icon: 'clipboard' },
     ],
     nurse: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
-        { id: 'records', label: 'Patient Records', icon: 'PT' },
-        { id: 'new-record', label: 'New Record', icon: 'NEW' },
-        { id: 'consultation', label: 'Initial Consultation', icon: 'IC' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
+        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' },
     ],
     midwives: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
-        { id: 'records', label: 'Patient Census', icon: 'PT' },
-        { id: 'reports', label: 'Generate Reports', icon: 'REP' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Patient Census', icon: 'users' },
+        { id: 'reports', label: 'Generate Reports', icon: 'chart' },
     ],
     BHW: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'DB' },
-        { id: 'records', label: 'Records', icon: 'PT' },
-        { id: 'new-record', label: 'New Record', icon: 'NEW' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Records', icon: 'users' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
     ],
 };
 
@@ -200,7 +200,6 @@ function DetailsPage() {
 
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
-            {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
             <ToastComponent />
 
             <Sidebar activePage="records" userName={userName} userInitials={userInitials} userRole={role.toUpperCase()} navItems={navItems} onNavigate={handleNavigate} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} />

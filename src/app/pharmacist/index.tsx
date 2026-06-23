@@ -10,6 +10,7 @@ import { printHtmlDocument } from '../../lib/utils/print';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { NetworkBadge } from '../../components/shared/NetworkBadge';
 import { EmptyState } from '../../components/shared/EmptyState';
+import { Icon } from '../../components/shared/Icon';
 
 
 // --- Interfaces ---
@@ -56,7 +57,7 @@ function PharmacyDashboard() {
     const isOnline = useOnlineStatus();
 
     const pharmacistNavItems = [
-        { id: 'queue', label: 'Pending Queue', icon: '💊' }
+        { id: 'queue', label: 'Pending Queue', icon: 'pill' }
     ];
 
     useEffect(() => {
@@ -311,7 +312,7 @@ function PharmacyDashboard() {
                             <>
                                 <div className="flex justify-between items-end">
                                     <div>
-                                        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Prescription Queue 💊</h1>
+                                        <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2"><Icon name="pill" className="h-6 w-6" /> Prescription Queue</h1>
                                         <p className="text-sm text-slate-500 mt-1">Review e-prescriptions sent by doctors and dispense medications.</p>
                                     </div>
                                 </div>
@@ -319,7 +320,7 @@ function PharmacyDashboard() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                     <div className="bg-white rounded-xl border border-blue-200 p-5 shadow-sm">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">⏳</div>
+                                            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="clock" className="h-5 w-5" /></div>
                                             <div>
                                                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Awaiting Dispense</div>
                                                 <div className="text-2xl font-black text-slate-900 leading-tight">{prescriptions.length}</div>
@@ -335,7 +336,7 @@ function PharmacyDashboard() {
                                             <p className="text-xs text-slate-500">Click to review medication details.</p>
                                         </div>
                                         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:w-auto">
-                                            <span>🔍</span>
+                                            <Icon name="search" className="h-4 w-4 text-slate-400" />
                                             <input
                                                 type="text"
                                                 placeholder="Search patient..."
@@ -359,13 +360,13 @@ function PharmacyDashboard() {
                                                         <div>
                                                             <h4 className="font-bold text-slate-900">{rx.patients?.lastName}, {rx.patients?.firstName}</h4>
                                                             <div className="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                                                                <span className="flex items-center gap-1">👤 {rx.patients?.sex}</span>
+                                                                <span className="flex items-center gap-1"><Icon name="user" className="h-3.5 w-3.5" /> {rx.patients?.sex}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
                                                         <span className="text-xs font-medium text-slate-500">{new Date(rx.prescription_date).toLocaleDateString('en-PH')}</span>
-                                                        <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[0.65rem] font-bold uppercase tracking-wide">⏳ Pending</span>
+                                                        <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[0.65rem] font-bold uppercase tracking-wide inline-flex items-center gap-1"><Icon name="clock" className="h-3 w-3" /> Pending</span>
                                                     </div>
                                                 </div>
                                             ))
@@ -387,7 +388,7 @@ function PharmacyDashboard() {
                                 <h2 className="text-lg font-bold text-slate-900">E-Prescription Details</h2>
                                 <p className="text-sm text-slate-500 mt-1">Patient: <span className="font-semibold text-slate-700">{selectedRx.patients?.firstName} {selectedRx.patients?.lastName}</span></p>
                             </div>
-                            <button onClick={() => setSelectedRx(null)} className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors">✕</button>
+                            <button onClick={() => setSelectedRx(null)} aria-label="Close prescription details" className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors"><Icon name="close" className="h-4 w-4" label="Close prescription details" /></button>
                         </div>
 
                         <div className="p-5 md:p-6 overflow-y-auto">
@@ -441,7 +442,7 @@ function PharmacyDashboard() {
                                 disabled={allChecked}
                                 className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'}`}
                             >
-                                🖨️ Print
+                                <Icon name="printer" className="h-4 w-4" /> Print
                             </button>
 
                             <button
@@ -449,7 +450,7 @@ function PharmacyDashboard() {
                                 disabled={isDispensing}
                                 className="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors w-full sm:w-auto flex items-center justify-center gap-2"
                             >
-                                {isDispensing ? 'Dispensing...' : '✅ Mark as Dispensed'}
+                                {isDispensing ? 'Dispensing...' : <><Icon name="check" className="h-4 w-4" /> Mark as Dispensed</>}
                             </button>
                         </div>
                     </div>

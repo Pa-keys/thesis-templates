@@ -7,6 +7,7 @@ import { createLabRequest, createPrescription, upsertConsultation, upsertFollowU
 import { getErrorMessage } from '../../lib/utils/errors';
 import { printHtmlDocument } from '../../lib/utils/print';
 import { itemizeText } from '../../features/patients/itemization';
+import { Icon } from '../../components/shared/Icon';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface ConsultationPageProps {
@@ -225,7 +226,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                 <div className="text-xs text-slate-500 mt-0.5">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm">✕</button>
+                        <button onClick={onClose} aria-label="Close patient history" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm"><Icon name="close" className="h-4 w-4" label="Close patient history" /></button>
                     </div>
                     <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
                         {sectionBtn('All', 'all', totalCount)}
@@ -243,7 +244,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                             </div>
                         ) : totalCount === 0 ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-2">
-                                <span className="text-3xl">📭</span>
+                                <Icon name="inbox" className="h-8 w-8 text-slate-400" />
                                 <span className="text-sm text-slate-400">No history records found.</span>
                             </div>
                         ) : (
@@ -1067,7 +1068,7 @@ export function ConsultationPage({
     if (!patient) {
         return (
             <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-8 mb-6 text-amber-700 flex flex-col items-center justify-center text-center">
-                <div className="text-4xl mb-4">🩺</div>
+                <Icon name="stethoscope" className="h-10 w-10 mb-4" />
                 <h2 className="text-xl font-bold mb-2">No Patient Selected</h2>
                 <p className="text-sm font-semibold mb-6">Please go back to the dashboard and select a patient from the queue.</p>
                 <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors">← Return to Dashboard</button>
@@ -1171,7 +1172,7 @@ export function ConsultationPage({
             </div>
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-                    <span className="text-lg leading-none">ℹ️</span>
+                    <Icon name="file-text" className="h-5 w-5 shrink-0" />
                     <span>No consultation saved yet — follow-up details will be saved when you save the consultation on Tab 5.</span>
                 </div>
             )}
@@ -1246,7 +1247,7 @@ export function ConsultationPage({
                             </span>
                         </label>
                         <textarea rows={5} name="followUpLabResults" value={formData.followUpLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
-                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
+                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2 inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Results Synced from Laboratory</p>}
                     </div>
                 </div>
             </div>
@@ -1274,10 +1275,10 @@ export function ConsultationPage({
                     <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">Follow-up Actions</p>
                     {!followUpDone ? (
                         <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full bg-white hover:bg-green-50 text-green-700 py-3 px-6 rounded-xl font-bold transition-colors border border-green-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
-                            {loading ? 'Processing...' : '✓ Mark Follow-up as Done'}
+                            {loading ? 'Processing...' : <><Icon name="check" className="h-4 w-4" /> Mark Follow-up as Done</>}
                         </button>
                     ) : (
-                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default">✓ Follow-up Completed</div>
+                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default"><Icon name="check" className="h-4 w-4" /> Follow-up Completed</div>
                     )}
                     <button onClick={() => setActiveTab(5)} className={`w-full text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Clinical Notes →</button>
                 </div>
@@ -1306,10 +1307,10 @@ export function ConsultationPage({
                 <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto">
                     <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">📄 Print Medical Certificate</button>
+                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="file-text" className="h-4 w-4" /> Print Medical Certificate</button>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Consultation</button>
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"><Icon name="save" className="h-4 w-4" /> Save Consultation</button>
                         <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Lab Request →</button>
                     </div>
                 </div>
@@ -1368,7 +1369,7 @@ export function ConsultationPage({
                 <button onClick={() => setActiveTab(5)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors">← Back</button>
                 <div className="flex flex-col sm:flex-row gap-4 order-1 sm:order-2">
                     <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto py-3.5 px-6 rounded-xl font-extrabold transition-colors shadow-sm border-2 disabled:opacity-50 ${isOnline ? 'bg-white border-blue-500 text-blue-600 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-                        {loading ? 'Sending...' : '📋 Send to Laboratory'}
+                        {loading ? 'Sending...' : <><Icon name="clipboard" className="inline h-4 w-4 mr-2" />Send to Laboratory</>}
                     </button>
                     <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold transition-all active:scale-95 ${primaryBtnBg}`}>Next: E-Prescription →</button>
                 </div>
@@ -1426,9 +1427,9 @@ export function ConsultationPage({
                 <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">← Back</button>
                 <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
                     <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">🖨️ Print Physical Copy</button>
+                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="printer" className="h-4 w-4" /> Print Physical Copy</button>
                     </div>
-                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>💊 Authorize &amp; Send to Pharmacy</button>
+                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 ${primaryBtnBg}`}><Icon name="pill" className="h-4 w-4" /> Authorize &amp; Send to Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1466,7 +1467,7 @@ export function ConsultationPage({
                             <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' : realtimeStatus === 'error' ? 'bg-red-500' : 'bg-slate-300 animate-pulse'}`} />
                             {realtimeStatus === 'live' ? 'Live Updates' : realtimeStatus === 'error' ? 'Realtime Off' : 'Connecting…'}
                         </span>
-                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">🕐 View History</button>
+                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5"><Icon name="clock" className="h-3.5 w-3.5" /> View History</button>
                         <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Icon } from '../../components/shared/Icon';
 
 interface Props {
     patients: any[];
@@ -49,13 +50,13 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
             {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-10 w-full">
                 {[
-                    { icon: '👥', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
-                    { icon: '🤰', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
-                    { icon: '👶', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
-                    { icon: '💊', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
+                    { icon: 'users', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
+                    { icon: 'heart-pulse', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
+                    { icon: 'baby', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
+                    { icon: 'pill', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
                 ].map(({ icon, label, value, bg, text }) => (
                     <div key={label} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                        <div className={`w-14 h-14 rounded-full ${bg} ${text} flex items-center justify-center text-2xl shadow-inner shrink-0`}>{icon}</div>
+                        <div className={`w-14 h-14 rounded-full ${bg} ${text} flex items-center justify-center text-2xl shadow-inner shrink-0`}><Icon name={icon} className="h-6 w-6" /></div>
                         <div className="min-w-0">
                             <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">{label}</div>
                             <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{value}</div>
@@ -145,9 +146,9 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                                             {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </div>
                                         {!p.consent_signed ? (
-                                            <span className="text-[0.6rem] font-extrabold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">⚠️ Pending</span>
+                                            <span className="text-[0.6rem] font-extrabold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase inline-flex items-center gap-1"><Icon name="alert-triangle" className="h-3 w-3" /> Pending</span>
                                         ) : (
-                                            <span className="text-[0.6rem] font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">✓ Signed</span>
+                                            <span className="text-[0.6rem] font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> Signed</span>
                                         )}
                                     </div>
                                 </div>

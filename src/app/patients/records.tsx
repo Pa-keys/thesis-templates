@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase/client';
+import { Icon } from '../../components/shared/Icon';
 
 const MALVAR_BARANGAYS = [
     'Bagong Pook, Malvar, Batangas',
@@ -114,7 +115,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
 
                     <div className="search-wrap flex flex-col sm:flex-row gap-3 mb-6">
                         <div className="relative flex-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
                                 type="text"
                                 placeholder="Search by name..."
@@ -147,7 +148,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                     onClick={() => setSelectedBarangay('')}
                                     className="flex items-center justify-center px-4 py-2.5 text-xs font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-xl transition-colors whitespace-nowrap"
                                 >
-                                    ✕ Clear
+                                    <Icon name="close" className="h-3.5 w-3.5 mr-1" /> Clear
                                 </button>
                             )}
                         </div>
@@ -174,7 +175,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                             </div>
                         ) : patients.length === 0 ? (
                             <div className="empty-list text-center py-12 text-slate-500">
-                                <div className="text-3xl mb-2">📭</div>
+                                <Icon name="inbox" className="h-8 w-8 mx-auto mb-2" />
                                 No patients found.
                             </div>
                         ) : (

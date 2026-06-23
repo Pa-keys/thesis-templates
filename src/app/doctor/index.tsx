@@ -6,6 +6,7 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
 import { useToast } from '../../components/feedback/Toast';
+import { Icon } from '../../components/shared/Icon';
 
 import ConsultationPage from '../consultation';
 import { RecordsComponent } from '../patients/records';
@@ -98,9 +99,9 @@ const DoctorDashboard = () => {
     const morbChartInst = useRef<Chart | null>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-        { id: 'records', label: 'Patient Records', icon: '📁' },
-        { id: 'consultation', label: 'Consultation Room', icon: '📝' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'consultation', label: 'Consultation Room', icon: 'clipboard' },
     ];
 
     const formatTime = (t: string | null) => {
@@ -667,7 +668,7 @@ const DoctorDashboard = () => {
                                 <p className="text-xs text-slate-400 mt-0.5">{allFollowUps.length} pending • sorted by date</p>
                             </div>
                             <button onClick={() => setShowFollowUpsModal(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base">✕</button>
+                                aria-label="Close follow-up dialog" className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base"><Icon name="close" className="h-4 w-4" label="Close follow-up dialog" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             {allFollowUps.length === 0 ? (

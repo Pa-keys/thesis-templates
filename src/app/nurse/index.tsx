@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
+import { Icon } from '../../components/shared/Icon';
 
 
 // ─── Imported Pure Components ────────────────────────────────────────────────
@@ -28,10 +29,10 @@ const NurseDashboard = () => {
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Home', icon: '🏠' },
-        { id: 'records', label: 'Patient Records', icon: '📁' },
-        { id: 'new-record', label: 'New Record', icon: '➕' },
-        { id: 'consultation', label: 'Initial Consultation', icon: '📝' }
+        { id: 'dashboard', label: 'Home', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
+        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' }
     ];
 
     // ─── Restored from old code: navigates to consultation with patient ID in URL ───
@@ -183,7 +184,7 @@ const NurseDashboard = () => {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div className="bg-green-50 p-5 rounded-2xl border border-green-200 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center text-xl shrink-0">✅</div>
+                                        <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center text-xl shrink-0"><Icon name="check" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-green-700">Consented Patients</div>
                                             <div className="text-2xl font-bold text-green-800 mt-1">{stats.consented}</div>
@@ -191,21 +192,21 @@ const NurseDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">👥</div>
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="users" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Total Patients</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0">♀</div>
+                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Female</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">♂</div>
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Male</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
@@ -220,13 +221,13 @@ const NurseDashboard = () => {
                                             <p className="text-xs text-slate-500">Click a patient to start their initial consultation.</p>
                                         </div>
                                         <span className="bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
-                                            ✅ {stats.consented} patients
+                                            <Icon name="check" className="h-3.5 w-3.5" /> {stats.consented} patients
                                         </span>
                                     </div>
 
                                     <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                                         <div className="relative max-w-md">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                             <input
                                                 type="text"
                                                 placeholder="Search by name..."
@@ -240,7 +241,7 @@ const NurseDashboard = () => {
                                     <div className="p-4">
                                         {filteredPatients.length === 0 ? (
                                             <div className="text-center py-16">
-                                                <div className="text-4xl mb-3">⏳</div>
+                                                <Icon name="clock" className="h-10 w-10 mx-auto mb-3 text-slate-300" />
                                                 <p className="text-slate-500 font-medium">No consented patients found.</p>
                                             </div>
                                         ) : (
@@ -267,24 +268,24 @@ const NurseDashboard = () => {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="font-bold text-slate-800 text-base">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
                                                                 <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                                                                    <span>👤 {p.sex || '—'}</span>
-                                                                    <span>🎂 {p.age ?? '—'} yrs</span>
-                                                                    <span>🩸 {p.bloodType || '—'}</span>
-                                                                    <span>🏥 {p.philhealthStatus || '—'}</span>
-                                                                    <span>📋 {category}</span>
+                                                                    <span className="inline-flex items-center gap-1"><Icon name="user" className="h-3.5 w-3.5" /> {p.sex || '—'}</span>
+                                                                    <span className="inline-flex items-center gap-1"><Icon name="calendar" className="h-3.5 w-3.5" /> {p.age ?? '—'} yrs</span>
+                                                                    <span className="inline-flex items-center gap-1"><Icon name="droplet" className="h-3.5 w-3.5" /> {p.bloodType || '—'}</span>
+                                                                    <span className="inline-flex items-center gap-1"><Icon name="building" className="h-3.5 w-3.5" /> {p.philhealthStatus || '—'}</span>
+                                                                    <span className="inline-flex items-center gap-1"><Icon name="clipboard" className="h-3.5 w-3.5" /> {category}</span>
                                                                 </div>
-                                                                <div className="text-xs text-slate-500 mt-1">📍 {p.address || 'No address'}</div>
+                                                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1"><Icon name="map-pin" className="h-3.5 w-3.5" /> {p.address || 'No address'}</div>
                                                             </div>
 
                                                             <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100">
                                                                 <div className="text-xs text-slate-400 font-medium text-right hidden sm:block">Registered<br />{date}</div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="bg-green-50 text-green-600 border border-green-200 px-2 py-1 rounded-full text-[0.65rem] font-bold">✅ Consent Signed</span>
+                                                                    <span className="bg-green-50 text-green-600 border border-green-200 px-2 py-1 rounded-full text-[0.65rem] font-bold inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> Consent Signed</span>
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleConsultNavigate(p.id); }}
                                                                         className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
                                                                     >
-                                                                        📋 Consult
+                                                                        <Icon name="clipboard" className="inline h-3.5 w-3.5 mr-1" /> Consult
                                                                     </button>
                                                                 </div>
                                                             </div>

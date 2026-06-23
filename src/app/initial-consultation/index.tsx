@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase/client';
 import { useToast } from '../../components/feedback/Toast';
 import { saveInitialConsultationWithVitals } from '../../features/consultation/services';
 import { getErrorMessage } from '../../lib/utils/errors';
+import { Icon } from '../../components/shared/Icon';
 
 // ─── ✨ GLASSMORPHISM Tailwind Classes ✨ ────────────────────────────────────
 const inputClasses = "w-full border border-white/50 rounded-xl px-4 py-2.5 text-sm text-left focus:ring-2 focus:ring-blue-500/40 focus:border-white/80 outline-none bg-white/30 hover:bg-white/40 focus:bg-white/60 backdrop-blur-md transition-all text-slate-800 placeholder:text-slate-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]";
@@ -246,13 +247,13 @@ export function ConsultationComponent() {
 
             <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2">📋 Initial Consultation</h1>
+                    <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><Icon name="clipboard" className="h-6 w-6" /> Initial Consultation</h1>
                     {patientInfo ? (
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                             <span className="font-bold text-blue-800 bg-blue-100/50 border border-blue-200 px-3 py-1 rounded-lg backdrop-blur-sm shadow-sm">{patientName}</span>
-                            <span className="bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm">👤 {patientInfo.sex || 'N/A'}</span>
-                            <span className="bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm">🎂 {patientInfo.age ?? 'N/A'} yrs</span>
-                            <span className="bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm">🩸 {patientInfo.bloodType || 'N/A'}</span>
+                            <span className="inline-flex items-center gap-1.5 bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm"><Icon name="user" className="h-3.5 w-3.5" /> {patientInfo.sex || 'N/A'}</span>
+                            <span className="inline-flex items-center gap-1.5 bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm"><Icon name="calendar" className="h-3.5 w-3.5" /> {patientInfo.age ?? 'N/A'} yrs</span>
+                            <span className="inline-flex items-center gap-1.5 bg-white/40 border border-white/60 px-3 py-1 rounded-lg backdrop-blur-md shadow-sm"><Icon name="droplet" className="h-3.5 w-3.5" /> {patientInfo.bloodType || 'N/A'}</span>
                         </div>
                     ) : (
                         <p className="text-sm text-slate-500 mt-2">Search and select a consented patient to begin.</p>
@@ -261,16 +262,16 @@ export function ConsultationComponent() {
 
                 {currentPatientId && (
                     <button onClick={() => { setCurrentPatientId(null); setPatientInfo(null); window.history.pushState({}, '', '?'); }} className="flex items-center gap-2 bg-white/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/60 shadow-sm shrink-0 text-sm font-bold text-slate-600 hover:bg-white/60 transition-colors">
-                        🔍 Search Another
+                        <Icon name="search" className="h-4 w-4" /> Search Another
                     </button>
                 )}
             </div>
 
             {!currentPatientId ? (
                 <div className="w-full bg-white/30 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)]">
-                    <div className="max-w-xl mx-auto">
+                    <div className="mx-auto w-full max-w-3xl">
                         <div className="relative mb-6">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
+                            <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                             <input 
                                 type="text" 
                                 placeholder="Search consented patients by name..." 
@@ -281,7 +282,7 @@ export function ConsultationComponent() {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin">
+                        <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1 sm:pr-2 scrollbar-thin">
                             {filteredPatients.length === 0 ? (
                                 <div className="text-center py-10 text-slate-500 font-medium bg-white/20 rounded-xl border border-white/40">No consented patients found.</div>
                             ) : (
@@ -289,16 +290,22 @@ export function ConsultationComponent() {
                                     <div 
                                         key={p.id}
                                         onClick={() => handleSelectPatient(p.id)}
-                                        className="flex items-center gap-4 p-4 bg-white/40 hover:bg-white/60 border border-white/50 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-sm group"
+                                        className="grid grid-cols-[3rem_minmax(0,1fr)_2.25rem] items-center gap-4 p-4 bg-white/40 hover:bg-white/60 border border-white/50 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-sm group"
                                     >
                                         <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                             {(p.firstName?.[0] || '').toUpperCase()}
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="font-bold text-slate-800">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
-                                            <div className="text-xs text-slate-500 mt-0.5">{p.sex || '—'} • {p.age ?? '—'} yrs • 🩸 {p.bloodType || '—'}</div>
+                                        <div className="min-w-0">
+                                            <div className="font-bold text-slate-800 truncate">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
+                                            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-500 sm:grid-cols-[minmax(4.5rem,0.8fr)_minmax(4.5rem,0.8fr)_minmax(5rem,1fr)]">
+                                                <span className="inline-flex min-w-0 items-center gap-1.5"><Icon name="user" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{p.sex || '—'}</span></span>
+                                                <span className="inline-flex min-w-0 items-center gap-1.5"><Icon name="calendar" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{p.age ?? '—'} yrs</span></span>
+                                                <span className="inline-flex min-w-0 items-center gap-1.5 col-span-2 sm:col-span-1"><Icon name="droplet" className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{p.bloodType || '—'}</span></span>
+                                            </div>
                                         </div>
-                                        <span className="text-slate-300 group-hover:text-blue-500 font-bold group-hover:translate-x-1 transition-transform">→</span>
+                                        <span className="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all">
+                                            <Icon name="clipboard" className="h-4 w-4" />
+                                        </span>
                                     </div>
                                 ))
                             )}
@@ -396,7 +403,7 @@ export function ConsultationComponent() {
 
                     <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-6 mb-12 border-t border-slate-200 pt-6">
                         <button type="submit" disabled={isSubmitting} className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white shadow-lg text-sm transition-all ${isSubmitting ? 'bg-blue-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-blue-500/30'}`}>
-                            {isSubmitting ? '⏳ Saving Record...' : '💾 Save Consultation Record'}
+                            {isSubmitting ? 'Saving Record...' : <><Icon name="save" className="inline h-4 w-4 mr-2" />Save Consultation Record</>}
                         </button>
                     </div>
                 </form>

@@ -3,6 +3,7 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase/client';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../../hooks/useNetworkSync';
 import { useToast } from '../../components/feedback/Toast';
+import { Icon } from '../../components/shared/Icon';
 import type { FieldErrors, PatientRecord, PatientRegistrationForm } from '../../types/patient';
 import { calcAge, formatPhilhealth, philhealthDigits, toPatientRegistrationPayload, validatePatientRegistration } from '../../features/patients/validation';
 import { createPatient } from '../../features/patients/services';
@@ -116,7 +117,7 @@ function RadioOption({ name, value, label, checked, onChange }: {
 
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
-    return <p className="mt-1.5 text-xs text-red-500 font-semibold flex items-center gap-1"><span>⚠</span>{message}</p>;
+    return <p className="mt-1.5 text-xs text-red-500 font-semibold flex items-center gap-1"><Icon name="alert-triangle" className="h-3.5 w-3.5 shrink-0" />{message}</p>;
 }
 
 // ─── Exported Pure Component ──────────────────────────────────────────────────
@@ -295,6 +296,17 @@ export function TemplatesComponent() {
                                     />
                                 </div>
                                 <div>
+                                    <label className={labelClasses}>Birthday</label>
+                                    <input
+                                        type="date" id="birthday" value={form.birthday}
+                                        onChange={handleBirthday}
+                                        className={errors['birthday'] ? inputErrorClasses : inputClasses}
+                                        max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
+                                        required
+                                    />
+                                    <FieldError message={errors['birthday']} />
+                                </div>
+                                <div>
                                     <label className={labelClasses}>Age <span className="text-blue-400 font-normal normal-case tracking-normal">(auto)</span></label>
                                     <input
                                         type="text" id="age" value={form.age}
@@ -319,17 +331,6 @@ export function TemplatesComponent() {
                                         <option value="" disabled>Select</option>
                                         {CIVIL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                </div>
-                                <div>
-                                    <label className={labelClasses}>Birthday</label>
-                                    <input
-                                        type="date" id="birthday" value={form.birthday}
-                                        onChange={handleBirthday}
-                                        className={errors['birthday'] ? inputErrorClasses : inputClasses}
-                                        max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
-                                        required
-                                    />
-                                    <FieldError message={errors['birthday']} />
                                 </div>
                                 <div className="col-span-1 sm:col-span-2 md:col-span-4">
                                     <label className={labelClasses}>Address (Brgy, Malvar)</label>
@@ -510,7 +511,7 @@ export function TemplatesComponent() {
                             disabled={saving}
                             className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white shadow-lg text-sm transition-all ${saving ? 'bg-blue-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-blue-500/30'}`}
                         >
-                            {saving ? '⏳ Saving...' : '💾 Save Registration'}
+                            {saving ? 'Saving...' : <><Icon name="save" className="inline h-4 w-4 mr-2" />Save Registration</>}
                         </button>
                     </div>
                 </form>

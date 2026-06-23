@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
+import { Icon } from '../../components/shared/Icon';
 
 
 // ─── Imported Pure Components ────────────────────────────────────────────────
@@ -27,10 +28,10 @@ const BhwDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
 
     const navItems = [
-        { id: 'dashboard', label: 'Home', icon: '🏠' },
-        { id: 'records', label: 'Records', icon: '📁' },
-        { id: 'new-record', label: 'New Record', icon: '➕' },
-        { id: 'reports', label: 'OCR Generation', icon: '📊' } // Added Reports Tab
+        { id: 'dashboard', label: 'Home', icon: 'home' },
+        { id: 'records', label: 'Records', icon: 'users' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
+        { id: 'reports', label: 'OCR Generation', icon: 'chart' }
     ];
 
     useEffect(() => {
@@ -172,35 +173,35 @@ const BhwDashboard = () => {
                             <>
                                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div>
-                                        <h1 className="text-2xl font-extrabold text-slate-800">Good day, {userName.split(' ')[0]}! 👋</h1>
+                                        <h1 className="text-2xl font-extrabold text-slate-800">Good day, {userName.split(' ')[0]}!</h1>
                                         <p className="text-sm text-slate-500 mt-1">Here's your overview for today.</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">👥</div>
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="users" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Total Patients</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">♂</div>
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Male</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0">♀</div>
+                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">Female</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
                                         </div>
                                     </div>
                                     <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl shrink-0">📍</div>
+                                        <div className="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl shrink-0"><Icon name="map-pin" className="h-5 w-5" /></div>
                                         <div>
                                             <div className="text-sm font-semibold text-slate-500">With Address</div>
                                             <div className="text-2xl font-bold text-slate-800 mt-1">{stats.withAddress}</div>
@@ -248,13 +249,13 @@ const BhwDashboard = () => {
                                         </div>
                                         <div className="p-5 grid grid-cols-2 gap-3">
                                             <button onClick={() => setActivePage('new-record')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700">
-                                                <span className="text-xl mb-2">➕</span> Register
+                                                <Icon name="user-plus" className="h-5 w-5 mb-2" /> Register
                                             </button>
                                             <button onClick={() => setActivePage('records')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700">
-                                                <span className="text-xl mb-2">🔍</span> Search
+                                                <Icon name="search" className="h-5 w-5 mb-2" /> Search
                                             </button>
                                             <button onClick={() => setActivePage('reports')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700 col-span-2">
-                                                <span className="text-xl mb-2">📊</span> Generate Reports
+                                                <Icon name="chart" className="h-5 w-5 mb-2" /> Generate Reports
                                             </button>
                                         </div>
                                     </div>

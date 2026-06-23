@@ -8,6 +8,7 @@ import { getInitials } from '../../lib/utils/names';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { NetworkBadge } from '../../components/shared/NetworkBadge';
 import { LoadingState } from '../../components/shared/LoadingState';
+import { Icon } from '../../components/shared/Icon';
 import type { Role } from '../../types/user';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ const AdminDashboard = () => {
     const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
 
     const navItems = [
-        { id: 'admin', label: 'User Management', icon: '👥' },
+        { id: 'admin', label: 'User Management', icon: 'users' },
     ];
 
     useEffect(() => {
@@ -398,14 +399,14 @@ const AdminDashboard = () => {
                     {/* Stats Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-blue-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">👥</div>
+                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="users" className="h-5 w-5" /></div>
                             <div>
                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Users</div>
                                 <div className="text-2xl font-black text-slate-800 leading-none">{allUsers.length}</div>
                             </div>
                         </div>
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-green-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">✅</div>
+                            <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="check" className="h-5 w-5" /></div>
                             <div>
                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active</div>
                                 <div className="text-2xl font-black text-slate-800 leading-none">{allUsers.length}</div>
@@ -413,7 +414,7 @@ const AdminDashboard = () => {
                         </div>
 
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-indigo-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔑</div>
+                            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="lock" className="h-5 w-5" /></div>
                             <div>
                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Roles</div>
                                 <div className="text-2xl font-black text-slate-800 leading-none">{ROLES.length}</div>
@@ -432,7 +433,7 @@ const AdminDashboard = () => {
                         {/* Filter Bar */}
                         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
                             <div className="relative flex-1">
-                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+                                <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     type="text"
                                     value={searchQuery}
@@ -457,7 +458,7 @@ const AdminDashboard = () => {
                                     <option value="admin">Admin</option>
                                 </select>
                                 <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95 shrink-0 justify-center">
-                                    <span>➕</span> Add User
+                                    <Icon name="user-plus" className="h-4 w-4" /> Add User
                                 </button>
                             </div>
                         </div>
@@ -475,7 +476,7 @@ const AdminDashboard = () => {
                                 <LoadingState label="Loading users..." />
                             ) : filteredUsers.length === 0 ? (
                                 <div className="p-16 flex flex-col items-center justify-center text-center">
-                                    <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-2xl flex items-center justify-center text-3xl mb-4">👥</div>
+                                    <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-2xl flex items-center justify-center mb-4"><Icon name="users" className="h-8 w-8" /></div>
                                     <h3 className="text-lg font-bold text-slate-700">No Users Found</h3>
                                     <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or search query.</p>
                                 </div>
@@ -505,10 +506,10 @@ const AdminDashboard = () => {
                                                 {/* Actions */}
                                                 <div className="flex items-center md:justify-end gap-2 md:pl-0 pl-[54px] mt-2 md:mt-0">
                                                     <button onClick={() => openEditModal(u.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
-                                                        ✏️ Edit
+                                                        <Icon name="edit" className="h-3.5 w-3.5" /> Edit
                                                     </button>
                                                     <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
-                                                        🗑 Delete
+                                                        <Icon name="trash" className="h-3.5 w-3.5" /> Delete
                                                     </button>
                                                 </div>
                                             </div>
@@ -530,7 +531,7 @@ const AdminDashboard = () => {
                                 <h3 className="text-xl font-black text-slate-800 tracking-tight">{isEditMode ? `Edit: ${fFullName}` : 'Add New User'}</h3>
                                 <p className="text-xs font-medium text-slate-500 mt-1">{isEditMode ? 'Update name or role assignment' : 'Create a new system account'}</p>
                             </div>
-                            <button onClick={closeUserModal} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:bg-slate-100 text-lg transition-colors">✕</button>
+                            <button onClick={closeUserModal} aria-label="Close user dialog" className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:bg-slate-100 text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close user dialog" /></button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="space-y-1.5">
@@ -592,7 +593,7 @@ const AdminDashboard = () => {
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={(e) => { if (e.target === e.currentTarget && !isSaving) closeConfirmModal(); }}>
                     <div className="bg-white w-full max-w-[360px] rounded-[24px] shadow-2xl flex flex-col items-center p-8 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
-                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center text-3xl mb-5 shadow-inner">🗑</div>
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-5 shadow-inner"><Icon name="trash" className="h-8 w-8" /></div>
                         <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">Delete User?</h3>
                         <p className="text-sm text-slate-500 leading-relaxed mb-8">
                             Are you sure you want to permanently delete <strong className="text-slate-800 font-bold">{userToDelete?.name}</strong>? This action cannot be undone.

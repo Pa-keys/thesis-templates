@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
+import { Icon } from '../../components/shared/Icon';
 
 import Dashboard from '../../features/midwife/dashboard';
 import PatientRecords from '../../features/midwife/patientRecords';
@@ -56,24 +57,24 @@ function PatientDetailsPanel({
                         {patient.firstName} {patient.middleName} {patient.lastName} {patient.suffix}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
-                        <span className="text-xs text-slate-500 font-medium">🩸 <span className="font-bold text-slate-700">{patient.bloodType || '—'}</span></span>
-                        <span className="text-xs text-slate-500 font-medium">👤 <span className="font-bold text-slate-700">{patient.sex || '—'}</span></span>
-                        <span className="text-xs text-slate-500 font-medium">🎂 <span className="font-bold text-slate-700">{patient.age ?? '—'}</span> yrs</span>
-                        <span className="text-xs text-slate-500 font-medium">📍 <span className="font-bold text-slate-700">{patient.address || '—'}</span></span>
+                        <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1"><Icon name="droplet" className="h-3.5 w-3.5" /> <span className="font-bold text-slate-700">{patient.bloodType || '—'}</span></span>
+                        <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1"><Icon name="user" className="h-3.5 w-3.5" /> <span className="font-bold text-slate-700">{patient.sex || '—'}</span></span>
+                        <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1"><Icon name="calendar" className="h-3.5 w-3.5" /> <span className="font-bold text-slate-700">{patient.age ?? '—'}</span> yrs</span>
+                        <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1"><Icon name="map-pin" className="h-3.5 w-3.5" /> <span className="font-bold text-slate-700">{patient.address || '—'}</span></span>
                     </div>
                 </div>
                 <div className="shrink-0">
                     {consentSigned ? (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[0.65rem] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5">✓ Consent Signed</span>
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[0.65rem] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Icon name="check" className="h-3.5 w-3.5" /> Consent Signed</span>
                     ) : (
-                        <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[0.65rem] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5">⚠️ Pending Consent</span>
+                        <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[0.65rem] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Icon name="alert-triangle" className="h-3.5 w-3.5" /> Pending Consent</span>
                     )}
                 </div>
             </div>
 
             {/* Section I */}
             <div className={sectionCls}>
-                <div className={headerCls}><span>👤</span> I. Patient's Information</div>
+                <div className={headerCls}><Icon name="users" className="h-4 w-4" /> I. Patient's Information</div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <DetailItem label="First Name"            value={patient.firstName} />
                     <DetailItem label="Middle Name"           value={patient.middleName} />
@@ -96,7 +97,7 @@ function PatientDetailsPanel({
 
             {/* Section II */}
             <div className={sectionCls}>
-                <div className={headerCls}><span>🏥</span> II. PhilHealth & Categorization</div>
+                <div className={headerCls}><Icon name="file-text" className="h-4 w-4" /> II. PhilHealth &amp; Categorization</div>
                 <div className="grid grid-cols-2 gap-4">
                     <DetailItem label="PhilHealth No."    value={patient.philhealthNo} />
                     <DetailItem label="PhilHealth Status" value={patient.philhealthStatus} />
@@ -106,7 +107,7 @@ function PatientDetailsPanel({
 
             {/* Section III */}
             <div className={sectionCls}>
-                <div className={headerCls}><span>🆘</span> III. Emergency Contact</div>
+                <div className={headerCls}><Icon name="alert-triangle" className="h-4 w-4" /> III. Emergency Contact</div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <DetailItem label="Relative's Name"    value={patient.relativeName} />
                     <DetailItem label="Relationship"       value={patient.relativeRelation} />
@@ -119,7 +120,7 @@ function PatientDetailsPanel({
                     onClick={onProceedToConsent}
                     className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-3 mt-2"
                 >
-                    📋 Proceed to Patient Consent →
+                    <Icon name="clipboard" className="h-5 w-5" /> Proceed to Patient Consent →
                 </button>
             )}
         </div>
@@ -184,7 +185,7 @@ function PatientModal({
                         onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold transition-colors"
                     >
-                        ✕
+                        <Icon name="close" className="h-4 w-4" label="Close patient details" />
                     </button>
                 </div>
 
@@ -256,10 +257,10 @@ const MidwifeApp = () => {
     }, [handleRealtimeChange]);
 
     const midwifeNavItems = [
-        { id: 'dashboard', label: 'Home',           icon: '🏠' },
-        { id: 'records',   label: 'Patient Records', icon: '📁' },
-        { id: 'census',    label: 'Census Entry',    icon: '📋' },
-        { id: 'reports',   label: 'OCR Reports',     icon: '📊' },
+        { id: 'dashboard', label: 'Home',           icon: 'home' },
+        { id: 'records',   label: 'Patient Records', icon: 'users' },
+        { id: 'census',    label: 'Census Entry',    icon: 'clipboard' },
+        { id: 'reports',   label: 'OCR Reports',     icon: 'chart' },
     ];
 
     return (

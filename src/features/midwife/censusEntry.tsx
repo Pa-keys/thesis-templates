@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { midwifeAPI } from './api';
 import { useToast } from '../../components/feedback/Toast';
+import { Icon } from '../../components/shared/Icon';
 import type { VaccineRecord } from '../patients/itemization';
 import {
     OTHER_VACCINE_NAME,
@@ -215,12 +216,12 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     };
 
     const logbooks = [
-        { id: 'maternal', label: '🤰 Maternal Care' },
-        { id: 'child', label: '👶 Child Care' },
-        { id: 'family_planning', label: '💊 Family Planning' },
-        { id: 'dental', label: '🦷 Dental Health' },
-        { id: 'ncd', label: '🫀 NCD & Seniors' },
-        { id: 'rabies_leprosy', label: '🐕 Rabies & Leprosy' }
+        { id: 'maternal', label: 'Maternal Care', icon: 'heart-pulse' },
+        { id: 'child', label: 'Child Care', icon: 'baby' },
+        { id: 'family_planning', label: 'Family Planning', icon: 'pill' },
+        { id: 'dental', label: 'Dental Health', icon: 'smile' },
+        { id: 'ncd', label: 'NCD & Seniors', icon: 'stethoscope' },
+        { id: 'rabies_leprosy', label: 'Rabies & Leprosy', icon: 'shield-plus' }
     ];
 
     return (
@@ -246,7 +247,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             }}
                             className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
                         >
-                            {log.label}
+                            <span className="inline-flex items-center gap-2"><Icon name={log.icon} className="h-4 w-4" />{log.label}</span>
                         </button>
                     ))}
                 </div>
@@ -260,7 +261,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 <h3 className="text-lg font-bold text-slate-800">{logbooks.find(l => l.id === activeLogbook)?.label} Registry</h3>
                             </div>
                             <button onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700">
-                                ➕ New Entry
+                                <Icon name="plus" className="inline h-4 w-4 mr-1" /> New Entry
                             </button>
                         </div>
                         <div className="overflow-x-auto">
@@ -295,7 +296,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             <h3 className="text-xl font-extrabold text-slate-800">New {logbooks.find(l => l.id === activeLogbook)?.label} Entry</h3>
                         </div>
 
-                        {errorMsg && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-semibold">⚠️ {errorMsg}</div>}
+                        {errorMsg && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-semibold flex items-start gap-2" role="alert"><Icon name="alert-triangle" className="h-5 w-5 shrink-0" /> {errorMsg}</div>}
 
                         <div className="max-w-3xl">
                             {/* STEP 1: PATIENT SELECTION */}

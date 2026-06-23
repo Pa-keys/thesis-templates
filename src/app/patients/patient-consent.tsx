@@ -5,6 +5,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { useToast } from '../../components/feedback/Toast';
 import { savePatientConsent } from '../../features/patients/services';
 import { getErrorMessage } from '../../lib/utils/errors';
+import { Icon } from '../../components/shared/Icon';
 
 interface ConsentProps {
     patientId: string;
@@ -337,10 +338,10 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
             {/* ── Section I: Consent Text ── */}
             <div style={styles.card}>
                 <div style={styles.cardHeader}>
-                    <div style={styles.cardHeaderIcon}>📋</div>
+                    <div style={styles.cardHeaderIcon}><Icon name="clipboard" className="h-5 w-5" /></div>
                     <div style={styles.cardHeaderTitle}>IV. Patient Consent &amp; Data Privacy</div>
                     <div style={styles.badge}>
-                        <span>🔒</span> RA 10173
+                        <Icon name="lock" className="h-4 w-4" /> RA 10173
                     </div>
                 </div>
                 <div style={styles.cardBody}>
@@ -359,7 +360,7 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
             {/* ── Section II: Signatures ── */}
             <div style={styles.card}>
                 <div style={styles.cardHeader}>
-                    <div style={styles.cardHeaderIcon}>✍️</div>
+                    <div style={styles.cardHeaderIcon}><Icon name="edit" className="h-5 w-5" /></div>
                     <div style={styles.cardHeaderTitle}>Signatures</div>
                 </div>
                 <div style={styles.cardBody}>
@@ -383,7 +384,7 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
             {/* ── Section III: Printed Names ── */}
             <div style={styles.card}>
                 <div style={styles.cardHeader}>
-                    <div style={styles.cardHeaderIcon}>🪪</div>
+                    <div style={styles.cardHeaderIcon}><Icon name="id-card" className="h-5 w-5" /></div>
                     <div style={styles.cardHeaderTitle}>Printed Names</div>
                 </div>
                 <div style={styles.cardBody}>
@@ -432,7 +433,7 @@ export default function PatientConsent({ patientId, patientName, rhuPersonnel: i
                     }
                 }}
             >
-                {isSubmitting ? '⏳ Saving Consent...' : '✅ Confirm & Save Consent'}
+                {isSubmitting ? 'Saving Consent...' : <><Icon name="check" className="inline h-4 w-4" /> Confirm &amp; Save Consent</>}
             </button>
         </form>
         </>
