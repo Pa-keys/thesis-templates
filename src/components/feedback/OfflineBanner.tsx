@@ -1,4 +1,3 @@
-import React from 'react';
 import { Icon } from '../shared/Icon';
 
 export function OfflineBanner({ isOnline }: { isOnline: boolean }) {

@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
-import { requireRole, logout } from '../../lib/auth/roles';
+import { requireRole } from '../../lib/auth/roles';
 import { Sidebar } from '../../components/layout/Sidebar';
+import { Topbar } from '../../components/layout/Topbar';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { useToast } from '../../components/feedback/Toast';
 import { getInitials } from '../../lib/utils/names';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { NetworkBadge } from '../../components/shared/NetworkBadge';
 import { LoadingState } from '../../components/shared/LoadingState';
 import { Icon } from '../../components/shared/Icon';
 import type { Role } from '../../types/user';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { safeTrim } from '../../lib/utils/strings';
+import { AuditLogPage } from '../../features/audit/AuditLogPage';
+import { logAuditEvent } from '../../features/audit/services';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -147,6 +152,7 @@ const AdminDashboard = () => {
 
     const navItems = [
         { id: 'admin', label: 'User Management', icon: 'users' },
+        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
     ];
 
     useEffect(() => {
@@ -187,7 +193,10 @@ const AdminDashboard = () => {
             .order('role', { ascending: true });
 
         if (error) {
-            if (!isSilent) showToast('Error loading users: ' + error.message, true);
+            if (!isSilent) {
+                logError('Failed to load users', error);
+                showToast(healthcareErrorMessage('load user accounts'), true);
+            }
         } else {
             setAllUsers((data as UserProfile[]) || []);
         }
@@ -239,7 +248,7 @@ const AdminDashboard = () => {
             return;
         }
 
-        const fullName = fFullName.trim();
+        const fullName = safeTrim(fFullName);
         const role = fRole;
 
         if (!fullName) { showToast('Please enter a full name.', true); return; }
@@ -257,10 +266,19 @@ const AdminDashboard = () => {
             setIsSaving(false);
 
             if (error) {
-                showToast('Error updating user: ' + error.message, true);
+                logError('Failed to update user profile', error);
+                showToast(healthcareErrorMessage('update the user profile'), true);
                 return;
             }
             showToast(`${fullName}'s profile updated successfully.`);
+            void logAuditEvent({
+                action: 'update',
+                module: 'Administration',
+                recordId: editingUserId,
+                recordType: 'profile',
+                description: 'Updated RHU user profile.',
+                metadata: { profile_id: editingUserId, action_scope: 'user_profile' },
+            });
             
             // Optimistically update local state
             setAllUsers(prev => prev.map(u => u.id === editingUserId ? { ...u, full_name: fullName, role } : u));
@@ -269,7 +287,7 @@ const AdminDashboard = () => {
             loadUsers();
         } else {
             // Create new user
-            const email = fEmail.trim();
+            const email = safeTrim(fEmail);
             const password = fPassword;
             const confirmPassword = fConfirmPassword;
             if (!email) { showToast('Please enter an email.', true); setIsSaving(false); return; }
@@ -283,11 +301,20 @@ const AdminDashboard = () => {
 
             if (error || data?.error || !data?.user) {
                 const message = await getFunctionErrorMessage(error, data);
-                showToast('Error creating user: ' + message, true);
+                logError('Failed to create user', { error, response: data, message });
+                showToast(healthcareErrorMessage('create the user account'), true);
                 return;
             }
 
             showToast(`User ${fullName} created successfully.`);
+            void logAuditEvent({
+                action: 'create',
+                module: 'Administration',
+                recordId: data.user.id,
+                recordType: 'profile',
+                description: 'Created RHU user account.',
+                metadata: { profile_id: data.user.id, action_scope: 'user_account' },
+            });
             setAllUsers(prev => [data.user as UserProfile, ...prev]);
             closeUserModal();
             loadUsers();
@@ -329,7 +356,8 @@ const AdminDashboard = () => {
         setIsSaving(false);
 
         if (error) {
-            showToast('Error deleting user: ' + error.message, true);
+            logError('Failed to delete user profile', error);
+            showToast(healthcareErrorMessage('delete the user profile'), true);
             closeConfirmModal();
             return;
         }
@@ -361,72 +389,56 @@ const AdminDashboard = () => {
                 isOnline={isOnline}
             />
 
-            <main className="flex-1 overflow-auto md:ml-[240px]">
+            <main className="flex-1 min-w-0 overflow-auto md:ml-[240px] w-full">
                 {/* ─── Topbar ─── */}
-                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                        </button>
-                        <h1 className="font-bold text-slate-800 hidden sm:block">User Management</h1>
-                    </div>
-                    <div className="flex items-center gap-4 md:gap-5">
-                        <NetworkBadge isOnline={isOnline} />
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500">Administrator</div>
-                        </div>
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer shrink-0">
-                            {userInitials}
-                        </div>
-                    </div>
-                </header>
+                <Topbar
+                    title={activePage === 'audit-log' ? 'Audit Log' : 'User Management'}
+                    sectionLabel="Administration"
+                    breadcrumbs={[{ label: 'Administration' }, { label: activePage === 'audit-log' ? 'Audit Log' : 'User Management', current: true }]}
+                    userName={userName}
+                    userInitials={userInitials}
+                    userRole="Administrator"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
-                <div className="p-6 md:p-8 max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
-                    {/* Welcome Row */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <h1 className="text-2xl font-black text-slate-800 tracking-tight">User Management</h1>
-                            <p className="text-sm text-slate-500 mt-1">Create, edit, assign roles, and manage system user accounts.</p>
-                        </div>
-                        <div className="sm:self-end flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-full text-xs font-bold shadow-sm">
-                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                            Live Data
-                        </div>
-                    </div>
+                <div className="w-full flex flex-col gap-5 animate-in fade-in duration-500">
+                    {activePage === 'audit-log' ? (
+                        <>
+                            <PageHeader
+                                title="Audit Log"
+                                subtitle="Review read-only system activity across MEDISENS workflows."
+                            />
+                            <AuditLogPage />
+                        </>
+                    ) : (
+                        <>
+                    <PageHeader
+                        title="User & Role Administration"
+                        subtitle="Maintain RHU staff accounts and role assignments."
+                    />
+                    <div className="pwa-page-pad flex flex-col pwa-panel-gap">
 
                     {/* Stats Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-blue-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="users" className="h-5 w-5" /></div>
-                            <div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Users</div>
-                                <div className="text-2xl font-black text-slate-800 leading-none">{allUsers.length}</div>
+                    <div className="ops-summary-grid">
+                        {[
+                            ['Total Users', allUsers.length, 'RHU staff accounts'],
+                            ['Active Accounts', allUsers.length, 'Currently available records'],
+                            ['Configured Roles', ROLES.length, 'Role assignment options'],
+                        ].map(([label, value, note]) => (
+                            <div key={label} className="ops-summary-card">
+                                <div className="ops-summary-label">{label}</div>
+                                <div className="ops-summary-value tabular-nums">{value}</div>
+                                <div className="ops-summary-note">{note}</div>
                             </div>
-                        </div>
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-green-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="check" className="h-5 w-5" /></div>
-                            <div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active</div>
-                                <div className="text-2xl font-black text-slate-800 leading-none">{allUsers.length}</div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-indigo-200 hover:shadow-md transition-all">
-                            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform"><Icon name="lock" className="h-5 w-5" /></div>
-                            <div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Roles</div>
-                                <div className="text-2xl font-black text-slate-800 leading-none">{ROLES.length}</div>
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
                     {/* Main Content Card */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                    <div className="ops-panel flex flex-col">
                         {/* Card Header */}
-                        <div className="p-6 border-b border-slate-100">
-                            <h2 className="text-lg font-black text-slate-800 tracking-tight">System Users</h2>
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60">
+                            <h2 className="text-base font-semibold text-slate-800 tracking-tight">System Users</h2>
                             <p className="text-sm text-slate-500">Manage accounts and role assignments</p>
                         </div>
 
@@ -438,6 +450,7 @@ const AdminDashboard = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    aria-label="Search users by name or email"
                                     placeholder="Search by name or email..."
                                     className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
                                 />
@@ -520,15 +533,18 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
+                        </>
+                    )}
+                </div>
             </main>
 
             {/* ─── Add/Edit User Modal ─── */}
             {isUserModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={(e) => { if (e.target === e.currentTarget) closeUserModal(); }}>
-                    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
+                    <div role="dialog" aria-modal="true" aria-labelledby="user-dialog-title" className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">{isEditMode ? `Edit: ${fFullName}` : 'Add New User'}</h3>
+                                <h3 id="user-dialog-title" className="text-xl font-black text-slate-800 tracking-tight">{isEditMode ? `Edit: ${fFullName}` : 'Add New User'}</h3>
                                 <p className="text-xs font-medium text-slate-500 mt-1">{isEditMode ? 'Update name or role assignment' : 'Create a new system account'}</p>
                             </div>
                             <button onClick={closeUserModal} aria-label="Close user dialog" className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:bg-slate-100 text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close user dialog" /></button>
@@ -591,10 +607,10 @@ const AdminDashboard = () => {
             {/* ─── Confirm Delete Modal ─── */}
             {isConfirmModalOpen && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={(e) => { if (e.target === e.currentTarget && !isSaving) closeConfirmModal(); }}>
-                    <div className="bg-white w-full max-w-[360px] rounded-[24px] shadow-2xl flex flex-col items-center p-8 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
+                    <div role="dialog" aria-modal="true" aria-labelledby="delete-user-dialog-title" className="bg-white w-full max-w-[360px] rounded-[24px] shadow-2xl flex flex-col items-center p-8 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
                         <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-5 shadow-inner"><Icon name="trash" className="h-8 w-8" /></div>
-                        <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">Delete User?</h3>
+                        <h3 id="delete-user-dialog-title" className="text-xl font-black text-slate-800 tracking-tight mb-2">Delete User?</h3>
                         <p className="text-sm text-slate-500 leading-relaxed mb-8">
                             Are you sure you want to permanently delete <strong className="text-slate-800 font-bold">{userToDelete?.name}</strong>? This action cannot be undone.
                         </p>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useToast } from '../../components/feedback/Toast';
+import { logAuditEvent } from '../audit/services';
 
 interface Props {
     records: any[];
@@ -147,6 +148,17 @@ const ReportGenerator = ({ records, isLoading = false }: Props) => {
             
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             pdf.save(`FHSIS_${selectedReport.toUpperCase()}_${reportMonth}.pdf`);
+            void logAuditEvent({
+                action: 'generate',
+                module: 'Reports',
+                recordId: `${selectedReport}-${reportMonth}`,
+                recordType: 'report',
+                description: 'Generated FHSIS report PDF.',
+                metadata: {
+                    category: selectedReport,
+                    count: monthlyLogs.length,
+                },
+            });
         } catch (error) {
             console.error("Error generating PDF:", error);
             showToast('Failed to generate FHSIS PDF. Please try again.', true);

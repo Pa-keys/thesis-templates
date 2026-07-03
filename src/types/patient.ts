@@ -25,6 +25,22 @@ export interface PatientRegistrationForm {
     relativeContact: string;
 }
 
+export const RELIGION_OPTIONS = [
+    'Roman Catholic',
+    'Iglesia ni Cristo',
+    'Born Again Christian',
+    'Christian',
+    'Islam',
+    'Seventh-day Adventist',
+    'Jehovah\'s Witness',
+    'Buddhist',
+    'Hindu',
+    'Indigenous / IP Belief',
+    'No Religion',
+    'Prefer not to say',
+    'Other',
+] as const;
+
 export interface PatientRegistrationPayload extends Omit<PatientRegistrationForm, 'age'> {
     age: number | null;
 }

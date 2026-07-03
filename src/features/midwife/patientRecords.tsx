@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { normalizeVaccineRecords } from '../patients/itemization';
 import { getVaccineDisplayName } from '../vaccines/vaccineOptions';
 import { Icon } from '../../components/shared/Icon';
@@ -133,6 +133,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                         <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             type="text"
+                            aria-label="Search midwife patient records"
                             placeholder="Search patient name..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
@@ -185,7 +186,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                                                 ? new Date(patient.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
                                                 : '—'}
                                         </span>
-                                        {/* ✅ Now reads pre-normalized consent_signed from useMidwifeData */}
+                                        {/* Reads pre-normalized consent_signed from useMidwifeData */}
                                         {patient.consent_signed ? (
                                             <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[0.6rem] font-extrabold px-2 py-0.5 rounded-md inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> SIGNED</span>
                                         ) : (

@@ -7,13 +7,16 @@
 import { createClient } from "@supabase/supabase-js";
 
 // ─── CONFIG ──────────────────────────────────────────────────
-// Vite exposes env vars via import.meta.env (client-side)
-// This script runs in Node, so we fall back to process.env with the same VITE_ names
-const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = import.meta.env?.VITE_SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-const IPROG_API_TOKEN = import.meta.env?.VITE_IPROG_API_TOKEN ?? process.env.VITE_IPROG_API_TOKEN;
+// Server-only config. Do not prefix service-role secrets with VITE_.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const IPROG_API_TOKEN = process.env.IPROG_API_TOKEN;
 const IPROG_SMS_URL = "https://www.iprogsms.com/api/v1/sms_messages";
 // ─────────────────────────────────────────────────────────────
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !IPROG_API_TOKEN) {
+  throw new Error("Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or IPROG_API_TOKEN.");
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

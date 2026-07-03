@@ -1,0 +1,23 @@
+import type { ReactNode } from 'react';
+
+interface PageHeaderProps {
+    title: string;
+    subtitle?: string;
+    actions?: ReactNode;
+    meta?: ReactNode;
+}
+
+export function PageHeader({ title, subtitle, actions, meta }: PageHeaderProps) {
+    return (
+        <section className="flex flex-col gap-3 border-b border-[#DDE7EF] bg-white px-4 py-3 md:flex-row md:items-center md:justify-between md:px-5 xl:px-6">
+            <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h2 className="truncate text-lg font-semibold text-[#0F3154] md:text-xl">{title}</h2>
+                    {meta}
+                </div>
+                {subtitle && <p className="mt-1 text-sm font-medium text-[#5F82A3]">{subtitle}</p>}
+            </div>
+            {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        </section>
+    );
+}

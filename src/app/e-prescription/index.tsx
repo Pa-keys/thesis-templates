@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
-import { supabase } from '../../lib/supabase/client';
 import SignatureCanvas from 'react-signature-canvas';
 import { useToast } from '../../components/feedback/Toast';
 import { requireRole } from '../../lib/auth/roles';
 import { createPrescription } from '../../features/consultation/services';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 
 interface Medication { name: string; dosage: string; frequency: string; duration: string; quantity: string; }
 
@@ -62,7 +61,8 @@ function EPrescription() {
       showToast('Prescription saved successfully!', false);
       sigCanvas.current?.clear();
     } catch (err) {
-      showToast('Error saving prescription: ' + getErrorMessage(err), true);
+      logError('Failed to save prescription', err);
+      showToast(healthcareErrorMessage("save the prescription"), true);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,7 +75,7 @@ function EPrescription() {
   return (
     <>
     <ToastComponent />
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow-lg rounded-lg mt-10 border-t-8 border-blue-800">
+    <div className="w-full p-4 md:p-6 bg-white shadow-lg rounded-lg mt-4 md:mt-6 border-t-8 border-blue-800">
       <div className="flex justify-between items-center mb-8 border-b-2 border-gray-800 pb-4">
         <div className="text-center w-full">
           <h2 className="text-xl font-bold uppercase">Republic of the Philippines</h2>
@@ -85,7 +85,7 @@ function EPrescription() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div><label className="font-bold text-sm">DATE:</label><input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className={inputStyle} /></div>
           <div></div>
           <div><label className="font-bold text-sm">NAME:</label><input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className={inputStyle} /></div>

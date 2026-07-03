@@ -5,6 +5,9 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
 import { Icon } from '../../components/shared/Icon';
+import { Topbar } from '../../components/layout/Topbar';
+import { safeTrim } from '../../lib/utils/strings';
+import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
 
 import Dashboard from '../../features/midwife/dashboard';
 import PatientRecords from '../../features/midwife/patientRecords';
@@ -19,7 +22,7 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
     const isEmpty = value === null || value === undefined || value === '';
     return (
         <div className="flex flex-col gap-1">
-            <div className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400">{label}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
             <div className={`text-sm font-semibold ${isEmpty ? 'text-slate-400 italic' : 'text-slate-800'}`}>
                 {isEmpty ? 'Not provided' : value}
             </div>
@@ -27,18 +30,20 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
     );
 }
 
-const sectionCls = "bg-white border border-slate-100 rounded-xl p-5 mb-4 shadow-sm";
-const headerCls  = "flex items-center gap-2 text-xs font-extrabold text-blue-600 uppercase tracking-widest border-b border-blue-50 pb-2.5 mb-4";
+const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 mb-4 shadow-sm";
+const headerCls  = "flex items-center gap-2 text-sm font-semibold text-blue-600 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
 
 // ─── Patient Details Panel ────────────────────────────────────────────────────
 function PatientDetailsPanel({
     patient,
     consentSigned,
     onProceedToConsent,
+    onViewHistory,
 }: {
     patient: any;
     consentSigned: boolean;
     onProceedToConsent: () => void;
+    onViewHistory: () => void;
 }) {
     const displayCategory = () => {
         if (patient.category === 'Other/s') return `Others (${patient.categoryOthers || 'Unspecified'})`;
@@ -48,12 +53,12 @@ function PatientDetailsPanel({
     return (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             {/* Profile banner */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5 mb-4 flex flex-wrap items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-md shrink-0 uppercase">
+            <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4 shadow-sm">
+                <div className="w-12 h-12 rounded-md bg-blue-600 text-white flex items-center justify-center font-semibold text-lg shadow-sm shrink-0 uppercase">
                     {patient.firstName?.[0]}{patient.lastName?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className="font-black text-slate-900 text-lg leading-tight truncate">
+                    <div className="font-semibold text-slate-900 text-lg leading-tight truncate">
                         {patient.firstName} {patient.middleName} {patient.lastName} {patient.suffix}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
@@ -63,7 +68,14 @@ function PatientDetailsPanel({
                         <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1"><Icon name="map-pin" className="h-3.5 w-3.5" /> <span className="font-bold text-slate-700">{patient.address || '—'}</span></span>
                     </div>
                 </div>
-                <div className="shrink-0">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={onViewHistory}
+                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[0.65rem] font-extrabold text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                    >
+                        <Icon name="clock" className="mr-1 inline h-3.5 w-3.5" /> History
+                    </button>
                     {consentSigned ? (
                         <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[0.65rem] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Icon name="check" className="h-3.5 w-3.5" /> Consent Signed</span>
                     ) : (
@@ -139,7 +151,7 @@ function PatientModal({
     onClose: () => void;
     onConsentSaved: () => void;
 }) {
-    const [step, setStep] = useState<'details' | 'consent'>('details');
+    const [step, setStep] = useState<'details' | 'consent' | 'history'>('details');
     const [consentSigned, setConsentSigned] = useState(
         Array.isArray(patient.patient_consent)
             ? patient.patient_consent.length > 0
@@ -159,7 +171,7 @@ function PatientModal({
                 {/* Modal Header */}
                 <div className="px-5 py-4 border-b border-slate-200 bg-white rounded-t-2xl flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
-                        {step === 'consent' && (
+                        {step !== 'details' && (
                             <button
                                 onClick={() => setStep('details')}
                                 className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
@@ -196,8 +208,9 @@ function PatientModal({
                             patient={patient}
                             consentSigned={consentSigned}
                             onProceedToConsent={() => setStep('consent')}
+                            onViewHistory={() => setStep('history')}
                         />
-                    ) : (
+                    ) : step === 'consent' ? (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                             <PatientConsent
                                 patientId={patient.id}
@@ -205,6 +218,13 @@ function PatientModal({
                                 rhuPersonnel={rhuPersonnel}
                                 onConsentSaved={handleConsentSaved}
                             />
+                        </div>
+                    ) : (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                            <div className={sectionCls}>
+                                <div className={headerCls}><Icon name="clock" className="h-4 w-4" /> Patient History</div>
+                                <PatientTransactionHistory patientId={patient.id} />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -264,7 +284,7 @@ const MidwifeApp = () => {
     ];
 
     return (
-        <div className="flex h-screen w-screen bg-[#F8FAFC] overflow-hidden">
+        <div className="flex h-screen w-full bg-[#F8FAFC] overflow-hidden">
             <Sidebar
                 activePage={activeTab}
                 userName={userData.name}
@@ -277,48 +297,24 @@ const MidwifeApp = () => {
                 isOnline={isOnline}
             />
 
-            <main className="flex-1 flex flex-col overflow-hidden md:ml-[240px]">
-                {/* Header */}
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800 capitalize">
-                            {activeTab === 'dashboard' ? 'Midwife Dashboard'
-                                : activeTab === 'records'  ? 'Patient Records'
-                                : activeTab === 'census'   ? 'Census Entry'
-                                : activeTab === 'reports'  ? 'OCR Generation'
-                                : activeTab.replace(/([A-Z])/g, ' $1').trim()}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 border rounded-full ${isOnline ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                            {isOnline
-                                ? <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                : <span className="w-2 h-2 rounded-full bg-amber-500" />}
-                            <span className={`text-[0.7rem] font-extrabold uppercase tracking-wider ${isOnline ? 'text-green-700' : 'text-amber-700'}`}>
-                                {isOnline ? 'System Online' : 'System Offline'}
-                            </span>
-                        </div>
-                        
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userData.name}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Registered Midwife</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
-                            {userData.initials}
-                        </div>
-                    </div>
-                </header>
+            <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
+                <Topbar
+                    title={activeTab === 'dashboard' ? 'Midwife Dashboard'
+                        : activeTab === 'records' ? 'Patient Records'
+                        : activeTab === 'census' ? 'Census Entry'
+                        : activeTab === 'reports' ? 'OCR Generation'
+                        : safeTrim(activeTab.replace(/([A-Z])/g, ' $1'))}
+                    sectionLabel="Maternal & Community Care"
+                    userName={userData.name}
+                    userInitials={userData.initials}
+                    userRole="Registered Midwife"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
                 {/* Content */}
                 <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[#F8FAFC]">
-                    <div className="w-full h-full p-4 md:p-6 lg:p-8">
+                    <div className="w-full min-h-full pwa-page-pad">
                         <div className="w-full">
                             {activeTab === 'dashboard' && (
                                 <Dashboard

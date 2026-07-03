@@ -9,6 +9,9 @@ import { useToast } from '../../components/feedback/Toast';
 import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
 import { getDashboardPath, requireAnyRole } from '../../lib/auth/roles';
 import type { Role } from '../../types/user';
+import { RELIGION_OPTIONS } from '../../types/patient';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { updatePatientRecord } from '../../features/patients/services';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,12 +52,12 @@ const PATIENT_DETAILS_NAV_ITEMS: Record<(typeof PATIENT_DETAILS_ROLES)[number], 
     ],
     midwives: [
         { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Patient Census', icon: 'users' },
-        { id: 'reports', label: 'Generate Reports', icon: 'chart' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'reports', label: 'OCR Reports', icon: 'chart' },
     ],
     BHW: [
         { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Records', icon: 'users' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
         { id: 'new-record', label: 'New Record', icon: 'user-plus' },
     ],
 };
@@ -94,6 +97,7 @@ function DetailsPage() {
     const { showToast, ToastComponent } = useToast();
 
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [otherReligion, setOtherReligion] = useState('');
 
     const [role, setRole] = useState<Role | null>(null);
     const [userName, setUserName] = useState('Loading...');
@@ -147,6 +151,7 @@ function DetailsPage() {
         setEditForm({
             firstName: patientData.firstName || '', middleName: patientData.middleName || '', lastName: patientData.lastName || '', age: patientData.age?.toString() ?? '', sex: patientData.sex || '', nationality: patientData.nationality || '', bloodType: patientData.bloodType || 'O+', religion: patientData.religion || '', birthday: patientData.birthday || '', birthPlace: patientData.birthPlace || '', suffix: patientData.suffix || '', civilStatus: patientData.civilStatus || '', address: patientData.address || '', contactNumber: patientData.contactNumber || '', educationalAttain: patientData.educationalAttain || '', employmentStatus: patientData.employmentStatus || '', philhealthNo: patientData.philhealthNo || '', philhealthStatus: patientData.philhealthStatus || '', category: patientData.category || '', categoryOthers: patientData.categoryOthers || '', relativeName: patientData.relativeName || '', relativeRelation: patientData.relativeRelation || '', relativeAddress: patientData.relativeAddress || ''
         });
+        setOtherReligion((patientData.religion || '').replace(/^Other:\s*/, ''));
     }
 
     const handleOpenHistory = () => setHistoryModalOpen(true);
@@ -154,6 +159,13 @@ function DetailsPage() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
         setEditForm(f => ({ ...f, [id]: value }));
+        if (id === 'religion' && value !== 'Other') setOtherReligion('');
+    };
+
+    const handleOtherReligion = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/[^a-zA-Z\s\-',.]/g, '');
+        setOtherReligion(value);
+        setEditForm(f => ({ ...f, religion: value ? `Other: ${value}` : 'Other' }));
     };
 
     const handleRadio = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,10 +179,16 @@ function DetailsPage() {
         const parsed = parseInt(editForm.age);
         const updates = { ...editForm, age: isNaN(parsed) ? null : parsed };
 
-        const { error } = await supabase.from('patients').update(updates).eq('id', patientId);
+        try {
+            if (!patientId) throw new Error('Missing patient ID.');
+            await updatePatientRecord(patientId, updates);
+        } catch (error) {
+            setSaving(false);
+            logError('Failed to update patient record', error);
+            showToast(healthcareErrorMessage("update the patient record"), true);
+            return;
+        }
         setSaving(false);
-
-        if (error) { showToast('Error updating record: ' + error.message, true); return; }
         showToast('Record Updated Successfully', false);
         setPatient(p => p ? { ...p, ...updates } as Patient : null);
         setEditing(false);
@@ -193,10 +211,10 @@ function DetailsPage() {
         else if (id === 'reports') window.location.href = '/pages/midwife.html';
     };
 
-    const sectionCls = "bg-white border border-slate-200 rounded-xl p-6 md:p-8 shadow-sm mb-6";
-    const headerCls = "flex items-center gap-3 text-sm font-extrabold text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-3 mb-5";
-    const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all";
-    const labelCls = "block text-[0.7rem] font-bold uppercase tracking-wider text-slate-600 mb-2";
+    const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm mb-4";
+    const headerCls = "flex items-center gap-3 text-sm font-semibold text-blue-600 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
+    const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors";
+    const labelCls = "block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2";
 
     return (
         <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
@@ -218,8 +236,8 @@ function DetailsPage() {
 
                 <OfflineBanner isOnline={isOnline} />
 
-                <main className="w-full flex-1 p-4 md:p-8 flex justify-center">
-                    <div className="w-full max-w-4xl">
+                <main className="w-full flex-1 pwa-page-pad">
+                    <div className="w-full">
                         {error ? (
                             <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 font-semibold text-center">{error}</div>
                         ) : !patient ? (
@@ -264,7 +282,16 @@ function DetailsPage() {
                                         <div><label className={labelCls}>Contact Number</label><input type="tel" id="contactNumber" value={editForm.contactNumber} onChange={handleChange} className={inputCls} placeholder="09XXXXXXXXX" /></div>
                                         <div className="md:col-span-2"><label className={labelCls}>Address</label><input type="text" id="address" value={editForm.address} onChange={handleChange} className={inputCls} required /></div>
                                         <div><label className={labelCls}>Nationality</label><input type="text" id="nationality" value={editForm.nationality} onChange={handleChange} className={inputCls} /></div>
-                                        <div><label className={labelCls}>Religion</label><input type="text" id="religion" value={editForm.religion} onChange={handleChange} className={inputCls} /></div>
+                                        <div>
+                                            <label className={labelCls}>Religion</label>
+                                            <select id="religion" value={editForm.religion.startsWith('Other:') ? 'Other' : editForm.religion} onChange={handleChange} className={inputCls}>
+                                                <option value="">Select religion</option>
+                                                {RELIGION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                            {(editForm.religion === 'Other' || editForm.religion.startsWith('Other:')) && (
+                                                <input type="text" value={otherReligion || (editForm.religion.startsWith('Other:') ? editForm.religion.replace(/^Other:\s*/, '') : '')} onChange={handleOtherReligion} className={`${inputCls} mt-2`} placeholder="Enter religion" />
+                                            )}
+                                        </div>
                                         <div><label className={labelCls}>Civil Status</label><input type="text" id="civilStatus" value={editForm.civilStatus} onChange={handleChange} className={inputCls} /></div>
                                         <div>
                                             <label className={labelCls}>Blood Type</label>

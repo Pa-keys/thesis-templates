@@ -1,5 +1,16 @@
 import { supabase } from '../../lib/supabase/client';
+import { safeTrim } from '../../lib/utils/strings';
 import { getDashboardPath, isRole } from '../../lib/auth/roles';
+import { logAuditEvent } from '../../features/audit/services';
+import loginBg1 from '../../assets/Login Page 1.png';
+import loginBg2 from '../../assets/Login Page 2.png';
+import loginBg3 from '../../assets/Login Page 3.png';
+import medisensLogo from '../../assets/MEDISENS Logo.png';
+
+document.documentElement.style.setProperty('--login-bg-1', `url("${loginBg1}")`);
+document.documentElement.style.setProperty('--login-bg-2', `url("${loginBg2}")`);
+document.documentElement.style.setProperty('--login-bg-3', `url("${loginBg3}")`);
+document.documentElement.style.setProperty('--medisens-logo', `url("${medisensLogo}")`);
 
 // If already logged in, redirect immediately
 const { data: { session } } = await supabase.auth.getSession();
@@ -7,7 +18,7 @@ if (session) redirectByRole(session.user.id);
 
 // ─── Handle Login ─────────────────────────────────────────────────────────────
 window.handleLogin = async function (): Promise<void> {
-    const email    = (document.getElementById('emailInput') as HTMLInputElement).value.trim();
+    const email    = safeTrim((document.getElementById('emailInput') as HTMLInputElement).value);
     const password = (document.getElementById('passwordInput') as HTMLInputElement).value;
     const btn      = document.getElementById('loginBtn')!;
     const spinner  = document.getElementById('spinner')!;
@@ -52,6 +63,14 @@ async function redirectByRole(userId: string): Promise<void> {
     }
 
     if (isRole(profile.role)) {
+        await logAuditEvent({
+            action: 'login',
+            module: 'Authentication',
+            recordId: userId,
+            recordType: 'profile',
+            description: 'User signed in.',
+            metadata: { profile_id: userId },
+        });
         window.location.href = getDashboardPath(profile.role);
     } else {
         stopLoading();

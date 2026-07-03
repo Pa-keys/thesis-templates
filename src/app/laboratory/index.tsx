@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Icon } from '../../components/shared/Icon';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
@@ -6,12 +6,15 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { useToast } from '../../components/feedback/Toast';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { isBlank } from '../../lib/utils/strings';
 import { upsertCompletedLabResult } from '../../features/laboratory/services';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { NetworkBadge } from '../../components/shared/NetworkBadge';
+import { Topbar } from '../../components/layout/Topbar';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { LoadingState } from '../../components/shared/LoadingState';
 import { EmptyState } from '../../components/shared/EmptyState';
+import { Modal } from '../../components/ui/Modal';
 
 
 interface LabRequest {
@@ -61,6 +64,13 @@ function formatDateTimeLocal(value?: string | null) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function formatDisplayDate(str?: string | null) {
+    if (!str) return '—';
+    const d = new Date(str);
+    return isNaN(d.getTime())
+        ? str
+        : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 function LabRequestDetail({
     request,
     onClose,
@@ -104,7 +114,7 @@ function LabRequestDetail({
                 setDatePerformed(formatDateTimeLocal(data.date_performed));
             }
         } catch (err) {
-            console.error('Failed to load lab result:', getErrorMessage(err));
+            logError('Failed to load laboratory result', err);
         } finally {
             setLoadingLabResult(false);
         }
@@ -113,14 +123,6 @@ function LabRequestDetail({
     const patientName = request.patient_firstName
         ? `${request.patient_firstName} ${request.patient_lastName}`
         : '—';
-
-    const formatDate = (str?: string | null) => {
-        if (!str) return '—';
-        const d = new Date(str);
-        return isNaN(d.getTime())
-            ? str
-            : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
 
     const statusColor = (s: string | null) => {
         if (s === 'Completed') return 'bg-green-100 text-green-700 border-green-200';
@@ -149,7 +151,7 @@ function LabRequestDetail({
             return;
         }
 
-        if (!results.trim()) {
+        if (isBlank(results)) {
             showToast('Please enter lab results before marking as completed.', true);
             return;
         }
@@ -178,7 +180,8 @@ function LabRequestDetail({
             onStatusUpdate(request.labrequest_id, 'Completed');
             showToast('Lab results submitted successfully!', false);
         } catch (err) {
-            showToast('Failed to submit results: ' + getErrorMessage(err), true);
+            logError('Failed to submit laboratory results', err);
+            showToast(healthcareErrorMessage("submit the lab results"), true);
         } finally {
             setSaving(false);
         }
@@ -187,14 +190,19 @@ function LabRequestDetail({
     return (
         <>
             <ToastComponent />
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40" onClick={onClose} />
-            <div className="fixed right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
-                    <div>
-                        <div className="font-bold text-slate-900 text-base">Lab Request #{request.labrequest_id}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{patientName} · {formatDate(request.request_date)}</div>
+            <button
+                type="button"
+                aria-label="Close laboratory request details"
+                className="lab-drawer-backdrop"
+                onClick={onClose}
+            />
+            <Modal labelledBy="lab-request-dialog-title" onClose={onClose} className="lab-drawer">
+                <div className="lab-drawer-header">
+                    <div className="min-w-0">
+                        <div id="lab-request-dialog-title" className="font-semibold text-slate-900 text-base">Lab Request #{request.labrequest_id}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{patientName} · {formatDisplayDate(request.request_date)}</div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusColor(request.status)}`}>
                             {request.status || 'Pending'}
                         </span>
@@ -202,7 +210,7 @@ function LabRequestDetail({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+                <div className="lab-drawer-body space-y-6">
                     <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow">
                             {request.patient_firstName?.[0]?.toUpperCase() ?? '?'}
@@ -219,13 +227,13 @@ function LabRequestDetail({
 
                     {request.chief_complaint && (
                         <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Chief Complaint</div>
+                            <div className="clinical-field-label">Chief Complaint</div>
                             <div className="text-sm text-slate-700 bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">{request.chief_complaint}</div>
                         </div>
                     )}
 
                     <div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Requested Tests</div>
+                        <div className="clinical-field-label">Requested Tests</div>
                         {activeTests.length === 0 && !request.others ? (
                             <p className="text-sm text-slate-400 italic">No tests specified.</p>
                         ) : (
@@ -241,7 +249,7 @@ function LabRequestDetail({
                                         <>
                                             {routine.length > 0 && (
                                                 <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Routine Tests</div>
+                                                    <div className="clinical-field-label">Routine Tests</div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {routine.map(t => (
                                                             <div key={t.label} className="flex items-center gap-2.5">
@@ -258,7 +266,7 @@ function LabRequestDetail({
                                             )}
                                             {fasting.length > 0 && (
                                                 <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Fasting Tests <span className="font-normal normal-case">(8–10 hrs)</span></div>
+                                                    <div className="clinical-field-label">Fasting Tests <span className="font-normal normal-case">(8-10 hrs)</span></div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {fasting.map(t => (
                                                             <div key={t.label} className="flex items-center gap-2.5">
@@ -275,7 +283,7 @@ function LabRequestDetail({
                                             )}
                                             {request.others && (
                                                 <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Others</div>
+                                                    <div className="clinical-field-label">Others</div>
                                                     <div className="text-sm text-slate-700">{request.others}</div>
                                                 </div>
                                             )}
@@ -288,7 +296,7 @@ function LabRequestDetail({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Performed By</label>
+                            <label className="clinical-field-label">Performed By</label>
                             <input
                                 type="text"
                                 value={currentUserName}
@@ -297,7 +305,7 @@ function LabRequestDetail({
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Date Performed</label>
+                            <label className="clinical-field-label">Date Performed</label>
                             <input
                                 type="datetime-local"
                                 value={datePerformed}
@@ -309,7 +317,7 @@ function LabRequestDetail({
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">
+                        <label className="clinical-field-label">
                             Lab Results / Findings
                             {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Submitted</span>}
                             {loadingLabResult && <span className="ml-2 text-blue-600 normal-case font-semibold">Loading saved result...</span>}
@@ -326,7 +334,7 @@ function LabRequestDetail({
                 </div>
 
                 {request.status !== 'Completed' && (
-                    <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                    <div className="lab-drawer-footer">
                         <button
                             onClick={handleMarkCompleted}
                             disabled={saving}
@@ -336,7 +344,7 @@ function LabRequestDetail({
                         </button>
                     </div>
                 )}
-            </div>
+            </Modal>
         </>
     );
 }
@@ -457,8 +465,8 @@ const LaboratoryDashboard = () => {
                 setRequests([]);
             }
         } catch (err) {
-            console.error('Failed to load lab requests:', getErrorMessage(err));
-            showToast('Error loading lab requests: ' + getErrorMessage(err), true);
+            logError('Failed to load lab requests', err);
+            showToast(healthcareErrorMessage("load laboratory requests"), true);
         } finally {
             if (showSpinner) setLoading(false);
         }
@@ -471,14 +479,6 @@ const LaboratoryDashboard = () => {
         if (selectedRequest?.labrequest_id === id) {
             setSelectedRequest(prev => prev ? { ...prev, status } : prev);
         }
-    };
-
-    const formatDate = (str?: string | null) => {
-        if (!str) return '—';
-        const d = new Date(str);
-        return isNaN(d.getTime())
-            ? str
-            : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     const statusBadge = (s: string | null) => {
@@ -525,64 +525,47 @@ const LaboratoryDashboard = () => {
             />
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800">Laboratory Dashboard</div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <NetworkBadge isOnline={isOnline} />
-                        
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Laboratory Staff</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
-                            {userInitials}
-                        </div>
-                    </div>
-                </header>
+                <Topbar
+                    title="Laboratory Dashboard"
+                    sectionLabel="Diagnostic Laboratory"
+                    userName={userName}
+                    userInitials={userInitials}
+                    userRole="Laboratory Staff"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl">
-                        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><Icon name="flask" className="h-6 w-6" /> Lab Requests</h1>
-                                <p className="text-sm text-slate-500 mt-1">Process and submit results. Updates automatically.</p>
+                    <div className="w-full">
+                        <PageHeader
+                            title="Laboratory Work Queue"
+                            subtitle="Encode pending results and review completed requests."
+                        />
+
+                        <div className="pwa-page-pad pb-0">
+                            <div className="ops-summary-grid">
+                                {[
+                                    ['Pending Requests', stats.pending, 'Awaiting result encoding'],
+                                    ['Completed Results', stats.completed, 'Already encoded'],
+                                    ['Total Requests', stats.total, 'Current worklist'],
+                                ].map(([label, value, note]) => (
+                                    <div key={label} className="ops-summary-card">
+                                        <div className="ops-summary-label">{label}</div>
+                                        <div className="ops-summary-value tabular-nums">{value}</div>
+                                        <div className="ops-summary-note">{note}</div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            {[
-                                { label: 'Total Requests', value: stats.total, icon: 'clipboard', color: 'bg-blue-50 text-blue-600' },
-                                { label: 'Pending', value: stats.pending, icon: 'clock', color: 'bg-amber-50 text-amber-600' },
-                                { label: 'Completed', value: stats.completed, icon: 'check', color: 'bg-green-50 text-green-600' },
-                            ].map(stat => (
-                                <div key={stat.label} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                    <div className={`w-12 h-12 rounded-full ${stat.color} flex items-center justify-center text-xl shrink-0`}>
-                                        <Icon name={stat.icon} className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-500">{stat.label}</div>
-                                        <div className="text-2xl font-bold text-slate-800 mt-1">{stat.value}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
-                            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="m-3 md:m-4 xl:m-5 ops-panel overflow-hidden mb-6">
+                            <div className="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60">
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800">All Lab Requests</h2>
+                                    <h2 className="text-base font-semibold text-slate-800">Lab Requests</h2>
                                     <p className="text-xs text-slate-500">Click a row to view details and submit results</p>
                                 </div>
-                                <div className="flex gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <span className="text-xs font-medium text-slate-500">{stats.pending} pending · {stats.completed} completed · {stats.total} total</span>
                                     {(['All', 'Pending',  'Completed'] as const).map(s => (
                                         <button
                                             key={s}
@@ -596,10 +579,11 @@ const LaboratoryDashboard = () => {
                             </div>
 
                             <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                <div className="relative max-w-md">
+                                <div className="relative w-full sm:max-w-lg">
                                     <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input
                                         type="text"
+                                        aria-label="Search lab requests by patient, lab number, or complaint"
                                         placeholder="Search by patient name, lab no, complaint..."
                                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white"
                                         value={searchQuery}
@@ -608,20 +592,20 @@ const LaboratoryDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                            <div className="clinical-table-scroll">
+                                <table className="clinical-table min-w-[980px]">
+                                    <thead>
                                         <tr>
-                                            <th className="px-6 py-4">Patient</th>
-                                            <th className="px-6 py-4">Date</th>
-                                            <th className="px-6 py-4">Tests</th>
-                                            <th className="px-6 py-4">Chief Complaint</th>
-                                            <th className="px-6 py-4">Requested By</th>
-                                            <th className="px-6 py-4">Status</th>
-                                            <th className="px-6 py-4 text-center">Action</th>
+                                            <th>Patient</th>
+                                            <th>Date</th>
+                                            <th>Tests</th>
+                                            <th>Chief Complaint</th>
+                                            <th>Requested By</th>
+                                            <th>Status</th>
+                                            <th className="text-right">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody>
                                         {loading ? (
                                             <tr>
                                                 <td colSpan={7} className="px-6 py-12 text-center">
@@ -661,7 +645,7 @@ const LaboratoryDashboard = () => {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-3 text-slate-600">{formatDate(r.request_date)}</td>
+                                                        <td className="px-6 py-3 text-slate-600">{formatDisplayDate(r.request_date)}</td>
                                                         <td className="px-6 py-3">
                                                             <span className="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">
                                                                 {testCount} test{testCount !== 1 ? 's' : ''}

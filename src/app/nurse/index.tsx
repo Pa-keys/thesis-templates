@@ -1,18 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { Suspense, lazy, useMemo, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
 import { Icon } from '../../components/shared/Icon';
+import { Topbar } from '../../components/layout/Topbar';
+import { PageHeader } from '../../components/layout/PageHeader';
 
 
 // ─── Imported Pure Components ────────────────────────────────────────────────
-import { RecordsComponent } from '../patients/records';
-import { TemplatesComponent } from '../patients/templates';
-import { ConsultationComponent } from '../initial-consultation';
+import type { Patient } from '../../components/patient/PatientDetailModal';
 
-import { PatientDetailModal, Patient } from '../../components/patient/PatientDetailModal';
+const RecordsComponent = lazy(() => import('../patients/records').then(module => ({ default: module.RecordsComponent })));
+const TemplatesComponent = lazy(() => import('../patients/templates').then(module => ({ default: module.TemplatesComponent })));
+const ConsultationComponent = lazy(() => import('../initial-consultation').then(module => ({ default: module.ConsultationComponent })));
+const PatientDetailModal = lazy(() => import('../../components/patient/PatientDetailModal').then(module => ({ default: module.PatientDetailModal })));
+
+const LazyPanelFallback = () => (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
+        Loading workspace...
+    </div>
+);
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 const NurseDashboard = () => {
@@ -95,9 +104,7 @@ const NurseDashboard = () => {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patient_consent' }, () => loadPatients())
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patient_consent' }, () => loadPatients())
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patient_consent' }, () => loadPatients())
-            .subscribe((status) => {
-                console.log('[Realtime] nurse-realtime channel status:', status);
-            });
+            .subscribe();
 
         return () => {
             window.removeEventListener('online', handleOnline);
@@ -106,16 +113,19 @@ const NurseDashboard = () => {
         };
     }, []);
 
-    const stats = {
+    const stats = useMemo(() => ({
         total: totalPatientsCount,
         consented: consentedPatients.length,
         male: consentedPatients.filter(p => p.sex === 'Male').length,
         female: consentedPatients.filter(p => p.sex === 'Female').length,
-    };
+    }), [consentedPatients, totalPatientsCount]);
 
-    const filteredPatients = consentedPatients.filter(p =>
-        `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredPatients = useMemo(() => {
+        const normalizedSearch = searchQuery.toLowerCase();
+        return consentedPatients.filter(p =>
+            `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(normalizedSearch)
+        );
+    }, [consentedPatients, searchQuery]);
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
@@ -134,102 +144,57 @@ const NurseDashboard = () => {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
 
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800 capitalize">
-                            {activePage === 'dashboard' ? 'Nurse Dashboard' : activePage.replace('-', ' ')}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 border rounded-full ${isOnline ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                            {isOnline && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>}
-                            {!isOnline && <span className="w-2 h-2 rounded-full bg-amber-500"></span>}
-                            <span className={`text-[0.7rem] font-extrabold uppercase tracking-wider ${isOnline ? 'text-green-700' : 'text-amber-700'}`}>
-                                {isOnline ? 'System Online' : 'System Offline'}
-                            </span>
-                        </div>
-                        
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Registered Nurse</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
-                            {userInitials}
-                        </div>
-                    </div>
-                </header>
+                <Topbar
+                    title={activePage === 'dashboard' ? 'Nurse Dashboard' : activePage.replace('-', ' ')}
+                    sectionLabel="Nursing"
+                    userName={userName}
+                    userInitials={userInitials}
+                    userRole="Registered Nurse"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl flex flex-col gap-6">
+                    <div className="w-full flex flex-col gap-5">
 
                         {activePage === 'dashboard' && (
                             <>
-                                <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div>
-                                        <h1 className="text-2xl font-extrabold text-slate-800">Good day!</h1>
-                                        <p className="text-sm text-slate-500 mt-1">Patients below have signed their consent and are ready for vitals and consultation.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                                        <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                                        <span className="text-xs font-bold text-slate-700">Live • Auto-updates</span>
+                                <PageHeader
+                                    title="Nursing Intake Queue"
+                                    subtitle="Patients with signed consent are ready for vitals and initial consultation."
+                                    meta={<span className="rounded-md border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                        {stats.consented} ready for vitals
+                                    </span>}
+                                />
+
+                                <div className="pwa-page-pad">
+                                    <div className="ops-summary-grid">
+                                        {[
+                                            ['Ready for Vitals', stats.consented, 'Consented patients'],
+                                            ['Total Patients', stats.total, 'Master registry'],
+                                            ['Female', stats.female, 'Registered patients'],
+                                            ['Male', stats.male, 'Registered patients'],
+                                        ].map(([label, value, note]) => (
+                                            <div key={label} className="ops-summary-card">
+                                                <div className="ops-summary-label">{label}</div>
+                                                <div className="ops-summary-value tabular-nums">{value}</div>
+                                                <div className="ops-summary-note">{note}</div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div className="bg-green-50 p-5 rounded-2xl border border-green-200 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center text-xl shrink-0"><Icon name="check" className="h-5 w-5" /></div>
+                                <div className="mx-3 md:mx-4 xl:mx-5 ops-panel overflow-hidden mb-5">
+                                    <div className="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60">
                                         <div>
-                                            <div className="text-sm font-semibold text-green-700">Consented Patients</div>
-                                            <div className="text-2xl font-bold text-green-800 mt-1">{stats.consented}</div>
-                                            <div className="text-xs font-bold text-green-600 mt-1">Ready for vitals</div>
+                                            <h2 className="text-base font-semibold text-slate-800">Consented Patients</h2>
+                                            <p className="text-xs text-slate-500">Open a patient to continue the RHU consultation workflow.</p>
                                         </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="users" className="h-5 w-5" /></div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Total Patients</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Female</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="user" className="h-5 w-5" /></div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Male</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
-                                    <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div>
-                                            <h2 className="text-lg font-bold text-slate-800">Consented Patients</h2>
-                                            <p className="text-xs text-slate-500">Click a patient to start their initial consultation.</p>
-                                        </div>
-                                        <span className="bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
-                                            <Icon name="check" className="h-3.5 w-3.5" /> {stats.consented} patients
-                                        </span>
-                                    </div>
-
-                                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                        <div className="relative max-w-md">
+                                        <div className="relative w-full sm:max-w-sm">
                                             <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                             <input
                                                 type="text"
+                                                aria-label="Search consented patients by name"
                                                 placeholder="Search by name..."
                                                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm bg-white"
                                                 value={searchQuery}
@@ -238,84 +203,89 @@ const NurseDashboard = () => {
                                         </div>
                                     </div>
 
-                                    <div className="p-4">
+                                    <div className="clinical-table-scroll">
                                         {filteredPatients.length === 0 ? (
-                                            <div className="text-center py-16">
-                                                <Icon name="clock" className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                                            <div className="text-center py-12">
+                                                <Icon name="clock" className="h-8 w-8 mx-auto mb-3 text-slate-300" />
                                                 <p className="text-slate-500 font-medium">No consented patients found.</p>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-col gap-3">
-                                                {filteredPatients.map(p => {
-                                                    const isMale = p.sex === 'Male';
-                                                    const date = p.createdAt
-                                                        ? new Date(p.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
-                                                        : '—';
-                                                    const category = p.category === 'Other/s'
-                                                        ? `Others (${p.categoryOthers || 'unspecified'})`
-                                                        : (p.category || '—');
+                                            <table className="clinical-table min-w-[820px]">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Patient</th>
+                                                        <th>Profile</th>
+                                                        <th>Address</th>
+                                                        <th>Registered</th>
+                                                        <th className="text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filteredPatients.map(p => {
+                                                        const date = p.createdAt
+                                                            ? new Date(p.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                            : '-';
 
-                                                    return (
-                                                        <div
-                                                            key={p.id}
-                                                            onClick={() => handleConsultNavigate(p.id)}
-                                                            className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-teal-500 hover:shadow-md cursor-pointer transition-all"
-                                                        >
-                                                            <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm ${isMale ? 'bg-blue-600' : 'bg-pink-500'}`}>
-                                                                {(p.firstName?.[0] || '?').toUpperCase()}
-                                                            </div>
-
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-bold text-slate-800 text-base">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
-                                                                <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                                                                    <span className="inline-flex items-center gap-1"><Icon name="user" className="h-3.5 w-3.5" /> {p.sex || '—'}</span>
-                                                                    <span className="inline-flex items-center gap-1"><Icon name="calendar" className="h-3.5 w-3.5" /> {p.age ?? '—'} yrs</span>
-                                                                    <span className="inline-flex items-center gap-1"><Icon name="droplet" className="h-3.5 w-3.5" /> {p.bloodType || '—'}</span>
-                                                                    <span className="inline-flex items-center gap-1"><Icon name="building" className="h-3.5 w-3.5" /> {p.philhealthStatus || '—'}</span>
-                                                                    <span className="inline-flex items-center gap-1"><Icon name="clipboard" className="h-3.5 w-3.5" /> {category}</span>
-                                                                </div>
-                                                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1"><Icon name="map-pin" className="h-3.5 w-3.5" /> {p.address || 'No address'}</div>
-                                                            </div>
-
-                                                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100">
-                                                                <div className="text-xs text-slate-400 font-medium text-right hidden sm:block">Registered<br />{date}</div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="bg-green-50 text-green-600 border border-green-200 px-2 py-1 rounded-full text-[0.65rem] font-bold inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> Consent Signed</span>
+                                                        return (
+                                                            <tr key={p.id} onClick={() => handleConsultNavigate(p.id)} className="cursor-pointer transition-colors hover:bg-slate-50">
+                                                                <td className="px-4 py-3">
+                                                                    <div className="font-semibold text-slate-800">{p.lastName}, {p.firstName} {p.middleName || ''}</div>
+                                                                    <div className="text-xs text-slate-500">Consent signed</div>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-slate-600">{p.sex || '-'} | {p.age ?? '-'} yrs | {p.bloodType || '-'}</td>
+                                                                <td className="px-4 py-3 text-slate-600 max-w-[260px] truncate">{p.address || 'No address'}</td>
+                                                                <td className="px-4 py-3 text-slate-500">{date}</td>
+                                                                <td className="px-4 py-3 text-right">
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleConsultNavigate(p.id); }}
-                                                                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                                                                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
                                                                     >
-                                                                        <Icon name="clipboard" className="inline h-3.5 w-3.5 mr-1" /> Consult
+                                                                        Initial Intake
                                                                     </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                         )}
                                     </div>
                                 </div>
+
                             </>
                         )}
 
                         {/* ─── Patient Records — untouched, modal still works here ─── */}
                         {activePage === 'records' && (
-                            <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
+                            <div className="pwa-page-pad">
+                                <Suspense fallback={<LazyPanelFallback />}>
+                                    <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
+                                </Suspense>
+                            </div>
                         )}
-                        {activePage === 'new-record' && <TemplatesComponent />}
-                        {activePage === 'consultation' && <ConsultationComponent />}
+                        {activePage === 'new-record' && (
+                            <Suspense fallback={<LazyPanelFallback />}>
+                                <TemplatesComponent />
+                            </Suspense>
+                        )}
+                        {activePage === 'consultation' && (
+                            <Suspense fallback={<LazyPanelFallback />}>
+                                <ConsultationComponent />
+                            </Suspense>
+                        )}
                     </div>
                 </div>
             </main>
 
             {/* Patient Detail Modal — only triggered from Records now, not the dashboard */}
             {selectedPatient && (
-                <PatientDetailModal
-                    patient={selectedPatient}
-                    onClose={() => setSelectedPatient(null)}
-                    onPatientUpdate={(updated) => setSelectedPatient(updated)}
-                />
+                <Suspense fallback={null}>
+                    <PatientDetailModal
+                        patient={selectedPatient}
+                        onClose={() => setSelectedPatient(null)}
+                        onPatientUpdate={(updated) => setSelectedPatient(updated)}
+                    />
+                </Suspense>
             )}
         </div>
     );

@@ -11,7 +11,8 @@ import { OfflineBanner } from '../../components/feedback/OfflineBanner';
 import { useToast } from '../../components/feedback/Toast';
 import { upsertLatestFollowUpByPatient } from '../../features/consultation/services';
 import { getInitials } from '../../lib/utils/names';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { safeTrim, toNumberOrNull as parseNumberOrNull } from '../../lib/utils/strings';
 
 interface FollowUpData {
     date: string; time: string; modeOfTx: string; modeOfTransfer: string;
@@ -40,7 +41,7 @@ export default function FollowUp() {
     const [formData, setFormData] = useState<FollowUpData>(EMPTY_FORM);
     const sigCanvas = useRef<SignatureCanvas | null>(null);
 
-    const { isOnline, isSyncing } = useNetworkSync();
+    const { isOnline } = useNetworkSync();
 
     // ─── INIT & AUTH ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -64,11 +65,7 @@ export default function FollowUp() {
     // ─── HANDLERS ────────────────────────────────────────────────────────────
     const handleVitalChange = (field: string, value: string) => setFormData(prev => ({ ...prev, vitals: { ...prev.vitals, [field]: value } }));
     
-    const toNumberOrNull = (val: string) => {
-        if (!val || val.trim() === '') return null;
-        const parsed = Number(val);
-        return isNaN(parsed) ? null : parsed;
-    };
+    const toNumberOrNull = (val: unknown) => parseNumberOrNull(val);
 
 
 
@@ -123,8 +120,9 @@ export default function FollowUp() {
             
             setFormData(EMPTY_FORM);
             sigCanvas.current?.clear();
-        } catch (err) { 
-            showToast('Error: ' + getErrorMessage(err), true); 
+        } catch (err) {
+            logError('Failed to save follow-up visitation', err);
+            showToast(healthcareErrorMessage("save the follow-up visit"), true);
         } finally {
             setIsSubmitting(false);
         }
@@ -133,16 +131,16 @@ export default function FollowUp() {
     // ─── STYLES & RENDER ─────────────────────────────────────────────────────
     if (!role) return null;
 
-    const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 transition-all disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed";
-    const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5";
-    const sectionCls = "bg-white border border-slate-200 rounded-xl p-6 md:p-8 shadow-sm mb-6";
-    const headerCls = "text-sm font-extrabold text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-3 mb-5";
+    const inputCls = "w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm text-slate-800 transition-colors disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed";
+    const labelCls = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
+    const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm mb-4";
+    const headerCls = "text-sm font-semibold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-3 mb-4";
 
     const navItems = role === 'doctor' 
         ? [ { id: 'dashboard', label: 'Dashboard', icon: 'home' }, { id: 'records', label: 'Patient Records', icon: 'users' }, { id: 'consultation', label: 'Consultation', icon: 'clipboard' } ]
         : [ { id: 'dashboard', label: 'Dashboard', icon: 'home' }, { id: 'new-record', label: 'New Record', icon: 'user-plus' }, { id: 'consultation', label: 'Consultation', icon: 'clipboard' } ];
 
-    const patientFullName = patient ? `${patient.lastName}, ${patient.firstName} ${patient.middleName || ''}`.trim() : 'Loading...';
+    const patientFullName = patient ? safeTrim(`${patient.lastName}, ${patient.firstName} ${patient.middleName || ''}`) : 'Loading...';
     const patientInitials = patient ? `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase() : '?';
 
     return (
@@ -188,8 +186,8 @@ export default function FollowUp() {
                 <OfflineBanner isOnline={isOnline} />
 
                 {/* MAIN CONTENT */}
-                <main className="w-full flex-1 p-4 md:p-8 flex justify-center">
-                    <div className="w-full max-w-5xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <main className="w-full flex-1 pwa-page-pad">
+                    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         
                         <div className="flex items-center gap-4 mb-6">
                             <button onClick={() => window.history.back()} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">← Back</button>

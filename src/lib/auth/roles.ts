@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client';
 import type { Role } from '../../types/user';
+import { logAuditEvent } from '../../features/audit/services';
 
 export const ROLE_DASHBOARD: Record<Role, string> = {
     doctor:     '/pages/doctor.html',
@@ -88,6 +89,17 @@ export async function redirectToDashboard(): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        await logAuditEvent({
+            action: 'logout',
+            module: 'Authentication',
+            recordId: user.id,
+            recordType: 'profile',
+            description: 'User signed out.',
+            metadata: { profile_id: user.id },
+        });
+    }
     await supabase.auth.signOut();
     window.location.href = '/pages/login.html';
 }

@@ -7,3 +7,11 @@ export function getErrorMessage(error: unknown, fallback = 'Unexpected error'): 
     }
     return fallback;
 }
+
+export function logError(context: string, error: unknown): void {
+    console.error(context, error);
+}
+
+export function healthcareErrorMessage(action: string): string {
+    return `Unable to ${action}. Please try again. If the problem persists, contact the system administrator.`;
+}

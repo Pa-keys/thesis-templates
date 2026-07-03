@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { requireRole } from '../../lib/auth/roles';
@@ -8,9 +8,14 @@ import { parsePrescriptionContent } from '../../features/pharmacy/prescriptionPa
 import type { Medication } from '../../types/prescription';
 import { printHtmlDocument } from '../../lib/utils/print';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { NetworkBadge } from '../../components/shared/NetworkBadge';
+import { Topbar } from '../../components/layout/Topbar';
+import { PageHeader } from '../../components/layout/PageHeader';
 import { EmptyState } from '../../components/shared/EmptyState';
 import { Icon } from '../../components/shared/Icon';
+import { Modal } from '../../components/ui/Modal';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { safeTrim } from '../../lib/utils/strings';
+import { logAuditEvent } from '../../features/audit/services';
 
 
 // --- Interfaces ---
@@ -116,7 +121,7 @@ function PharmacyDashboard() {
             });
             setPrescriptions(transformed as unknown as Prescription[]);
         } else if (error) {
-            console.error('Error loading prescriptions:', error.message);
+            logError('Failed to load prescriptions', error);
         }
     };
 
@@ -138,7 +143,7 @@ function PharmacyDashboard() {
         }));
     };
 
-    // ─── Updated Print Format (Matches doctor.tsx) ───────────────────────────
+    // --- Updated Print Format (Matches doctor.tsx) ---------------------------
     const handlePrintUnavailable = () => {
         if (!selectedRx) return;
 
@@ -154,7 +159,7 @@ function PharmacyDashboard() {
             return;
         }
 
-        const patientFullName = `${selectedRx.patients.lastName}, ${selectedRx.patients.firstName} ${selectedRx.patients.middleName || ''}`.trim();
+        const patientFullName = safeTrim(`${selectedRx.patients.lastName}, ${selectedRx.patients.firstName} ${selectedRx.patients.middleName || ''}`);
         const pt = selectedRx.patients;
 
         const html = `
@@ -243,11 +248,24 @@ function PharmacyDashboard() {
 
         setIsDispensing(false);
         if (!error) {
+            void logAuditEvent({
+                action: 'dispense',
+                module: 'Pharmacy',
+                recordId: selectedRx.prescription_id,
+                recordType: 'prescription',
+                description: 'Marked prescription as dispensed.',
+                metadata: {
+                    prescription_id: selectedRx.prescription_id,
+                    patient_id: selectedRx.patient_id,
+                    status: 'Dispensed',
+                },
+            });
             setSelectedRx(null);
             setPrescriptions(prev => prev.filter(p => p.prescription_id !== selectedRx.prescription_id));
             showToast('Medication dispensed successfully!', false);
         } else {
-            showToast('Error dispensing: ' + error.message, true);
+            logError('Failed to dispense prescription', error);
+            showToast(healthcareErrorMessage("mark the prescription as dispensed"), true);
         }
     };
 
@@ -283,62 +301,52 @@ function PharmacyDashboard() {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
 
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800 capitalize">Pharmacy Dashboard</div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <NetworkBadge isOnline={isOnline} />
-
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{profile?.fullName || 'Loading...'}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Pharmacist</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">
-                            {initials}
-                        </div>
-                    </div>
-                </header>
+                <Topbar
+                    title="Pharmacy Dashboard"
+                    sectionLabel="Pharmacy"
+                    userName={profile?.fullName || 'Loading...'}
+                    userInitials={initials}
+                    userRole="Pharmacist"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="w-full max-w-full p-4 md:p-6 lg:p-8 mx-auto flex flex-col gap-6">
+                    <div className="w-full max-w-full flex flex-col gap-6">
                         {activePage === 'queue' && (
                             <>
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2"><Icon name="pill" className="h-6 w-6" /> Prescription Queue</h1>
-                                        <p className="text-sm text-slate-500 mt-1">Review e-prescriptions sent by doctors and dispense medications.</p>
-                                    </div>
-                                </div>
+                                <PageHeader
+                                    title="Pharmacy Dispensing Queue"
+                                    subtitle="Review pending e-prescriptions and document dispensing decisions."
+                                />
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                                    <div className="bg-white rounded-xl border border-blue-200 p-5 shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0"><Icon name="clock" className="h-5 w-5" /></div>
-                                            <div>
-                                                <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Awaiting Dispense</div>
-                                                <div className="text-2xl font-black text-slate-900 leading-tight">{prescriptions.length}</div>
+                                <div className="pwa-page-pad">
+                                    <div className="ops-summary-grid">
+                                        {[
+                                            ['To Dispense', prescriptions.length, 'Pending e-prescriptions'],
+                                            ['Matching Search', filteredRx.length, 'Visible worklist'],
+                                            ['Review Required', filteredRx.length, 'Open row for medication details'],
+                                        ].map(([label, value, note]) => (
+                                            <div key={label} className="ops-summary-card">
+                                                <div className="ops-summary-label">{label}</div>
+                                                <div className="ops-summary-value tabular-nums">{value}</div>
+                                                <div className="ops-summary-note">{note}</div>
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 shadow-sm w-full">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <div className="m-3 md:m-4 xl:m-5 ops-panel overflow-hidden">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 bg-slate-50/60 px-4 py-3">
                                         <div>
-                                            <h3 className="font-bold text-slate-900">Pending Prescriptions</h3>
-                                            <p className="text-xs text-slate-500">Click to review medication details.</p>
+                                            <h3 className="font-semibold text-slate-900">Pending Prescriptions</h3>
+                                            <p className="text-xs text-slate-500">{prescriptions.length} awaiting dispense | click a row to review medication details</p>
                                         </div>
                                         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:w-auto">
                                             <Icon name="search" className="h-4 w-4 text-slate-400" />
                                             <input
                                                 type="text"
+                                                aria-label="Search prescriptions by patient"
                                                 placeholder="Search patient..."
                                                 className="bg-transparent border-none outline-none text-sm text-slate-700 w-full"
                                                 value={searchQuery}
@@ -347,30 +355,34 @@ function PharmacyDashboard() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-3">
-                                        {filteredRx.length === 0 ? (
-                                            <EmptyState title="No pending prescriptions" description="New e-prescriptions from doctors will appear here." />
-                                        ) : (
-                                            filteredRx.map(rx => (
-                                                <div key={rx.prescription_id} onClick={() => handleRxSelect(rx)} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-md transition-all cursor-pointer bg-white gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
-                                                            {rx.patients?.firstName?.[0]?.toUpperCase() || '?'}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900">{rx.patients?.lastName}, {rx.patients?.firstName}</h4>
-                                                            <div className="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1 mt-1">
-                                                                <span className="flex items-center gap-1"><Icon name="user" className="h-3.5 w-3.5" /> {rx.patients?.sex}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2">
-                                                        <span className="text-xs font-medium text-slate-500">{new Date(rx.prescription_date).toLocaleDateString('en-PH')}</span>
-                                                        <span className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[0.65rem] font-bold uppercase tracking-wide inline-flex items-center gap-1"><Icon name="clock" className="h-3 w-3" /> Pending</span>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
+                                    <div className="clinical-table-scroll">
+                                        <table className="clinical-table min-w-[720px]">
+                                            <thead>
+                                                <tr>
+                                                    <th>Patient</th>
+                                                    <th>Prescription Date</th>
+                                                    <th>Status</th>
+                                                    <th className="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredRx.length === 0 ? (
+                                                    <tr><td colSpan={4}><EmptyState title="No pending prescriptions" description="New e-prescriptions from doctors will appear here." /></td></tr>
+                                                ) : (
+                                                    filteredRx.map(rx => (
+                                                        <tr key={rx.prescription_id} onClick={() => handleRxSelect(rx)} className="cursor-pointer">
+                                                            <td>
+                                                                <div className="clinical-primary">{rx.patients?.lastName}, {rx.patients?.firstName}</div>
+                                                                <div className="clinical-secondary">{rx.patients?.sex || '-'}</div>
+                                                            </td>
+                                                            <td>{new Date(rx.prescription_date).toLocaleDateString('en-PH')}</td>
+                                                            <td><span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700"><Icon name="clock" className="h-3 w-3" /> Pending</span></td>
+                                                            <td className="text-right"><span className="clinical-link-action">Review</span></td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </>
@@ -382,25 +394,25 @@ function PharmacyDashboard() {
             {/* Modal */}
             {selectedRx && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="p-5 md:p-6 border-b border-slate-200 flex justify-between items-start bg-slate-50">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-900">E-Prescription Details</h2>
-                                <p className="text-sm text-slate-500 mt-1">Patient: <span className="font-semibold text-slate-700">{selectedRx.patients?.firstName} {selectedRx.patients?.lastName}</span></p>
+                    <Modal labelledBy="prescription-dialog-title" onClose={() => setSelectedRx(null)} className="pharmacy-preview-modal">
+                        <div className="pharmacy-preview-header">
+                            <div className="min-w-0">
+                                <h2 id="prescription-dialog-title" className="text-lg font-semibold text-slate-900">E-Prescription Details</h2>
+                                <p className="text-sm text-slate-500 mt-1 truncate">Patient: <span className="font-semibold text-slate-700">{selectedRx.patients?.firstName} {selectedRx.patients?.lastName}</span></p>
                             </div>
-                            <button onClick={() => setSelectedRx(null)} aria-label="Close prescription details" className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors"><Icon name="close" className="h-4 w-4" label="Close prescription details" /></button>
+                            <button onClick={() => setSelectedRx(null)} aria-label="Close prescription details" className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center transition-colors shrink-0"><Icon name="close" className="h-4 w-4" label="Close prescription details" /></button>
                         </div>
 
-                        <div className="p-5 md:p-6 overflow-y-auto">
+                        <div className="pharmacy-preview-body">
                             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                                <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Prescribed Medications</h3>
+                                <h3 className="clinical-field-label mb-0">Prescribed Medications</h3>
                                 <span className="text-xs font-medium text-slate-500">Check each medication that can be dispensed.</span>
                             </div>
 
                             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm whitespace-nowrap">
-                                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                <div className="clinical-table-scroll">
+                                    <table className="clinical-table min-w-[680px]">
+                                        <thead>
                                             <tr>
                                                 <th className="p-4 font-semibold text-center">Dispense</th>
                                                 <th className="p-4 font-semibold">Medication</th>
@@ -423,7 +435,7 @@ function PharmacyDashboard() {
                                                     <td className={`p-4 font-bold ${dispenseChecklist[i] ? 'text-blue-600' : 'text-red-700 line-through'}`}>{med.name}</td>
                                                     <td className="p-4 text-slate-700">{med.dosage}</td>
                                                     <td className="p-4 text-slate-700">{med.frequency}</td>
-                                                    <td className="p-4 font-black text-slate-900">{med.quantity}</td>
+                                                    <td className="p-4 font-semibold text-slate-900 tabular-nums">{med.quantity}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -432,7 +444,7 @@ function PharmacyDashboard() {
                             </div>
                         </div>
 
-                        <div className="p-4 md:p-5 border-t border-slate-200 bg-slate-50 flex flex-wrap sm:flex-nowrap justify-end gap-3 shrink-0">
+                        <div className="pharmacy-preview-footer">
                             <button onClick={() => setSelectedRx(null)} className="px-5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 transition-colors w-full sm:w-auto">
                                 Cancel
                             </button>
@@ -453,7 +465,7 @@ function PharmacyDashboard() {
                                 {isDispensing ? 'Dispensing...' : <><Icon name="check" className="h-4 w-4" /> Mark as Dispensed</>}
                             </button>
                         </div>
-                    </div>
+                    </Modal>
                 </div>
             )}
         </div>

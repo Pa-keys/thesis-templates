@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type IconName =
     | 'home'
     | 'users'
@@ -32,7 +34,9 @@ export type IconName =
     | 'baby'
     | 'heart-pulse'
     | 'smile'
-    | 'shield-plus';
+    | 'shield-plus'
+    | 'menu'
+    | 'chevron-right';
 
 interface IconProps {
     name: IconName | string;
@@ -40,7 +44,7 @@ interface IconProps {
     label?: string;
 }
 
-const paths: Record<IconName, JSX.Element> = {
+const paths: Record<IconName, ReactNode> = {
     home: <><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></>,
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
     'user-plus': <><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></>,
@@ -75,6 +79,8 @@ const paths: Record<IconName, JSX.Element> = {
     'heart-pulse': <><path d="M20.8 8.6a5.5 5.5 0 0 0-9.8-3.3L12 6.4l1-1.1a5.5 5.5 0 0 1 8.2 7.3L12 21l-9.2-8.4a5.5 5.5 0 0 1 8.2-7.3L12 6.4"/><path d="M3 12h4l2-3 3 6 2-3h7"/></>,
     smile: <><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M16 10h.01M8.5 14.5a5 5 0 0 0 7 0"/></>,
     'shield-plus': <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M12 8v6M9 11h6"/></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
+    'chevron-right': <><path d="m9 18 6-6-6-6"/></>,
 };
 
 function resolveIcon(name: string): IconName {

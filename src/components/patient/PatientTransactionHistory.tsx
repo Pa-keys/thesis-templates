@@ -17,6 +17,8 @@ interface PatientTransactionHistoryProps {
     onRetry?: () => void;
 }
 
+type HistoryFilter = 'all' | 'consultations' | 'initial';
+
 const TYPE_LABEL: Record<PatientTransaction['type'], string> = {
     registration: 'Registration',
     consent: 'Consent',
@@ -124,6 +126,7 @@ function RetryButton({ onRetry }: { onRetry?: () => void }) {
 
 function HistoryWarning({ warnings, onRetry }: { warnings: PatientHistoryWarning[]; onRetry?: () => void }) {
     if (warnings.length === 0) return null;
+    const canRetry = warnings.some(warning => warning.kind !== 'application') && Boolean(onRetry);
 
     return (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -138,7 +141,7 @@ function HistoryWarning({ warnings, onRetry }: { warnings: PatientHistoryWarning
                     </li>
                 ))}
             </ul>
-            <RetryButton onRetry={onRetry} />
+            <RetryButton onRetry={canRetry ? onRetry : undefined} />
         </div>
     );
 }
@@ -148,6 +151,7 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
     const [loadedWarnings, setLoadedWarnings] = useState<PatientHistoryWarning[]>([]);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isFetching, setIsFetching] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<HistoryFilter>('all');
 
     const loadTransactions = useCallback(async () => {
         if (!patientId) return;
@@ -175,12 +179,44 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
     const visibleWarnings = patientId ? loadedWarnings : warnings;
     const visibleError = patientId ? loadError : error;
     const retry = patientId ? loadTransactions : onRetry;
+    const filterOptions: Array<{ id: HistoryFilter; label: string; count: number }> = [
+        { id: 'all', label: 'All', count: visibleTransactions.length },
+        {
+            id: 'consultations',
+            label: 'Consultations',
+            count: visibleTransactions.filter(transaction => transaction.type === 'doctor_consultation').length,
+        },
+        {
+            id: 'initial',
+            label: 'Initial',
+            count: visibleTransactions.filter(transaction => transaction.type === 'initial_consultation').length,
+        },
+    ];
+    const filteredTransactions = visibleTransactions.filter(transaction => {
+        if (activeFilter === 'consultations') return transaction.type === 'doctor_consultation';
+        if (activeFilter === 'initial') return transaction.type === 'initial_consultation';
+        return true;
+    });
+    const emptyFilterCopy = activeFilter === 'consultations'
+        ? {
+            title: 'No consultation records yet.',
+            description: 'Doctor consultation records will appear here after a consultation is completed.',
+        }
+        : activeFilter === 'initial'
+            ? {
+                title: 'No consultation records yet.',
+                description: 'Initial consultation records will appear here after nurse intake is completed.',
+            }
+            : {
+                title: 'No transactions found',
+                description: 'Registration, consent, consultations, lab, pharmacy, vaccine, and follow-up records will appear here.',
+            };
 
     if (isLoading || isFetching) return <LoadingState label="Loading complete transaction history..." />;
 
     if (visibleError) {
         return (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                 <div className="font-extrabold">Patient history could not be loaded</div>
                 <p className="mt-1 font-medium">{visibleError}</p>
                 <RetryButton onRetry={retry} />
@@ -188,12 +224,36 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
         );
     }
 
+    const filterControls = (
+        <div className="mb-4 flex flex-wrap gap-2">
+            {filterOptions.map(option => (
+                <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setActiveFilter(option.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+                        activeFilter === option.id
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                >
+                    {option.label}
+                    <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[0.65rem] ${
+                        activeFilter === option.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                        {option.count}
+                    </span>
+                </button>
+            ))}
+        </div>
+    );
+
     if (visibleTransactions.length === 0) {
         if (visibleWarnings.length > 0) {
             return (
                 <div>
                     <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
-                    <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-700">
+                    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-700">
                         No history records can be shown until the failed sections are retried or checked.
                     </div>
                 </div>
@@ -201,21 +261,28 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
         }
 
         return (
-            <EmptyState
-                title="No transactions found"
-                description="Registration, consent, consultations, lab, pharmacy, vaccine, and follow-up records will appear here."
-            />
+            <div>
+                {filterControls}
+                <EmptyState title={emptyFilterCopy.title} description={emptyFilterCopy.description} />
+            </div>
         );
     }
 
     return (
         <div className="relative">
+            {filterControls}
             <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
 
             <div className="absolute bottom-3 left-[18px] top-3 hidden w-0.5 bg-slate-200 sm:block" />
 
-            <div className="space-y-4">
-                {visibleTransactions.map(transaction => (
+            {filteredTransactions.length === 0 ? (
+                <EmptyState
+                    title={emptyFilterCopy.title}
+                    description={emptyFilterCopy.description}
+                />
+            ) : (
+                <div className="space-y-3">
+                    {filteredTransactions.map(transaction => (
                     <div key={transaction.id} className="relative flex gap-4">
                         <div className="hidden shrink-0 pt-4 sm:flex">
                             <div className={`h-2.5 w-2.5 rounded-full shadow-sm ring-2 ring-white ${
@@ -238,8 +305,9 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                             <ItemsGrid items={transaction.items} />
                         </div>
                     </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

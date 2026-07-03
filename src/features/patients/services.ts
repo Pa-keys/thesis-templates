@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase/client';
 import type { PatientRegistrationPayload } from '../../types/patient';
+import { logAuditEvent } from '../audit/services';
 
 export interface PatientConsentPayload {
     patient_id: string;
@@ -13,11 +14,29 @@ export interface PatientConsentPayload {
 export async function createPatient(payload: PatientRegistrationPayload): Promise<void> {
     const { error } = await supabase.from('patients').insert([payload]);
     if (error) throw error;
+    void logAuditEvent({
+        action: 'create',
+        module: 'Patient Records',
+        recordId: null,
+        recordType: 'patient',
+        description: 'Created patient record.',
+        metadata: { action_scope: 'patient_registration' },
+    });
 }
 
 export async function updatePatientRecord(patientId: string, updates: Record<string, unknown>): Promise<void> {
     const { error } = await supabase.from('patients').update(updates).eq('id', patientId);
     if (error) throw error;
+    const nameFields = ['firstName', 'middleName', 'lastName', 'suffix'];
+    const nameUpdated = nameFields.some(field => Object.prototype.hasOwnProperty.call(updates, field));
+    await logAuditEvent({
+        action: 'update',
+        module: 'Patient Records',
+        recordId: patientId,
+        recordType: 'patient',
+        description: 'Updated patient profile',
+        metadata: { patient_id: patientId, name_updated: nameUpdated },
+    });
 }
 
 export async function savePatientConsent(payload: PatientConsentPayload): Promise<void> {
