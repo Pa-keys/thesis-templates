@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase/client';
 
 interface OfflineRecord {
     id: string | number;
-    data: Record<string, unknown>;
+    type?: string;
+    data: unknown;
 }
 
 export function useNetworkSync() {
@@ -20,17 +21,16 @@ export function useNetworkSync() {
             }
         });
 
-        // 3. Handlers for active browser network events
         // Handlers for browser network events
         const handleOnline = () => {
             setIsOnline(true);
-            document.body.classList.remove('offline-mode'); // 🔴 REMOVE CLASS
+            document.body.classList.remove('offline-mode');
             triggerSync(); 
         };
         
         const handleOffline = () => {
             setIsOnline(false);
-            document.body.classList.add('offline-mode'); // 🔴 ADD CLASS
+            document.body.classList.add('offline-mode');
         };
 
         // Also run a check on initial boot
@@ -52,8 +52,6 @@ export function useNetworkSync() {
         setIsSyncing(true);
         
         try {
-            // 1. Get all pending records from your IndexedDB
-            // (Replace 'MediSensDB' and 'offline_patients' with your actual DB/Store names)
             const offlineRecords = await getOfflineData('MediSensDB', 'offline_patients');
             
             if (offlineRecords.length === 0) {
@@ -61,16 +59,12 @@ export function useNetworkSync() {
                 return;
             }
 
-            console.log(`Found ${offlineRecords.length} records to sync...`);
-
-            // 2. Loop through and push to Supabase
             for (const record of offlineRecords) {
                 const { error } = await supabase
-                    .from('patients') // Or 'lab_request', etc.
+                    .from('patients')
                     .insert([record.data]);
 
                 if (!error) {
-                    // 3. If successful, delete it from local IndexedDB
                     await deleteOfflineData('MediSensDB', 'offline_patients', record.id);
                 } else {
                     console.error("Failed to sync record:", error);

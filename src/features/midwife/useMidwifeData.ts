@@ -58,7 +58,7 @@ export const useMidwifeData = () => {
 
             setPatients(normalized);
         } catch (err) {
-            console.error("❌ Error fetching patients:", err);
+                console.error("Error fetching patients:", err);
             setPatients([]);
         }
 
@@ -67,7 +67,7 @@ export const useMidwifeData = () => {
             const recs = await midwifeAPI.getFHSISLogs(currentMonth);
             setRecords(recs || []);
         } catch (err) {
-            console.error("❌ Error fetching census records:", err);
+                console.error("Error fetching census records:", err);
             setRecords([]);
         }
 
@@ -76,7 +76,7 @@ export const useMidwifeData = () => {
             const summ = await midwifeAPI.getMonthlySummary(currentMonth);
             setSummary(summ || {});
         } catch (err) {
-            console.error("❌ Error fetching summary:", err);
+                console.error("Error fetching summary:", err);
             setSummary({});
         }
 

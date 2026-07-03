@@ -1,17 +1,28 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { Suspense, lazy, useMemo, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
+import { Icon } from '../../components/shared/Icon';
+import { Topbar } from '../../components/layout/Topbar';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { safeTrim } from '../../lib/utils/strings';
 
 
 // ─── Imported Pure Components ────────────────────────────────────────────────
-import { RecordsComponent } from '../patients/records';
-import { TemplatesComponent } from '../patients/templates';
-import { PatientDetailModal, Patient } from '../../components/patient/PatientDetailModal';
+import type { Patient } from '../../components/patient/PatientDetailModal';
 
+const RecordsComponent = lazy(() => import('../patients/records').then(module => ({ default: module.RecordsComponent })));
+const TemplatesComponent = lazy(() => import('../patients/templates').then(module => ({ default: module.TemplatesComponent })));
+const PatientDetailModal = lazy(() => import('../../components/patient/PatientDetailModal').then(module => ({ default: module.PatientDetailModal })));
 const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
+
+const LazyPanelFallback = () => (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
+        Loading workspace...
+    </div>
+);
 
 const BhwDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,17 +31,16 @@ const BhwDashboard = () => {
     const [userInitials, setUserInitials] = useState('?');
     const [patients, setPatients] = useState<Patient[]>([]);
     const [records, setRecords] = useState<any[]>([]); // State for FHSIS Census Logs
-    const [searchQuery, setSearchQuery] = useState('');
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     // ─── SPA Navigation State ───
     const [activePage, setActivePage] = useState('dashboard');
 
     const navItems = [
-        { id: 'dashboard', label: 'Home', icon: '🏠' },
-        { id: 'records', label: 'Records', icon: '📁' },
-        { id: 'new-record', label: 'New Record', icon: '➕' },
-        { id: 'reports', label: 'OCR Generation', icon: '📊' } // Added Reports Tab
+        { id: 'dashboard', label: 'Home', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
+        { id: 'reports', label: 'OCR Generation', icon: 'chart' }
     ];
 
     useEffect(() => {
@@ -79,7 +89,7 @@ const BhwDashboard = () => {
                     const patientData: any = Array.isArray(record.patients) ? record.patients[0] : record.patients;
                     return {
                         ...record,
-                        patientName: patientData ? `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() : 'Unknown Patient',
+                        patientName: patientData ? safeTrim(`${patientData.firstName || ''} ${patientData.lastName || ''}`) : 'Unknown Patient',
                         address: patientData?.address || 'N/A'
                     };
                 });
@@ -104,14 +114,14 @@ const BhwDashboard = () => {
         };
     }, []);
 
-    const stats = {
+    const stats = useMemo(() => ({
         total: patients.length,
         male: patients.filter(p => p.sex === 'Male').length,
         female: patients.filter(p => p.sex === 'Female').length,
-        withAddress: patients.filter(p => p.address && p.address.trim() !== '').length
-    };
+        withAddress: patients.filter(p => safeTrim(p.address) !== '').length
+    }), [patients]);
 
-    const recentPatients = patients.slice(0, 5);
+    const recentPatients = useMemo(() => patients.slice(0, 5), [patients]);
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
@@ -130,133 +140,102 @@ const BhwDashboard = () => {
 
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
                 
-                <header className="h-[60px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-slate-500 p-2 -ml-2 rounded-lg hover:bg-slate-50">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-                        <div className="font-bold text-lg text-slate-800 capitalize">
-                            {activePage === 'dashboard' ? 'Dashboard'
-                                : activePage === 'reports' ? 'OCR Reports'
-                                : activePage.replace(/-/g, ' ')}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 border rounded-full ${isOnline ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                            {isOnline && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>}
-                            {!isOnline && <span className="w-2 h-2 rounded-full bg-amber-500"></span>}
-                            <span className={`text-[0.7rem] font-extrabold uppercase tracking-wider ${isOnline ? 'text-green-700' : 'text-amber-700'}`}>
-                                {isOnline ? 'System Online' : 'System Offline'}
-                            </span>
-                        </div>
-                        
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500 font-medium">Barangay Health Worker</div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
-                            {userInitials}
-                        </div>
-                    </div>
-                </header>
+                <Topbar
+                    title={activePage === 'dashboard' ? 'Dashboard' : activePage === 'records' ? 'Patient Records' : activePage === 'reports' ? 'OCR Reports' : activePage.replace(/-/g, ' ')}
+                    sectionLabel="Barangay Health Worker"
+                    userName={userName}
+                    userInitials={userInitials}
+                    userRole="Barangay Health Worker"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="p-4 md:p-6 lg:p-8 mx-auto w-full max-w-7xl animate-in fade-in duration-500">
+                    <div className="w-full animate-in fade-in duration-500">
                         
                         {/* ─── DASHBOARD VIEW ─── */}
                         {activePage === 'dashboard' && (
                             <>
-                                <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div>
-                                        <h1 className="text-2xl font-extrabold text-slate-800">Good day, {userName.split(' ')[0]}! 👋</h1>
-                                        <p className="text-sm text-slate-500 mt-1">Here's your overview for today.</p>
-                                    </div>
-                                </div>
+                                <PageHeader
+                                    title="Barangay Health Work Queue"
+                                    subtitle="Register residents, review recent intakes, and continue FHSIS reporting."
+                                />
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">👥</div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Total Patients</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">♂</div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Male</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.male}</div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-xl shrink-0">♀</div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">Female</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.female}</div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-xl shrink-0">📍</div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-slate-500">With Address</div>
-                                            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.withAddress}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col lg:col-span-2">
-                                        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-                                            <div>
-                                                <h2 className="text-lg font-bold text-slate-800">Recent Intakes</h2>
-                                                <p className="text-xs text-slate-500">5 latest registered patients</p>
+                                <div className="pwa-page-pad flex flex-col pwa-panel-gap">
+                                    <div className="ops-summary-grid">
+                                        {[
+                                            ['Recent Registrations', recentPatients.length, 'Latest residents added'],
+                                            ['Total Patients', stats.total, 'Master registry'],
+                                            ['FHSIS Records', records.length, 'Existing report entries'],
+                                            ['With Address', stats.withAddress, 'Barangay-ready records'],
+                                        ].map(([label, value, note]) => (
+                                            <div key={label} className="ops-summary-card">
+                                                <p className="ops-summary-label">{label}</p>
+                                                <p className="ops-summary-value tabular-nums">{value}</p>
+                                                <p className="ops-summary-note">{note}</p>
                                             </div>
-                                            <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">{recentPatients.length}</span>
+                                        ))}
+                                    </div>
+
+                                    <div className="ops-grid">
+                                    <div className="ops-panel flex flex-col lg:col-span-8">
+                                        <div className="ops-panel-header">
+                                            <div>
+                                                <h2 className="ops-panel-title">Recent Registrations</h2>
+                                                <p className="ops-panel-subtitle">Latest residents added to the barangay registry</p>
+                                            </div>
+                                            <span className="ops-badge">{recentPatients.length} recent</span>
                                         </div>
-                                        <div className="p-2 flex-1">
+                                        <div className="flex-1 ops-list">
                                             {recentPatients.length === 0 ? (
-                                                <div className="p-8 text-center text-sm text-slate-500">No patients found.</div>
+                                                <div className="ops-empty">No recent registrations.</div>
                                             ) : (
                                                 recentPatients.map(p => (
-                                                    <div key={p.id} onClick={() => setSelectedPatient(p)} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors">
-                                                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
-                                                            {(p.firstName?.[0] || '?').toUpperCase()}
-                                                        </div>
+                                                    <div key={p.id} onClick={() => setSelectedPatient(p)} className="ops-row cursor-pointer sm:grid-cols-[minmax(0,2fr)_120px_96px]">
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="font-bold text-slate-800 text-sm truncate">{p.firstName} {p.lastName}</div>
-                                                            <div className="text-xs text-slate-500 mt-0.5">{p.sex || '—'} &bull; {p.bloodType || '—'}</div>
+                                                            <div className="ops-row-title">{p.lastName}, {p.firstName}</div>
+                                                            <div className="ops-row-meta">{p.sex || '-'} | {p.bloodType || '-'} | {p.address || 'No address'}</div>
                                                         </div>
-                                                        <div className="text-[0.65rem] text-slate-400 font-semibold shrink-0">
-                                                            {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
-                                                        </div>
+                                                        <div className="ops-row-meta">{p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'}</div>
+                                                        <div className="ops-action sm:text-right">Open Chart</div>
                                                     </div>
                                                 ))
                                             )}
                                         </div>
-                                        <div className="p-4 border-t border-slate-100 text-center">
-                                            <button onClick={() => setActivePage('records')} className="text-blue-600 font-bold text-sm hover:text-blue-700">View all patients →</button>
+                                        <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/60 text-right">
+                                            <button onClick={() => setActivePage('records')} className="text-blue-600 font-semibold text-sm hover:text-blue-700">View Patient Registry</button>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
-                                        <div className="p-5 border-b border-slate-100">
-                                            <h2 className="text-lg font-bold text-slate-800">Quick Actions</h2>
+                                    <div className="ops-panel flex flex-col lg:col-span-4">
+                                        <div className="ops-panel-header">
+                                            <div>
+                                                <h2 className="ops-panel-title">Registry Status</h2>
+                                                <p className="ops-panel-subtitle">Current master list counts</p>
+                                            </div>
                                         </div>
-                                        <div className="p-5 grid grid-cols-2 gap-3">
-                                            <button onClick={() => setActivePage('new-record')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700">
-                                                <span className="text-xl mb-2">➕</span> Register
+                                        <div className="divide-y divide-slate-100 text-sm">
+                                            {[
+                                                ['Total Patients', stats.total],
+                                                ['Male', stats.male],
+                                                ['Female', stats.female],
+                                                ['With Address', stats.withAddress],
+                                            ].map(([label, value]) => (
+                                                <div key={label} className="flex items-center justify-between px-4 py-3">
+                                                    <span className="font-medium text-slate-600">{label}</span>
+                                                    <span className="font-semibold text-slate-900 tabular-nums">{value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2 p-4 border-t border-slate-200 bg-slate-50/60">
+                                            <button onClick={() => setActivePage('new-record')} className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">
+                                                <Icon name="user-plus" className="h-4 w-4" /> Register Patient
                                             </button>
-                                            <button onClick={() => setActivePage('records')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700">
-                                                <span className="text-xl mb-2">🔍</span> Search
-                                            </button>
-                                            <button onClick={() => setActivePage('reports')} className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors border border-slate-100 text-sm font-semibold text-slate-700 col-span-2">
-                                                <span className="text-xl mb-2">📊</span> Generate Reports
+                                            <button onClick={() => setActivePage('reports')} className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+                                                <Icon name="chart" className="h-4 w-4" /> FHSIS Reports
                                             </button>
                                         </div>
+                                    </div>
                                     </div>
                                 </div>
                             </>
@@ -264,19 +243,23 @@ const BhwDashboard = () => {
 
                         {/* ─── MODULAR COMPONENT TABS ─── */}
                         {activePage === 'records' && (
-                            <div className="w-full bg-white rounded-2xl shadow-sm p-4 min-h-[500px]">
-                                <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
+                            <div className="w-full pwa-dense-panel min-h-[500px] m-3 md:m-4 xl:m-5">
+                                <Suspense fallback={<LazyPanelFallback />}>
+                                    <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as any)} />
+                                </Suspense>
                             </div>
                         )}
                         
                         {activePage === 'new-record' && (
-                            <div className="w-full bg-white rounded-2xl shadow-sm p-4 min-h-[500px]">
-                                <TemplatesComponent />
+                            <div className="w-full pwa-dense-panel min-h-[500px] m-3 md:m-4 xl:m-5">
+                                <Suspense fallback={<LazyPanelFallback />}>
+                                    <TemplatesComponent />
+                                </Suspense>
                             </div>
                         )}
 
                         {activePage === 'reports' && (
-                            <div className="w-full bg-[#F8FAFC] rounded-2xl min-h-[500px]">
+                            <div className="w-full bg-[#F8FAFC] min-h-[500px] m-3 md:m-4 xl:m-5">
                                 {/* Pass the newly fetched FHSIS logs down to the generator */}
                                 <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">Loading report generator...</div>}>
                                     <ReportGenerator records={records} />
@@ -289,11 +272,13 @@ const BhwDashboard = () => {
             </main>
 
             {selectedPatient && (
-                <PatientDetailModal
-                    patient={selectedPatient}
-                    onClose={() => setSelectedPatient(null)}
-                    onPatientUpdate={(updated) => setSelectedPatient(updated)}
-                />
+                <Suspense fallback={null}>
+                    <PatientDetailModal
+                        patient={selectedPatient}
+                        onClose={() => setSelectedPatient(null)}
+                        onPatientUpdate={(updated) => setSelectedPatient(updated)}
+                    />
+                </Suspense>
             )}
         </div>
     );

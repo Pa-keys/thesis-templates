@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { supabase } from '../../lib/supabase/client';
 import { useToast } from '../../components/feedback/Toast';
 import { requireRole } from '../../lib/auth/roles';
 import { createLabRequest } from '../../features/consultation/services';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 
 interface LabRequestData {
   date: string; labNo: string; name: string; age: string; sex: string; address: string; cc: string;
@@ -66,7 +65,8 @@ function LabRequest() {
       });
       showToast(`Lab Request ${formData.status === 'Completed' ? 'Results Saved' : 'Submitted'}!`, false);
     } catch (err) {
-      showToast('Error: ' + getErrorMessage(err), true);
+      logError('Failed to submit lab request', err);
+      showToast(healthcareErrorMessage("submit the lab request"), true);
     } finally {
       setIsSubmitting(false);
     }
@@ -80,18 +80,18 @@ function LabRequest() {
   return (
     <>
     <ToastComponent />
-    <div className="max-w-4xl mx-auto p-8 bg-white shadow border rounded-lg mt-10">
+    <div className="w-full p-4 md:p-6 bg-white shadow border rounded-lg mt-4 md:mt-6">
       <h2 className="text-2xl font-bold text-center mb-6 border-b-2 pb-2">LABORATORY REQUEST</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="flex"><label className="w-16 font-bold text-sm">Date:</label><input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className={inputStyle} disabled={isLab}/></div>
           <div className="flex"><label className="w-20 font-bold text-sm">Lab. No.:</label><input type="text" value={formData.labNo} onChange={e => setFormData({...formData, labNo: e.target.value})} className={inputStyle} disabled={!isLab}/></div>
         </div>
 
         <div className="flex"><label className="w-16 font-bold text-sm">Name:</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputStyle} disabled={isLab}/></div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="flex"><label className="w-16 font-bold text-sm">Age:</label><input type="text" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className={inputStyle} disabled={isLab}/></div>
           <div className="flex items-center gap-4"><label className="font-bold text-sm">Sex:</label>
             <label><input type="radio" name="sex" value="M" checked={formData.sex === 'M'} onChange={e => setFormData({...formData, sex: e.target.value})} disabled={isLab}/> M</label>
@@ -102,7 +102,7 @@ function LabRequest() {
         <div className="flex"><label className="w-20 font-bold text-sm">Address:</label><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className={inputStyle} disabled={isLab}/></div>
         <div className="flex"><label className="w-12 font-bold text-sm">CC:</label><input type="text" value={formData.cc} onChange={e => setFormData({...formData, cc: e.target.value})} className={inputStyle} disabled={isLab}/></div>
 
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-8 p-4 border border-gray-200 rounded">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 mt-6 p-4 border border-gray-200 rounded">
           <label className="flex items-center gap-2"><input type="checkbox" checked={formData.tests.cbc} onChange={() => handleTestCheck('tests', 'cbc')} disabled={isLab}/> Complete Blood Count (CBC)</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={formData.tests.urinalysis} onChange={() => handleTestCheck('tests', 'urinalysis')} disabled={isLab}/> Urinalysis</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={formData.tests.cbcPlatelet} onChange={() => handleTestCheck('tests', 'cbcPlatelet')} disabled={isLab}/> CBC with Platelet Count</label>
@@ -115,7 +115,7 @@ function LabRequest() {
 
         <div className="p-4 border border-gray-200 rounded bg-gray-50">
           <h4 className="font-bold text-sm mb-3">For fasting 8-10 hours</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             <label className="flex items-center gap-2"><input type="checkbox" checked={formData.fastingTests.rbs} onChange={() => handleTestCheck('fastingTests', 'rbs')} disabled={isLab}/> RBS</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={formData.fastingTests.fbs} onChange={() => handleTestCheck('fastingTests', 'fbs')} disabled={isLab}/> FBS</label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={formData.fastingTests.uricAcid} onChange={() => handleTestCheck('fastingTests', 'uricAcid')} disabled={isLab}/> Uric Acid</label>

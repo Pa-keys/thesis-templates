@@ -1,7 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { midwifeAPI } from './api';
 import { useToast } from '../../components/feedback/Toast';
+import { Icon } from '../../components/shared/Icon';
 import type { VaccineRecord } from '../patients/itemization';
+import { isBlank } from '../../lib/utils/strings';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import {
     OTHER_VACCINE_NAME,
     VACCINE_OPTIONS,
@@ -16,6 +19,9 @@ interface Props {
     records: any[];
     onSaveSuccess: () => Promise<void>;
 }
+
+const isFemalePatient = (patient: any) => String(patient?.sex || '').trim().toLowerCase() === 'female';
+const MATERNAL_ELIGIBILITY_MESSAGE = 'Only female patients are eligible for Maternal Care records.';
 
 const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     const [activeLogbook, setActiveLogbook] = useState('maternal');
@@ -43,12 +49,14 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     }, [records, activeLogbook]);
 
     const filteredPatients = useMemo(() => {
-        if (!searchQuery.trim()) return [];
+        if (isBlank(searchQuery)) return [];
         return patients.filter(p => {
             const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
-            return fullName.includes(searchQuery.toLowerCase());
+            const matchesSearch = fullName.includes(searchQuery.toLowerCase());
+            const isEligible = activeLogbook === 'maternal' ? isFemalePatient(p) : true;
+            return matchesSearch && isEligible;
         });
-    }, [patients, searchQuery]);
+    }, [activeLogbook, patients, searchQuery]);
 
     // Handle generic inputs
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -117,6 +125,12 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
         e.preventDefault();
         if (!selectedPatient) {
             setErrorMsg("Please select a patient from the registry first.");
+            return;
+        }
+
+        if (activeLogbook === 'maternal' && !isFemalePatient(selectedPatient)) {
+            setErrorMsg(MATERNAL_ELIGIBILITY_MESSAGE);
+            showToast(MATERNAL_ELIGIBILITY_MESSAGE, true);
             return;
         }
 
@@ -208,23 +222,24 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             
         } catch (error: any) {
             console.error("FHSIS Save Error:", error);
-            setErrorMsg(error.message || "Failed to save record to the database.");
+            logError('Failed to save midwife census record', error);
+            setErrorMsg(healthcareErrorMessage("save the census record"));
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const logbooks = [
-        { id: 'maternal', label: '🤰 Maternal Care' },
-        { id: 'child', label: '👶 Child Care' },
-        { id: 'family_planning', label: '💊 Family Planning' },
-        { id: 'dental', label: '🦷 Dental Health' },
-        { id: 'ncd', label: '🫀 NCD & Seniors' },
-        { id: 'rabies_leprosy', label: '🐕 Rabies & Leprosy' }
+        { id: 'maternal', label: 'Maternal Care', icon: 'heart-pulse' },
+        { id: 'child', label: 'Child Care', icon: 'baby' },
+        { id: 'family_planning', label: 'Family Planning', icon: 'pill' },
+        { id: 'dental', label: 'Dental Health', icon: 'smile' },
+        { id: 'ncd', label: 'NCD & Seniors', icon: 'stethoscope' },
+        { id: 'rabies_leprosy', label: 'Rabies & Leprosy', icon: 'shield-plus' }
     ];
 
     return (
-        <div className="max-w-6xl mx-auto animate-in fade-in duration-500 relative pb-10">
+        <div className="w-full animate-in fade-in duration-500 relative pb-10">
             
             <ToastComponent />
             <div className="mb-8">
@@ -246,7 +261,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             }}
                             className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
                         >
-                            {log.label}
+                            <span className="inline-flex items-center gap-2"><Icon name={log.icon} className="h-4 w-4" />{log.label}</span>
                         </button>
                     ))}
                 </div>
@@ -260,7 +275,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 <h3 className="text-lg font-bold text-slate-800">{logbooks.find(l => l.id === activeLogbook)?.label} Registry</h3>
                             </div>
                             <button onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700">
-                                ➕ New Entry
+                                <Icon name="plus" className="inline h-4 w-4 mr-1" /> New Entry
                             </button>
                         </div>
                         <div className="overflow-x-auto">
@@ -295,7 +310,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             <h3 className="text-xl font-extrabold text-slate-800">New {logbooks.find(l => l.id === activeLogbook)?.label} Entry</h3>
                         </div>
 
-                        {errorMsg && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-semibold">⚠️ {errorMsg}</div>}
+                        {errorMsg && <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl text-sm font-semibold flex items-start gap-2" role="alert"><Icon name="alert-triangle" className="h-5 w-5 shrink-0" /> {errorMsg}</div>}
 
                         <div className="max-w-3xl">
                             {/* STEP 1: PATIENT SELECTION */}
@@ -303,15 +318,35 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">1. Select Patient</label>
                                 {!selectedPatient ? (
                                     <div className="relative">
-                                        <input type="text" placeholder="Search patient name..." value={searchQuery} onFocus={() => setShowDropdown(true)} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-4 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
+                                        <input type="text" aria-label="Search patient name for census entry" placeholder="Search patient name..." value={searchQuery} onFocus={() => setShowDropdown(true)} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-4 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
                                         {showDropdown && searchQuery && (
                                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
-                                                {filteredPatients.map(p => (
-                                                    <button key={p.id} type="button" onClick={() => { setSelectedPatient(p); setShowDropdown(false); }} className="w-full text-left px-5 py-4 hover:bg-blue-50 border-b border-slate-50 flex justify-between">
+                                                {filteredPatients.length > 0 ? filteredPatients.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (activeLogbook === 'maternal' && !isFemalePatient(p)) {
+                                                                setErrorMsg(MATERNAL_ELIGIBILITY_MESSAGE);
+                                                                showToast(MATERNAL_ELIGIBILITY_MESSAGE, true);
+                                                                return;
+                                                            }
+                                                            setErrorMsg('');
+                                                            setSelectedPatient(p);
+                                                            setShowDropdown(false);
+                                                        }}
+                                                        className="w-full text-left px-5 py-4 hover:bg-blue-50 border-b border-slate-50 flex justify-between"
+                                                    >
                                                         <span className="font-bold text-slate-800 capitalize">{p.firstName} {p.lastName}</span>
                                                         <span className="text-[0.65rem] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded uppercase">{p.address}</span>
                                                     </button>
-                                                ))}
+                                                )) : (
+                                                    <div className="px-5 py-4 text-sm font-semibold text-slate-500">
+                                                        {activeLogbook === 'maternal'
+                                                            ? 'No eligible female patients match this search.'
+                                                            : 'No patients match this search.'}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

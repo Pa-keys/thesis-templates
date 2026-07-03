@@ -1,3 +1,5 @@
+import { safeTrim } from '../../lib/utils/strings';
+
 export type VaccineCategory =
     | 'Child Care / Core RHU Immunization'
     | 'Maternal Care / Women of Reproductive Age'
@@ -71,7 +73,7 @@ export function getVaccineCategory(vaccineName: string): VaccineCategory | '' {
 }
 
 export function getVaccineDisplayName(record: Pick<VaccineRecord, 'vaccine_name' | 'other_vaccine_name'>): string {
-    if (record.vaccine_name === OTHER_VACCINE_NAME) return record.other_vaccine_name?.trim() || OTHER_VACCINE_NAME;
+    if (record.vaccine_name === OTHER_VACCINE_NAME) return safeTrim(record.other_vaccine_name) || OTHER_VACCINE_NAME;
     return record.vaccine_name;
 }
 
@@ -80,15 +82,15 @@ export function cleanVaccineRecord(record: VaccineRecord): VaccineRecord {
     return {
         id: record.id || crypto.randomUUID(),
         vaccine_category: category,
-        vaccine_name: record.vaccine_name.trim(),
-        other_vaccine_name: record.other_vaccine_name?.trim() || '',
-        dose_label: record.dose_label?.trim() || '',
-        date_given: record.date_given?.trim() || '',
-        next_due_date: record.next_due_date?.trim() || '',
-        administered_by: record.administered_by?.trim() || '',
-        facility: record.facility?.trim() || '',
-        lot_number: record.lot_number?.trim() || '',
-        remarks: record.remarks?.trim() || '',
+        vaccine_name: safeTrim(record.vaccine_name),
+        other_vaccine_name: safeTrim(record.other_vaccine_name),
+        dose_label: safeTrim(record.dose_label),
+        date_given: safeTrim(record.date_given),
+        next_due_date: safeTrim(record.next_due_date),
+        administered_by: safeTrim(record.administered_by),
+        facility: safeTrim(record.facility),
+        lot_number: safeTrim(record.lot_number),
+        remarks: safeTrim(record.remarks),
     };
 }
 

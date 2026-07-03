@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase/client';
+import { safeTrim } from '../../lib/utils/strings';
+import { logAuditEvent } from '../audit/services';
 
 // Helper to get the current logged-in user
 const getCurrentUser = async () => {
@@ -58,7 +60,7 @@ export const midwifeAPI = {
 
             return {
                 ...record,
-                patientName: patientData ? `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() : 'Unknown Patient',
+                patientName: patientData ? safeTrim(`${patientData.firstName || ''} ${patientData.lastName || ''}`) : 'Unknown Patient',
                 address: patientData?.address || 'N/A'
             };
         });
@@ -89,6 +91,7 @@ export const midwifeAPI = {
 
     /**
      * Inserts a new FHSIS entry and links it via patient_id.
+     * TODO(audit): Add update logging when the app introduces an explicit FHSIS edit workflow.
      */
     saveFHSISLog: async (payload: { patientId: number; category: string; data: any }) => {
         const user = await getCurrentUser();
@@ -108,6 +111,18 @@ export const midwifeAPI = {
             console.error('Error saving FHSIS log:', error);
             throw error;
         }
+        const saved = Array.isArray(data) ? data[0] : null;
+        void logAuditEvent({
+            action: 'create',
+            module: 'Census Entry',
+            recordId: saved?.id,
+            recordType: 'fhsis_log',
+            description: 'Created FHSIS census entry.',
+            metadata: {
+                patient_id: payload.patientId,
+                category: payload.category,
+            },
+        });
         
         return data;
     }

@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase/client';
+import { logAuditEvent } from '../audit/services';
 
 export type WorkflowPayload = Record<string, unknown>;
 
@@ -24,6 +25,18 @@ export async function saveInitialConsultationWithVitals(
         throw new Error('vital_sign: ' + vitalsError.message);
     }
 
+    void logAuditEvent({
+        action: 'create',
+        module: 'Consultation',
+        recordId: consultationId,
+        recordType: 'initial_consultation',
+        description: 'Created initial consultation record.',
+        metadata: {
+            initial_consultation_id: consultationId,
+            patient_id: consultationPayload.patient_id as string | number | undefined,
+        },
+    });
+
     return consultationId;
 }
 
@@ -31,6 +44,14 @@ export async function upsertConsultation(payload: WorkflowPayload, consultationI
     if (consultationId) {
         const { error } = await supabase.from('consultation').update(payload).eq('consultation_id', consultationId);
         if (error) throw error;
+        void logAuditEvent({
+            action: 'update',
+            module: 'Consultation',
+            recordId: consultationId,
+            recordType: 'consultation',
+            description: 'Updated doctor consultation record.',
+            metadata: { consultation_id: consultationId, patient_id: payload.patient_id as string | number | undefined },
+        });
         return consultationId;
     }
 
@@ -41,10 +62,20 @@ export async function upsertConsultation(payload: WorkflowPayload, consultationI
         .single();
 
     if (error) throw error;
-    return data.consultation_id as number;
+    const newId = data.consultation_id as number;
+    void logAuditEvent({
+        action: 'create',
+        module: 'Consultation',
+        recordId: newId,
+        recordType: 'consultation',
+        description: 'Created doctor consultation record.',
+        metadata: { consultation_id: newId, patient_id: payload.patient_id as string | number | undefined },
+    });
+    return newId;
 }
 
 export async function upsertFollowUpByConsultation(consultationId: number, payload: WorkflowPayload): Promise<void> {
+    // TODO(audit): Add follow-up audit entries after confirming whether follow-ups are in scope for the Audit Log module.
     const { data: existing, error: checkError } = await supabase
         .from('follow_up')
         .select('consultation_id')
@@ -87,9 +118,31 @@ export async function upsertLatestFollowUpByPatient(patientId: string, payload: 
 export async function createLabRequest(payload: WorkflowPayload): Promise<void> {
     const { error } = await supabase.from('lab_request').insert([payload]);
     if (error) throw error;
+    void logAuditEvent({
+        action: 'create',
+        module: 'Laboratory',
+        recordId: null,
+        recordType: 'lab_request',
+        description: 'Created laboratory request.',
+        metadata: {
+            consultation_id: payload.consultation_id as string | number | undefined,
+            patient_id: payload.patient_id as string | number | undefined,
+        },
+    });
 }
 
 export async function createPrescription(payload: WorkflowPayload): Promise<void> {
     const { error } = await supabase.from('prescription').insert([payload]);
     if (error) throw error;
+    void logAuditEvent({
+        action: 'create',
+        module: 'Pharmacy',
+        recordId: null,
+        recordType: 'prescription',
+        description: 'Created prescription for pharmacy queue.',
+        metadata: {
+            consultation_id: payload.consultation_id as string | number | undefined,
+            patient_id: payload.patient_id as string | number | undefined,
+        },
+    });
 }

@@ -21,7 +21,8 @@
         /* The Responsive Container */
         .page-container { 
             width: 100%; 
-            max-width: 1000px; 
+            max-width: none;
+            min-width: 0;
         }
 
         /* Card Styles */
@@ -37,6 +38,7 @@
 
         /* Larger Patient Rows */
         .patient-list { max-height: calc(100vh - 250px); overflow-y: auto; }
+        .patient-list > .grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
         .patient-row { display: flex; align-items: center; padding: 20px 32px; border-bottom: 1px solid #E2E8F0; cursor: pointer; transition: all 0.15s; }
         .patient-row:hover { background: #F8FAFC; padding-left: 36px; } 
         .patient-row:last-child { border-bottom: none; }

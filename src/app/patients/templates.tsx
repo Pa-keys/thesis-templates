@@ -1,24 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Session } from '@supabase/supabase-js';
-import { supabase } from '../../lib/supabase/client';
+import { useState, useEffect } from 'react';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../../hooks/useNetworkSync';
 import { useToast } from '../../components/feedback/Toast';
-import type { FieldErrors, PatientRecord, PatientRegistrationForm } from '../../types/patient';
+import { Icon } from '../../components/shared/Icon';
+import { RELIGION_OPTIONS, type FieldErrors, type PatientRegistrationForm } from '../../types/patient';
 import { calcAge, formatPhilhealth, philhealthDigits, toPatientRegistrationPayload, validatePatientRegistration } from '../../features/patients/validation';
 import { createPatient } from '../../features/patients/services';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 
 // ─── Reusable Tailwind Classes ───────────────────────────────────────────────
-const inputClasses = "w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-left focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
-const inputErrorClasses = "w-full border border-red-400 rounded-lg px-4 py-2.5 text-sm text-left focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none bg-red-50 focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
-const readOnlyInputClasses = "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-left bg-slate-100 text-slate-600 font-semibold cursor-not-allowed select-none";
-const labelClasses = "block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5";
-const fieldsetClasses = "bg-white rounded-2xl shadow-sm border border-slate-100 mb-6 overflow-hidden";
-const legendClasses = "w-full px-6 py-4 border-b border-slate-100 text-sm font-extrabold text-slate-800 uppercase tracking-wider bg-slate-50/50 flex items-center gap-2";
+const inputClasses = "w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-left focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-white focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
+const inputErrorClasses = "w-full border border-red-400 rounded-lg px-3 py-2.5 text-sm text-left focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none bg-red-50 focus:bg-white transition-colors text-slate-800 placeholder:text-slate-400";
+const readOnlyInputClasses = "w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-left bg-slate-100 text-slate-600 font-semibold cursor-not-allowed select-none";
+const labelClasses = "block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5";
+const fieldsetClasses = "bg-white rounded-lg shadow-sm border border-slate-200 mb-4 overflow-hidden";
+const legendClasses = "w-full px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-800 uppercase tracking-wide bg-slate-50/60 flex items-center gap-2";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type PatientForm = PatientRegistrationForm;
-type Patient = PatientRecord;
 
 const EMPTY_FORM: PatientForm = {
     firstName: '', middleName: '', lastName: '', suffix: '',
@@ -84,7 +82,7 @@ function AddressField({ value, onChange }: { value: string; onChange: (val: stri
                 {MALVAR_BARANGAYS.map(b => (
                     <option key={b} value={b}>{b}</option>
                 ))}
-                <option value={OUTSIDE_MALVAR}>📍 Outside Malvar / Type manually</option>
+                <option value={OUTSIDE_MALVAR}>Outside Malvar / Type manually</option>
             </select>
 
             {selectVal === OUTSIDE_MALVAR && (
@@ -116,15 +114,13 @@ function RadioOption({ name, value, label, checked, onChange }: {
 
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
-    return <p className="mt-1.5 text-xs text-red-500 font-semibold flex items-center gap-1"><span>⚠</span>{message}</p>;
+    return <p className="mt-1.5 text-xs text-red-500 font-semibold flex items-center gap-1"><Icon name="alert-triangle" className="h-3.5 w-3.5 shrink-0" />{message}</p>;
 }
 
 // ─── Exported Pure Component ──────────────────────────────────────────────────
 export function TemplatesComponent() {
-    const [session, setSession] = useState<Session | null>(null);
     const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
-    const [patients, setPatients] = useState<Patient[]>([]);
-    const [search, setSearch] = useState('');
+    const [otherReligion, setOtherReligion] = useState('');
     const [saving, setSaving] = useState(false);
     const { showToast, ToastComponent } = useToast();
     const [errors, setErrors] = useState<FieldErrors>({});
@@ -133,26 +129,22 @@ export function TemplatesComponent() {
 
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-        });
     }, []);
-
-    const fetchPatients = useCallback(async (filterText = '') => {
-        const { data, error } = await supabase.from('patients').select('*').order('lastName', { ascending: true });
-        if (error) { console.error(error); return; }
-        const lower = filterText.toLowerCase();
-        setPatients((data as Patient[]).filter(p => `${p.firstName} ${p.middleName} ${p.lastName}`.toLowerCase().includes(lower)));
-    }, []);
-
-    useEffect(() => { if (session) fetchPatients(); }, [session, fetchPatients]);
 
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
         setForm(f => ({ ...f, [id]: value }));
+        if (id === 'religion' && value !== 'Other') setOtherReligion('');
         if (errors[id]) setErrors(prev => { const n = { ...prev }; delete n[id]; return n; });
+    };
+
+    const handleOtherReligion = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/[^a-zA-Z\s\-',.]/g, '');
+        setOtherReligion(value);
+        setForm(f => ({ ...f, religion: value ? `Other: ${value}` : 'Other' }));
+        if (errors.religion) setErrors(prev => { const n = { ...prev }; delete n.religion; return n; });
     };
 
     // Updated to allow commas
@@ -220,16 +212,13 @@ export function TemplatesComponent() {
             }
             setForm(EMPTY_FORM);
             setErrors({});
-            fetchPatients();
         } catch (error) {
-            console.error("Save Error:", error);
-            showToast('Error saving record: ' + getErrorMessage(error), true);
+            logError('Failed to save patient registration', error);
+            showToast(healthcareErrorMessage("save the patient record"), true);
         } finally {
             setSaving(false);
         }
     };
-
-    if (!session) return null;
 
     return (
         <div className="w-full relative">
@@ -241,10 +230,6 @@ export function TemplatesComponent() {
                         Patient Registration
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">Register a new patient into the system for initial triage.</p>
-                </div>
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
-                    <span className="text-xs font-bold text-slate-700">Live • Auto-sync enabled</span>
                 </div>
             </div>
 
@@ -295,12 +280,23 @@ export function TemplatesComponent() {
                                     />
                                 </div>
                                 <div>
+                                    <label className={labelClasses}>Birthday</label>
+                                    <input
+                                        type="date" id="birthday" value={form.birthday}
+                                        onChange={handleBirthday}
+                                        className={errors['birthday'] ? inputErrorClasses : inputClasses}
+                                        max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
+                                        required
+                                    />
+                                    <FieldError message={errors['birthday']} />
+                                </div>
+                                <div>
                                     <label className={labelClasses}>Age <span className="text-blue-400 font-normal normal-case tracking-normal">(auto)</span></label>
                                     <input
                                         type="text" id="age" value={form.age}
                                         readOnly
                                         className={readOnlyInputClasses}
-                                        placeholder="Set birthday"
+                                        placeholder="Birthday"
                                         tabIndex={-1}
                                     />
                                     <FieldError message={errors['age']} />
@@ -319,17 +315,6 @@ export function TemplatesComponent() {
                                         <option value="" disabled>Select</option>
                                         {CIVIL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                </div>
-                                <div>
-                                    <label className={labelClasses}>Birthday</label>
-                                    <input
-                                        type="date" id="birthday" value={form.birthday}
-                                        onChange={handleBirthday}
-                                        className={errors['birthday'] ? inputErrorClasses : inputClasses}
-                                        max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
-                                        required
-                                    />
-                                    <FieldError message={errors['birthday']} />
                                 </div>
                                 <div className="col-span-1 sm:col-span-2 md:col-span-4">
                                     <label className={labelClasses}>Address (Brgy, Malvar)</label>
@@ -365,12 +350,24 @@ export function TemplatesComponent() {
                                 </div>
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Religion</label>
-                                    <input
-                                        type="text" id="religion" value={form.religion}
-                                        onChange={handleTextOnly}
+                                    <select
+                                        id="religion"
+                                        value={form.religion.startsWith('Other:') ? 'Other' : form.religion}
+                                        onChange={handleChange}
                                         className={inputClasses}
-                                        placeholder="Catholic"
-                                    />
+                                    >
+                                        <option value="">Select religion</option>
+                                        {RELIGION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                    </select>
+                                    {(form.religion === 'Other' || form.religion.startsWith('Other:')) && (
+                                        <input
+                                            type="text"
+                                            value={otherReligion || (form.religion.startsWith('Other:') ? form.religion.replace(/^Other:\s*/, '') : '')}
+                                            onChange={handleOtherReligion}
+                                            className={`${inputClasses} mt-2`}
+                                            placeholder="Enter religion"
+                                        />
+                                    )}
                                 </div>
                                 <div className="col-span-1 sm:col-span-2">
                                     <label className={labelClasses}>Birth Place</label>
@@ -504,13 +501,22 @@ export function TemplatesComponent() {
                         </div>
                     </fieldset>
 
-                    <div className="flex justify-end gap-4 mt-6 mb-12 border-t border-slate-200 pt-6">
+                    <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm font-medium leading-6 text-blue-900">
+                        <div className="flex gap-3">
+                            <Icon name="lock" className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                            <p>
+                                Personal and health data are collected and processed only for authorized RHU healthcare purposes in accordance with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-4 mt-4 mb-12 border-t border-slate-200 pt-6">
                         <button
                             type="submit"
                             disabled={saving}
-                            className={`w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-white shadow-lg text-sm transition-all ${saving ? 'bg-blue-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-blue-500/30'}`}
+                            className={`w-full sm:w-auto px-6 py-2.5 rounded-lg font-semibold text-white shadow-sm text-sm transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700'}`}
                         >
-                            {saving ? '⏳ Saving...' : '💾 Save Registration'}
+                            {saving ? 'Saving...' : <><Icon name="save" className="inline h-4 w-4 mr-2" />Save Registration</>}
                         </button>
                     </div>
                 </form>

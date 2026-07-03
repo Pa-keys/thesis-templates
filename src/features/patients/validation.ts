@@ -1,4 +1,5 @@
 import type { FieldErrors, PatientRegistrationForm, PatientRegistrationPayload } from '../../types/patient';
+import { isBlank } from '../../lib/utils/strings';
 
 export function calcAge(birthday: string): string {
     if (!birthday) return '';
@@ -46,7 +47,7 @@ export function validatePatientRegistration(form: PatientRegistrationForm): Fiel
         errors.age = 'Please enter a valid age.';
     }
 
-    if (form.category === 'Other/s' && !form.categoryOthers.trim()) {
+    if (form.category === 'Other/s' && isBlank(form.categoryOthers)) {
         errors.categoryOthers = 'Please specify the patient classification.';
     }
 

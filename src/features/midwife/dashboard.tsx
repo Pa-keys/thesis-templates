@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import { Icon } from '../../components/shared/Icon';
 
 interface Props {
     patients: any[];
@@ -36,51 +37,51 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
     }, [censusRecords]);
 
     return (
-        <div className="w-full max-w-full px-2 sm:px-4 md:px-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-full px-2 sm:px-4 md:px-0 animate-in fade-in duration-300">
 
             {/* Header */}
-            <div className="mb-8 flex justify-between items-end">
+            <div className="mb-4 flex justify-between items-end">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">FHSIS Overview</h1>
-                    <p className="text-sm text-slate-500 mt-1">Live metrics for the current reporting month.</p>
+                    <h1 className="text-xl font-semibold text-slate-800 tracking-tight">Maternal & Child Health Work Queue</h1>
+                    <p className="text-sm text-slate-500 mt-1">Review census entries, patient records, and reporting tasks for the current month.</p>
                 </div>
             </div>
 
-            {/* Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-10 w-full">
+            {/* Operational Summary */}
+            <div className="ops-summary-grid mb-5 w-full">
                 {[
-                    { icon: '👥', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
-                    { icon: '🤰', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
-                    { icon: '👶', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
-                    { icon: '💊', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
+                    { icon: 'users', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
+                    { icon: 'heart-pulse', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
+                    { icon: 'baby', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
+                    { icon: 'pill', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
                 ].map(({ icon, label, value, bg, text }) => (
-                    <div key={label} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow w-full">
-                        <div className={`w-14 h-14 rounded-full ${bg} ${text} flex items-center justify-center text-2xl shadow-inner shrink-0`}>{icon}</div>
+                    <div key={label} className="ops-summary-card flex items-center gap-3 w-full">
+                        <div className={`w-8 h-8 rounded-lg ${bg} ${text} flex items-center justify-center text-2xl shadow-inner shrink-0`}><Icon name={icon} className="h-6 w-6" /></div>
                         <div className="min-w-0">
-                            <div className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest truncate">{label}</div>
-                            <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1">{value}</div>
+                            <div className="ops-summary-label truncate">{label}</div>
+                            <div className="ops-summary-value tabular-nums">{value}</div>
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Lower Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
+            <div className="ops-grid w-full">
 
                 {/* Recent Reports */}
-                <div className="lg:col-span-2 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm w-full overflow-hidden">
-                    <div className="border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
+                <div className="lg:col-span-8 ops-panel flex flex-col w-full">
+                    <div className="border-b border-slate-200 px-4 py-3 bg-slate-50/60 flex justify-between items-start w-full">
                         <div>
-                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Recent Reports Encodes</h3>
+                            <h3 className="text-base font-semibold text-slate-800 tracking-tight">Recent Reports Encodes</h3>
                             <p className="text-sm text-slate-500 mt-1">Latest entries synchronized with the database.</p>
                         </div>
-                        <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold shrink-0 shadow-sm">
+                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-200 text-xs font-semibold shrink-0">
                             {todayCount} Today
                         </span>
                     </div>
                     <div className="flex-1 w-full">
                         {censusRecords.length === 0 ? (
-                            <div className="p-12 text-center text-slate-400 font-medium">No entries for this month yet.</div>
+                            <div className="p-10 text-center text-slate-400 font-medium">No entries for this month yet.</div>
                         ) : (
                             <div className="divide-y divide-slate-100 w-full">
                                 {censusRecords.slice(0, 6).map((record, i) => (
@@ -105,10 +106,10 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                 </div>
 
                 {/* Patient Directory — clicks now open modal instead of redirecting */}
-                <div className="lg:col-span-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm w-full overflow-hidden max-h-[600px]">
-                    <div className="border-b border-slate-100 p-6 sm:p-8 bg-slate-50/50 flex justify-between items-start w-full">
+                <div className="lg:col-span-4 ops-panel flex flex-col w-full max-h-[600px]">
+                    <div className="border-b border-slate-200 px-4 py-3 bg-slate-50/60 flex justify-between items-start w-full">
                         <div>
-                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Patient Directory</h3>
+                            <h3 className="text-base font-semibold text-slate-800 tracking-tight">Patient Directory</h3>
                             <p className="text-sm text-slate-500 mt-1">All registered patients</p>
                         </div>
                         <button
@@ -119,20 +120,20 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                         </button>
                     </div>
 
-                    <div className="p-5 sm:p-6 flex-1 w-full bg-white overflow-y-auto scrollbar-thin">
-                        <div className="space-y-4 w-full">
+                    <div className="flex-1 w-full bg-white overflow-y-auto scrollbar-thin">
+                        <div className="divide-y divide-slate-100 w-full">
                             {recentPatients.length > 0 ? recentPatients.map(p => (
                                 <div
                                     key={p.id}
                                     onClick={() => onPatientClick?.(p)}   // ← opens modal, no redirect
-                                    className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:bg-slate-50 cursor-pointer transition-all hover:border-blue-200 hover:shadow-sm group w-full"
+                                    className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors group w-full"
                                 >
                                     <div className="flex items-center gap-4 min-w-0">
-                                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shadow-sm shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        <div className="hidden">
                                             {p.firstName?.[0]}{p.lastName?.[0]}
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight truncate">
+                                            <div className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight truncate">
                                                 {p.lastName}, {p.firstName}
                                             </div>
                                             <div className="text-[0.7rem] text-slate-500 font-medium mt-1 truncate">
@@ -145,9 +146,9 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                                             {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         </div>
                                         {!p.consent_signed ? (
-                                            <span className="text-[0.6rem] font-extrabold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">⚠️ Pending</span>
+                                            <span className="text-[0.68rem] font-semibold bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase inline-flex items-center gap-1"><Icon name="alert-triangle" className="h-3 w-3" /> Pending</span>
                                         ) : (
-                                            <span className="text-[0.6rem] font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase">✓ Signed</span>
+                                            <span className="text-[0.68rem] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded shadow-sm tracking-wider uppercase inline-flex items-center gap-1"><Icon name="check" className="h-3 w-3" /> Signed</span>
                                         )}
                                     </div>
                                 </div>

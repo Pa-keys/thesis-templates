@@ -1,15 +1,27 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import Chart from 'chart.js/auto';
 import { supabase } from '../../lib/supabase/client';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
 import { useToast } from '../../components/feedback/Toast';
+import { Icon } from '../../components/shared/Icon';
+import { Topbar } from '../../components/layout/Topbar';
+import { Modal } from '../../components/ui/Modal';
+import type { Patient } from '../../components/patient/PatientDetailModal';
+import { PageHeader } from '../../components/layout/PageHeader';
+import { AuditLogPage } from '../../features/audit/AuditLogPage';
 
-import ConsultationPage from '../consultation';
-import { RecordsComponent } from '../patients/records';
-import { TemplatesComponent } from '../patients/templates';
+const ConsultationPage = lazy(() => import('../consultation'));
+const RecordsComponent = lazy(() => import('../patients/records').then(module => ({ default: module.RecordsComponent })));
+const TemplatesComponent = lazy(() => import('../patients/templates').then(module => ({ default: module.TemplatesComponent })));
+const PatientDetailModal = lazy(() => import('../../components/patient/PatientDetailModal').then(module => ({ default: module.PatientDetailModal })));
+
+const LazyPanelFallback = () => (
+    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
+        Loading workspace...
+    </div>
+);
 
 type FilterPeriod = 'today' | 'week' | 'month' | 'year';
 
@@ -50,14 +62,6 @@ const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: Fi
     </div>
 );
 
-// ── Small pulsing "LIVE" badge ─────────────────────────────────────────────
-const LiveBadge = ({ status }: { status: 'connecting' | 'live' | 'error' }) => (
-    <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full ${status === 'live' ? 'bg-green-100 text-green-700' : status === 'error' ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-400'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full inline-block shrink-0 ${status === 'live' ? 'bg-green-500 animate-pulse' : status === 'error' ? 'bg-red-400' : 'bg-slate-300 animate-pulse'}`} />
-        {status === 'live' ? 'Live' : status === 'error' ? 'Off' : '…'}
-    </span>
-);
-
 const DoctorDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -67,6 +71,7 @@ const DoctorDashboard = () => {
     const [activePage, setActivePage] = useState('dashboard');
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [selectedIcid, setSelectedIcid] = useState<string | null>(null);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     const [totalPatients, setTotalPatients] = useState(0);
     const [visitsToday, setVisitsToday] = useState(0);
@@ -94,13 +99,14 @@ const DoctorDashboard = () => {
 
     const trendChartRef = useRef<HTMLCanvasElement>(null);
     const morbChartRef = useRef<HTMLCanvasElement>(null);
-    const trendChartInst = useRef<Chart | null>(null);
-    const morbChartInst = useRef<Chart | null>(null);
+    const trendChartInst = useRef<any>(null);
+    const morbChartInst = useRef<any>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
-        { id: 'records', label: 'Patient Records', icon: '📁' },
-        { id: 'consultation', label: 'Consultation Room', icon: '📝' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'records', label: 'Patient Records', icon: 'users' },
+        { id: 'consultation', label: 'Consultation Room', icon: 'clipboard' },
+        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
     ];
 
     const formatTime = (t: string | null) => {
@@ -297,7 +303,7 @@ const DoctorDashboard = () => {
     }, []); // runs once on mount
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ★ REALTIME SUBSCRIPTIONS
+    // Realtime subscriptions
     //   Separate from the auth/init effect so it can list stable callbacks
     //   as dependencies without re-subscribing on every state change.
     // ─────────────────────────────────────────────────────────────────────────
@@ -309,7 +315,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'initial_consultation' },
                 () => {
-                    console.log('[RT] initial_consultation changed → refreshing queue + charts');
                     loadQueueAndFollowUps();
                     loadTrendData(trendFilterRef.current);
                     loadMorbidityData(morbFilterRef.current);
@@ -326,7 +331,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'consultation' },
                 () => {
-                    console.log('[RT] consultation INSERT → refreshing queue + trend');
                     loadQueueAndFollowUps();
                     loadTrendData(trendFilterRef.current);
                     // bump visits today
@@ -340,7 +344,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'consultation' },
                 () => {
-                    console.log('[RT] consultation UPDATE → refreshing trend');
                     loadTrendData(trendFilterRef.current);
                 }
             )
@@ -349,7 +352,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'patients' },
                 () => {
-                    console.log('[RT] patient added → bumping total count');
                     supabase.from('patients')
                         .select('*', { count: 'exact', head: true })
                         .then(({ count }) => setTotalPatients(count || 0));
@@ -359,7 +361,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'patients' },
                 () => {
-                    console.log('[RT] patient updated → refreshing queue names');
                     loadQueueAndFollowUps();
                 }
             )
@@ -368,7 +369,6 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'follow_up' },
                 () => {
-                    console.log('[RT] follow_up changed → refreshing follow-ups');
                     loadQueueAndFollowUps();
                 }
             )
@@ -376,14 +376,12 @@ const DoctorDashboard = () => {
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'lab_result' },
                 () => {
-                    console.log('[RT] lab_result changed - refreshing dashboard');
                     showToast('A laboratory result was completed. Dashboard data refreshed.', false);
                     loadQueueAndFollowUps();
                 }
             )
 
             .subscribe((status) => {
-                console.log('[RT] dashboard channel:', status);
                 if (status === 'SUBSCRIBED') setRealtimeStatus('live');
                 else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error');
                 else setRealtimeStatus('connecting');
@@ -407,10 +405,15 @@ const DoctorDashboard = () => {
     // ── Chart rendering ──────────────────────────────────────────────────────
     useEffect(() => {
         if (activePage !== 'dashboard') return;
+        let cancelled = false;
 
-        if (trendChartRef.current && trendData.length > 0) {
-            if (trendChartInst.current) trendChartInst.current.destroy();
-            trendChartInst.current = new Chart(trendChartRef.current, {
+        const renderCharts = async () => {
+            const { default: Chart } = await import('chart.js/auto');
+            if (cancelled) return;
+
+            if (trendChartRef.current && trendData.length > 0) {
+                if (trendChartInst.current) trendChartInst.current.destroy();
+                trendChartInst.current = new Chart(trendChartRef.current, {
                 type: 'line',
                 data: {
                     labels: trendData.map(d => d.date),
@@ -430,11 +433,11 @@ const DoctorDashboard = () => {
                     }
                 }
             });
-        }
+            }
 
-        if (morbChartRef.current && morbidityData.length > 0) {
-            if (morbChartInst.current) morbChartInst.current.destroy();
-            morbChartInst.current = new Chart(morbChartRef.current, {
+            if (morbChartRef.current && morbidityData.length > 0) {
+                if (morbChartInst.current) morbChartInst.current.destroy();
+                morbChartInst.current = new Chart(morbChartRef.current, {
                 type: 'bar',
                 data: {
                     labels: morbidityData.map(m => m.label),
@@ -452,10 +455,18 @@ const DoctorDashboard = () => {
                     }
                 }
             });
-        }
+            }
+        };
+
+        renderCharts();
+
+        return () => {
+            cancelled = true;
+        };
     }, [trendData, morbidityData, activePage]);
 
     const handleConsultNavigate = (patientId: string, icid?: string) => {
+        setSelectedPatient(null);
         setSelectedPatientId(patientId);
         setSelectedIcid(icid || null);
         setActivePage('consultation');
@@ -472,6 +483,7 @@ const DoctorDashboard = () => {
                 navItems={navItems}
                 onNavigate={(id) => {
                     if (id !== 'consultation') { setSelectedPatientId(null); setSelectedIcid(null); }
+                    setSelectedPatient(null);
                     setActivePage(id);
                 }}
                 isMobileMenuOpen={isMobileMenuOpen}
@@ -480,65 +492,53 @@ const DoctorDashboard = () => {
             />
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
-                {/* Topbar */}
-                <header className="h-[64px] md:h-[72px] w-full bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-30 shadow-sm md:shadow-none">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-4 md:gap-5">
-                        <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-full transition-colors duration-300 ${!isOnline ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-                            <span className="relative flex h-2.5 w-2.5">
-                                {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
-                                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${!isOnline ? 'bg-amber-500' : 'bg-green-500'}`} />
-                            </span>
-                            <span className={`text-[0.65rem] font-extrabold uppercase tracking-widest ${!isOnline ? 'text-amber-700' : 'text-green-700'}`}>
-                                {!isOnline ? 'Offline Mode' : 'System Online'}
-                            </span>
-                        </div>
-                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                        <div className="text-right hidden sm:block">
-                            <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
-                            <div className="text-[0.7rem] text-slate-500">General Practitioner</div>
-                        </div>
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md cursor-pointer">{userInitials}</div>
-                    </div>
-                </header>
+                <Topbar
+                    title={activePage === 'dashboard' ? 'Doctor Dashboard' : activePage === 'records' ? 'Patient Records' : activePage === 'audit-log' ? 'Audit Log' : 'Consultation Room'}
+                    sectionLabel="Clinical Consultation"
+                    userName={userName}
+                    userInitials={userInitials}
+                    userRole="General Practitioner"
+                    isOnline={isOnline}
+                    onOpenNavigation={() => setIsMobileMenuOpen(true)}
+                />
 
-                <div className="p-6 md:p-8 max-w-[1400px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
+                <div className="w-full flex flex-col gap-5 animate-in fade-in duration-500">
 
                     {activePage === 'dashboard' && (
                         <>
-                            <div className="mb-2">
-                                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Good day, {userName.split(' ')[0]}</h1>
-                            </div>
+                            <PageHeader
+                                title="Clinical Work Queue"
+                                subtitle="Review waiting patients, follow-ups, morbidity trends, and visit volume."
+                            />
+                            <div className="pwa-page-pad flex flex-col pwa-panel-gap">
 
-                            {/* Stat Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                                    <p className="text-sm font-semibold text-slate-500 mb-2">Total Patients</p>
-                                    <h2 className="text-3xl font-black text-slate-800 leading-none">{totalPatients}</h2>
-                                </div>
-                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center">
-                                    <p className="text-sm font-semibold text-slate-500 mb-2">Visits Today</p>
-                                    <h2 className="text-3xl font-black text-slate-800 leading-none">{visitsToday}</h2>
-                                </div>
+                            <div className="ops-summary-grid">
+                                {[
+                                    ['Waiting Patients', queue.length, 'Ready for consultation'],
+                                    ['Follow-ups Due', followUps.length, 'Scheduled returns'],
+                                    ['Visits Today', visitsToday, 'Completed encounters'],
+                                    ['Total Patients', totalPatients, 'Registry baseline'],
+                                ].map(([label, value, note]) => (
+                                    <div key={label} className="ops-summary-card">
+                                        <p className="ops-summary-label">{label}</p>
+                                        <h2 className="ops-summary-value tabular-nums">{value}</h2>
+                                        <p className="ops-summary-note">{note}</p>
+                                    </div>
+                                ))}
                             </div>
 
                             {/* Queue + Trends */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="ops-grid">
 
                                 {/* ── Patient Queue ── */}
-                                <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
-                                    <div className="p-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
-                                        <h3 className="font-bold text-slate-800 text-[0.95rem]">Patient Queue</h3>
+                                <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 shrink-0 flex items-center justify-between">
+                                        <h3 className="font-semibold text-slate-800 text-[0.95rem]">Waiting Patients</h3>
                                         <div className="flex items-center gap-2">
                                             {/* queue count badge */}
                                             {queue.length > 0 && (
                                                 <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{queue.length}</span>
                                             )}
-                                            <LiveBadge status={realtimeStatus} />
                                         </div>
                                     </div>
                                     <div className="flex-1 overflow-y-auto">
@@ -571,7 +571,7 @@ const DoctorDashboard = () => {
                                 </div>
 
                                 {/* Visit Trends */}
-                                <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px]">
+                                <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
                                     <div className="flex justify-between items-center mb-4 shrink-0">
                                         <h3 className="font-bold text-slate-800 text-[0.95rem]">Visit Trends</h3>
                                         <FilterTabs value={trendFilter} onChange={setTrendFilter} />
@@ -583,10 +583,10 @@ const DoctorDashboard = () => {
                             </div>
 
                             {/* Morbidity + Follow-ups */}
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="ops-grid">
 
                                 {/* Morbidity */}
-                                <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px]">
+                                <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
                                     <div className="flex justify-between items-center mb-2 shrink-0">
                                         <h3 className="font-bold text-slate-800 text-[0.95rem]">Morbidity Analytics</h3>
                                         <FilterTabs value={morbFilter} onChange={setMorbFilter} />
@@ -597,10 +597,9 @@ const DoctorDashboard = () => {
                                 </div>
 
                                 {/* ── Upcoming Follow-ups ── */}
-                                <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
-                                    <div className="p-5 border-b border-slate-100 flex justify-between items-center shrink-0">
-                                        <h3 className="font-bold text-slate-800 text-[0.95rem]">Upcoming Follow-ups</h3>
-                                        <LiveBadge status={realtimeStatus} />
+                                <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 flex justify-between items-center shrink-0">
+                                        <h3 className="font-semibold text-slate-800 text-[0.95rem]">Follow-ups Due</h3>
                                     </div>
                                     <div className="flex-1 overflow-y-auto">
                                         {followUps.length === 0 ? (
@@ -634,21 +633,41 @@ const DoctorDashboard = () => {
                                     )}
                                 </div>
                             </div>
+                            </div>
                         </>
                     )}
 
                     {activePage === 'records' && (
-                        <RecordsComponent onPatientClick={(p) => handleConsultNavigate(p.id)} />
+                        <div className="px-4 md:px-5 xl:px-6">
+                            <Suspense fallback={<LazyPanelFallback />}>
+                                <RecordsComponent onPatientClick={(p) => setSelectedPatient(p as Patient)} />
+                            </Suspense>
+                        </div>
                     )}
-                    {activePage === 'new-record' && <TemplatesComponent />}
+                    {activePage === 'new-record' && (
+                        <Suspense fallback={<LazyPanelFallback />}>
+                            <TemplatesComponent />
+                        </Suspense>
+                    )}
                     {activePage === 'consultation' && (
-                        <ConsultationPage
-                            doctorName={userName}
-                            doctorInitials={userInitials}
-                            patientIdProp={selectedPatientId}
-                            icidProp={selectedIcid}
-                            onBack={() => setActivePage('dashboard')}
-                        />
+                        <Suspense fallback={<LazyPanelFallback />}>
+                            <ConsultationPage
+                                doctorName={userName}
+                                doctorInitials={userInitials}
+                                patientIdProp={selectedPatientId}
+                                icidProp={selectedIcid}
+                                onBack={() => setActivePage('dashboard')}
+                            />
+                        </Suspense>
+                    )}
+                    {activePage === 'audit-log' && (
+                        <>
+                            <PageHeader
+                                title="Audit Log"
+                                subtitle="Review read-only system activity for clinical governance."
+                            />
+                            <AuditLogPage />
+                        </>
                     )}
                 </div>
             </main>
@@ -657,17 +676,16 @@ const DoctorDashboard = () => {
             {showFollowUpsModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
                     onClick={(e) => { if (e.target === e.currentTarget) setShowFollowUpsModal(false); }}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]">
+                    <Modal labelledBy="followups-dialog-title" onClose={() => setShowFollowUpsModal(false)} className="max-h-[80vh] max-w-lg flex flex-col">
                         <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <h2 className="text-lg font-black text-slate-800">All Upcoming Follow-ups</h2>
-                                    <LiveBadge status={realtimeStatus} />
+                                    <h2 id="followups-dialog-title" className="text-lg font-semibold text-slate-800">All Upcoming Follow-ups</h2>
                                 </div>
                                 <p className="text-xs text-slate-400 mt-0.5">{allFollowUps.length} pending • sorted by date</p>
                             </div>
                             <button onClick={() => setShowFollowUpsModal(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base">✕</button>
+                                aria-label="Close follow-up dialog" className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base"><Icon name="close" className="h-4 w-4" label="Close follow-up dialog" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             {allFollowUps.length === 0 ? (
@@ -701,8 +719,18 @@ const DoctorDashboard = () => {
                             <button onClick={() => setShowFollowUpsModal(false)}
                                 className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
                         </div>
-                    </div>
+                    </Modal>
                 </div>
+            )}
+            {selectedPatient && (
+                <Suspense fallback={null}>
+                    <PatientDetailModal
+                        patient={selectedPatient}
+                        onClose={() => setSelectedPatient(null)}
+                        onPatientUpdate={(updated) => setSelectedPatient(updated)}
+                        onConsult={(patient) => handleConsultNavigate(patient.id)}
+                    />
+                </Suspense>
             )}
         </div>
     );

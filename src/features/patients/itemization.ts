@@ -1,6 +1,7 @@
 import { parsePrescriptionContent } from '../pharmacy/prescriptionParser';
 import type { Medication } from '../../types/prescription';
 import { createVaccineRecord, getVaccineCategory, type VaccineRecord } from '../vaccines/vaccineOptions';
+import { safeTrim } from '../../lib/utils/strings';
 export type { VaccineRecord } from '../vaccines/vaccineOptions';
 
 const TEST_LABELS: Record<string, string> = {
@@ -22,7 +23,7 @@ export function itemizeText(value?: string | null): string[] {
     if (!value) return [];
     return value
         .split(/\r?\n|;|,(?=\s*[A-Za-z])/)
-        .map(item => item.trim())
+        .map(item => safeTrim(item))
         .filter(Boolean);
 }
 
@@ -31,7 +32,7 @@ export function itemizeLabTests(row: Record<string, unknown>): string[] {
         .filter(([key]) => Boolean(row[key]))
         .map(([, label]) => label);
 
-    const others = typeof row.others === 'string' ? row.others.trim() : '';
+    const others = safeTrim(row.others);
     if (others) tests.push(...itemizeText(others));
 
     return tests;
@@ -57,26 +58,26 @@ export function normalizeVaccineRecords(dataFields: Record<string, unknown> | nu
             .map((record): VaccineRecord | null => {
                 if (!record || typeof record !== 'object') return null;
                 const raw = record as Record<string, unknown>;
-                const vaccineName = String(raw.vaccine_name || '').trim();
+                const vaccineName = safeTrim(raw.vaccine_name);
                 if (!vaccineName) return null;
                 return {
                     id: String(raw.id || crypto.randomUUID()),
                     vaccine_category: String(raw.vaccine_category || getVaccineCategory(vaccineName)) as VaccineRecord['vaccine_category'],
                     vaccine_name: vaccineName,
-                    other_vaccine_name: String(raw.other_vaccine_name || '').trim() || undefined,
-                    dose_label: String(raw.dose_label || '').trim() || undefined,
-                    date_given: String(raw.date_given || '').trim() || undefined,
-                    next_due_date: String(raw.next_due_date || '').trim() || undefined,
-                    administered_by: String(raw.administered_by || '').trim() || undefined,
-                    facility: String(raw.facility || '').trim() || undefined,
-                    lot_number: String(raw.lot_number || '').trim() || undefined,
-                    remarks: String(raw.remarks || '').trim() || undefined,
+                    other_vaccine_name: safeTrim(raw.other_vaccine_name) || undefined,
+                    dose_label: safeTrim(raw.dose_label) || undefined,
+                    date_given: safeTrim(raw.date_given) || undefined,
+                    next_due_date: safeTrim(raw.next_due_date) || undefined,
+                    administered_by: safeTrim(raw.administered_by) || undefined,
+                    facility: safeTrim(raw.facility) || undefined,
+                    lot_number: safeTrim(raw.lot_number) || undefined,
+                    remarks: safeTrim(raw.remarks) || undefined,
                 };
             })
             .filter((record): record is VaccineRecord => Boolean(record))
         : [];
 
-    const bcgDate = typeof dataFields.bcg_date === 'string' ? dataFields.bcg_date.trim() : '';
+    const bcgDate = safeTrim(dataFields.bcg_date);
     if (bcgDate && !fromArray.some(record => record.vaccine_name.toLowerCase() === 'bcg')) {
         fromArray.unshift(createVaccineRecord({
             vaccine_name: 'BCG',

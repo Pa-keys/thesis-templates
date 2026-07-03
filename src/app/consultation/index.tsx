@@ -4,11 +4,13 @@ import { supabase } from '../../lib/supabase/client';
 import { useNetworkSync, saveToIndexedDB, initIndexedDB } from '../../hooks/useNetworkSync';
 import { useToast } from '../../components/feedback/Toast';
 import { createLabRequest, createPrescription, upsertConsultation, upsertFollowUpByConsultation, upsertLatestFollowUpByPatient } from '../../features/consultation/services';
-import { getErrorMessage } from '../../lib/utils/errors';
+import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { isBlank, safeTrim, toNumberOrNull as parseNumberOrNull } from '../../lib/utils/strings';
 import { printHtmlDocument } from '../../lib/utils/print';
 import { itemizeText } from '../../features/patients/itemization';
+import { Icon } from '../../components/shared/Icon';
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// --- Interfaces ---------------------------------------------------------------
 export interface ConsultationPageProps {
     doctorName: string;
     doctorInitials?: string;
@@ -93,13 +95,9 @@ interface InitialConsultationRecord {
     vitals?: VitalSignRecord | null;
 }
 
-const toNumberOrNull = (val: string | undefined | null): number | null => {
-    if (val === undefined || val === null || val.trim() === '') return null;
-    const n = parseFloat(val);
-    return isNaN(n) ? null : n;
-};
+const toNumberOrNull = (val: unknown): number | null => parseNumberOrNull(val);
 
-// ─── History Panel Sub-Component ──────────────────────────────────────────────
+// --- History Panel Sub-Component ----------------------------------------------
 function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; patientName: string; onClose: () => void; }) {
     const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
     const [initialConsults, setInitialConsults] = useState<InitialConsultationRecord[]>([]);
@@ -188,7 +186,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                     {subtitle && <div className="text-xs text-slate-400 truncate">{subtitle}</div>}
                 </div>
                 <span className="shrink-0 text-xs text-slate-400 font-medium">{date}</span>
-                <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '▲' : '▼'}</span>
+                <span className="shrink-0 text-slate-400 ml-1">{expandedId === id ? '?' : '?'}</span>
             </button>
             {expandedId === id && (
                 <div className="px-4 pb-4 pt-2 bg-slate-50 border-t border-slate-100 space-y-4">{children}</div>
@@ -222,10 +220,10 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                             </div>
                             <div>
                                 <div className="font-extrabold text-slate-900 text-base leading-tight">Patient History</div>
-                                <div className="text-xs text-slate-500 mt-0.5">{patientName} · {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
+                                <div className="text-xs text-slate-500 mt-0.5">{patientName} ? {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm">✕</button>
+                        <button onClick={onClose} aria-label="Close patient history" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm"><Icon name="close" className="h-4 w-4" label="Close patient history" /></button>
                     </div>
                     <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
                         {sectionBtn('All', 'all', totalCount)}
@@ -243,7 +241,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                             </div>
                         ) : totalCount === 0 ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-2">
-                                <span className="text-3xl">📭</span>
+                                <Icon name="inbox" className="h-8 w-8 text-slate-400" />
                                 <span className="text-sm text-slate-400">No history records found.</span>
                             </div>
                         ) : (
@@ -280,8 +278,8 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                                     <Field label="BP" value={rec.vitals.bp} />
                                                     <Field label="Heart Rate" value={rec.vitals.heart_rate != null ? `${rec.vitals.heart_rate} bpm` : null} />
                                                     <Field label="Resp. Rate" value={rec.vitals.respiratory_rate != null ? `${rec.vitals.respiratory_rate} cpm` : null} />
-                                                    <Field label="Temperature" value={rec.vitals.temperature != null ? `${rec.vitals.temperature} °C` : null} />
-                                                    <Field label="O₂ Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
+                                                    <Field label="Temperature" value={rec.vitals.temperature != null ? `${rec.vitals.temperature} ?C` : null} />
+                                                    <Field label="O2 Saturation" value={rec.vitals.o2_saturation != null ? `${rec.vitals.o2_saturation}%` : null} />
                                                     <Field label="MUAC" value={rec.vitals.muac != null ? `${rec.vitals.muac} cm` : null} />
                                                 </div>
                                                 <SectionHeader label="Anthropometrics" />
@@ -354,8 +352,8 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                                     <Field label="Family History" value={rec.family_history} />
                                                     <Field label="Immunization History" value={rec.immunization_history} />
-                                                    <Field label="Smoking" value={rec.smoking_status === 'Yes' ? `Yes — ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs` : rec.smoking_status} />
-                                                    <Field label="Drinking" value={rec.drinking_status === 'Yes' ? `Yes — ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs` : rec.drinking_status} />
+                                                    <Field label="Smoking" value={rec.smoking_status === 'Yes' ? `Yes - ${rec.smoking_sticks_per_day ?? '?'} sticks/day for ${rec.smoking_years ?? '?'} yrs` : rec.smoking_status} />
+                                                    <Field label="Drinking" value={rec.drinking_status === 'Yes' ? `Yes - ${rec.drinking_frequency ?? '?'}, ${rec.drinking_years ?? '?'} yrs` : rec.drinking_status} />
                                                 </div>
                                             </>
                                         )}
@@ -365,7 +363,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                                 <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                                                     <Field label="Menarche (y/o)" value={rec.menarche_age} />
                                                     <Field label="Sexual Onset (y/o)" value={rec.sexual_onset_age} />
-                                                    <Field label="Menopause" value={rec.is_menopause === 'Yes' ? `Yes — age ${rec.menopause_age ?? '?'}` : rec.is_menopause} />
+                                                    <Field label="Menopause" value={rec.is_menopause === 'Yes' ? `Yes - age ${rec.menopause_age ?? '?'}` : rec.is_menopause} />
                                                     <Field label="LMP" value={rec.lmp ? formatDate(rec.lmp) : null} />
                                                     <Field label="Interval Cycle" value={rec.interval_cycle ? `${rec.interval_cycle} days` : null} />
                                                     <Field label="Period Duration" value={rec.period_duration ? `${rec.period_duration} days` : null} />
@@ -395,10 +393,9 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
     );
 }
 
-// ─── Exported Pure Component ──────────────────────────────────────────────────
+// --- Exported Pure Component --------------------------------------------------
 export function ConsultationPage({
     doctorName,
-    doctorInitials = 'D',
     patientIdProp,
     icidProp,
     onBack
@@ -447,20 +444,6 @@ export function ConsultationPage({
         return null;
     }, [formData.followUpWeight, formData.followUpHeight]);
 
-    const vitalsBmiInfo = useMemo(() => {
-        const w = parseFloat(formData.weight || '0');
-        const h = parseFloat(formData.height || '0');
-        if (w > 0 && h > 0) {
-            const bmiValue = parseFloat((w / ((h / 100) * (h / 100))).toFixed(1));
-            let status = 'Normal';
-            if (bmiValue < 18.5) status = 'Underweight';
-            else if (bmiValue >= 25 && bmiValue < 29.9) status = 'Overweight';
-            else if (bmiValue >= 30) status = 'Obese';
-            return { value: bmiValue.toString(), status };
-        }
-        return null;
-    }, [formData.weight, formData.height]);
-
     const [medications, setMedications] = useState<Medication[]>([{ name: '', dosage: '', frequency: '', duration: '', quantity: '' }]);
     const [consultationSaved, setConsultationSaved] = useState(false);
     const [followUpDone, setFollowUpDone] = useState(false);
@@ -474,27 +457,21 @@ export function ConsultationPage({
     const [consultationId, setConsultationId] = useState<number | null>(null);
     const [showHistory, setShowHistory] = useState(false);
 
-    // ── real-time live indicator ──────────────────────────────────────────────
+    // -- real-time live indicator ----------------------------------------------
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
 
-    const { isOnline, isSyncing } = useNetworkSync();
+    const { isOnline } = useNetworkSync();
     const primaryBtnBg = isOnline ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
 
     const { showToast, ToastComponent } = useToast();
 
-    const [vitalsId, setVitalsId] = useState<number | null>(null);
-    const [vitalsLoading, setVitalsLoading] = useState(false);
-
-    // ── stable ref so subscriptions always see the latest consultationId ──────
+    // -- stable ref so subscriptions always see the latest consultationId ------
     const consultationIdRef = useRef<number | null>(null);
     useEffect(() => { consultationIdRef.current = consultationId; }, [consultationId]);
 
-    // ── stable ref for patientId ──────────────────────────────────────────────
-    const patientIdRef = useRef<string | null>(patientId ?? null);
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // fetchLabResults — pulled out so the real-time handler can call it too
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
+    // fetchLabResults ? pulled out so the real-time handler can call it too
+    // -------------------------------------------------------------------------
     const fetchLabResults = useCallback(async (pid: string, cid: number) => {
         const { data, error } = await supabase
             .from('lab_result')
@@ -508,9 +485,9 @@ export function ConsultationPage({
         setFormData(prev => ({ ...prev, followUpLabResults: data?.findings || prev.followUpLabResults }));
     }, []);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // fetchFollowUp — pulled out so the real-time handler can call it too
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
+    // fetchFollowUp ? pulled out so the real-time handler can call it too
+    // -------------------------------------------------------------------------
     const fetchFollowUp = useCallback(async (pid: string, cid: number | null) => {
         const query = supabase.from('follow_up').select('*').eq('patient_id', pid);
         if (cid) query.eq('consultation_id', cid);
@@ -545,9 +522,9 @@ export function ConsultationPage({
         }));
     }, []);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Init + load patient
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         initIndexedDB('MediSensDB', 'offline_patients');
         setFormData(prev => ({
@@ -570,14 +547,13 @@ export function ConsultationPage({
         loadPatient();
     }, [patientId, doctorName]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Load latest vitals
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
         supabase.from('vital_sign').select('*').eq('patient_id', patient.id).order('vitals_id', { ascending: false }).limit(1).single().then(({ data }) => {
             if (data) {
-                setVitalsId(data.vitals_id);
                 setFormData(prev => ({
                     ...prev, bp: data.bp ?? '', hr: data.heart_rate?.toString() ?? '', rr: data.respiratory_rate?.toString() ?? '',
                     temp: data.temperature?.toString() ?? '', weight: data.weight?.toString() ?? '', height: data.height?.toString() ?? '',
@@ -588,17 +564,17 @@ export function ConsultationPage({
         });
     }, [patient?.id]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Load lab results
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id || !consultationId) return;
         fetchLabResults(patient.id, consultationId);
     }, [patient?.id, consultationId, fetchLabResults]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Load consultation
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
         const query = supabase.from('consultation').select('*').eq('patient_id', patient.id);
@@ -613,15 +589,20 @@ export function ConsultationPage({
             setConsultationSaved(true);
             if (data.follow_up_status === 'done') setFollowUpDone(true);
             setFormData(prev => ({
-                ...prev, familyHistory: data.family_history ?? '', chiefComplaints: data.chief_complaints ?? '', diagnosis: data.diagnosis ?? '', hpi: data.hpi ?? '',
-                attendingProvider: data.attending_provider ?? prev.attendingProvider, medicationAndTreatment: data.medication_treatment ?? '',
+                ...prev,
+                familyHistory: data.family_history ?? '',
+                chiefComplaints: data.chief_complaints ?? '',
+                diagnosis: data.diagnosis ?? '',
+                hpi: data.hpi ?? '',
+                attendingProvider: data.attending_provider ?? prev.attendingProvider,
+                medicationAndTreatment: data.medication_treatment ?? '',
             }));
         });
     }, [patient?.id, icidFromUrl]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Load follow-up
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
         const run = async () => {
@@ -635,10 +616,10 @@ export function ConsultationPage({
         run();
     }, [patient?.id, consultationId, icidFromUrl, fetchFollowUp]);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ★ REAL-TIME SUBSCRIPTIONS
+    // -------------------------------------------------------------------------
+    // Real-time subscriptions
     //   Subscribes once patient is loaded. Cleans up on unmount or patient change.
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
 
@@ -647,7 +628,7 @@ export function ConsultationPage({
         const channel = supabase
             .channel(`consultation-realtime-${pid}`)
 
-            // ── 1. lab_result → auto-fill Lab Results field ──────────────────
+            // -- 1. lab_result ? auto-fill Lab Results field ------------------
             .on(
                 'postgres_changes',
                 {
@@ -656,14 +637,13 @@ export function ConsultationPage({
                     table: 'lab_result',
                     filter: `patient_id=eq.${pid}`,
                 },
-                (payload) => {
-                    console.log('[RT] lab_result change:', payload);
+                () => {
                     const cid = consultationIdRef.current;
                     if (cid) fetchLabResults(pid, cid);
                 }
             )
 
-            // ── 2. follow_up → sync follow-up fields & done status ───────────
+            // -- 2. follow_up ? sync follow-up fields & done status -----------
             .on(
                 'postgres_changes',
                 {
@@ -672,13 +652,12 @@ export function ConsultationPage({
                     table: 'follow_up',
                     filter: `patient_id=eq.${pid}`,
                 },
-                (payload) => {
-                    console.log('[RT] follow_up change:', payload);
+                () => {
                     fetchFollowUp(pid, consultationIdRef.current);
                 }
             )
 
-            // ── 3. consultation → sync chief complaints / diagnosis / hpi ────
+            // -- 3. consultation ? sync chief complaints / diagnosis / hpi ----
             .on(
                 'postgres_changes',
                 {
@@ -688,7 +667,6 @@ export function ConsultationPage({
                     filter: `patient_id=eq.${pid}`,
                 },
                 (payload) => {
-                    console.log('[RT] consultation update:', payload);
                     const data = payload.new as any;
                     // Only update fields the user hasn't actively changed
                     setFormData(prev => ({
@@ -703,7 +681,7 @@ export function ConsultationPage({
                 }
             )
 
-            // ── 4. vital_sign → keep vitals panel fresh ──────────────────────
+            // -- 4. vital_sign ? keep vitals panel fresh ----------------------
             .on(
                 'postgres_changes',
                 {
@@ -713,7 +691,6 @@ export function ConsultationPage({
                     filter: `patient_id=eq.${pid}`,
                 },
                 (payload) => {
-                    console.log('[RT] vital_sign change:', payload);
                     const data = payload.new as any;
                     if (!data) return;
                     setFormData(prev => ({
@@ -735,7 +712,6 @@ export function ConsultationPage({
             )
 
             .subscribe((status) => {
-                console.log('[RT] channel status:', status);
                 if (status === 'SUBSCRIBED') setRealtimeStatus('live');
                 else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error');
                 else setRealtimeStatus('connecting');
@@ -746,9 +722,9 @@ export function ConsultationPage({
         };
     }, [patient?.id, fetchLabResults, fetchFollowUp]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     // Helpers
-    // ─────────────────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
     const buildConsultationPayload = () => ({
         patient_id: patient?.id, ...(icidFromUrl ? { initial_consultation_id: parseInt(icidFromUrl as string) } : {}),
         family_history: formData.familyHistory || null, immunization_history: formData.immunizationHistory || null,
@@ -826,7 +802,10 @@ export function ConsultationPage({
                 setConsultationSaved(true);
                 showToast('Offline Mode: Consultation saved locally and will sync when connection returns!', false);
             }
-        } catch (err) { showToast('Failed to save consultation: ' + getErrorMessage(err), true); } finally { setLoading(false); }
+        } catch (err) {
+            logError('Failed to save consultation', err);
+            showToast(healthcareErrorMessage("save the consultation"), true);
+        } finally { setLoading(false); }
     };
 
     const handleMarkFollowUpDone = async () => {
@@ -857,13 +836,13 @@ export function ConsultationPage({
             setFollowUpDone(true);
             showToast('Follow-up marked as done!', false);
         } catch (err) {
-            console.error('Full error:', err);
-            showToast('Failed to mark follow-up as done: ' + getErrorMessage(err), true);
+            logError('Failed to mark follow-up as done', err);
+            showToast(healthcareErrorMessage("mark the follow-up as done"), true);
         } finally { setLoading(false); }
     };
 
     const handlePrintPrescription = () => {
-        const validMeds = medications.filter(m => m.name.trim() !== '');
+        const validMeds = medications.filter(m => !isBlank(m.name));
         if (validMeds.length === 0) { showToast('Please add at least one medication before printing.', true); return; }
         const html = `
             <!DOCTYPE html><html><head>
@@ -925,7 +904,7 @@ export function ConsultationPage({
     };
 
     const handlePrintMedCert = () => {
-        if (!formData.diagnosis || formData.diagnosis.trim() === '') { showToast('Please enter a Diagnosis before printing.', true); return; }
+        if (isBlank(formData.diagnosis)) { showToast('Please enter a Diagnosis before printing.', true); return; }
         const html = `
             <!DOCTYPE html><html><head>
             <title>Medical Certificate - ${patientFullName}</title>
@@ -1000,13 +979,16 @@ export function ConsultationPage({
                 await createLabRequest(labPayload);
                 showToast('Lab request sent to laboratory successfully!', false);
             } else { showToast('Offline mode requires connecting to the server to generate a consultation ID first.', true); }
-        } catch (error) { console.error('Error:', error); showToast('Failed to save lab request: ' + getErrorMessage(error), true); } finally { setLoading(false); }
+        } catch (error) {
+            logError('Failed to save lab request', error);
+            showToast(healthcareErrorMessage("save the lab request"), true);
+        } finally { setLoading(false); }
     };
 
     const handleSavePrescription = async () => {
         if (!patient?.id) return;
         if (sigCanvas.current?.isEmpty()) { showToast('Doctor signature is required before saving.', true); return; }
-        const validMedications = medications.filter(m => m.name.trim() !== '');
+        const validMedications = medications.filter(m => !isBlank(m.name));
         if (validMedications.length === 0) { showToast('Please add at least one medication before saving.', true); return; }
         setLoading(true);
         try {
@@ -1029,15 +1011,18 @@ export function ConsultationPage({
                 showToast('Prescription saved and sent to pharmacy!', false);
                 sigCanvas.current?.clear();
             } else { showToast('Offline mode requires connecting to the server to generate a consultation ID first.', true); }
-        } catch (error) { console.error('Error:', error); showToast('Failed to save prescription: ' + getErrorMessage(error), true); } finally { setLoading(false); }
+        } catch (error) {
+            logError('Failed to save prescription', error);
+            showToast(healthcareErrorMessage("save the prescription"), true);
+        } finally { setLoading(false); }
     };
 
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
     const isMale = patient?.sex?.toLowerCase() === 'male';
-    const inputCls = "w-full bg-white border border-slate-200 rounded-lg p-3.5 text-left focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm font-medium text-slate-800";
-    const labelCls = "block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2";
-    const textareaCls = "w-full bg-white border border-slate-200 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 resize-y";
+    const inputCls = "w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-left focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-medium text-slate-800";
+    const labelCls = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2";
+    const textareaCls = "w-full bg-white border border-slate-200 rounded-lg p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm text-slate-800 resize-y";
     const cardCls = "space-y-6 animate-in fade-in pb-20 md:pb-0";
 
     const RadioGroup = ({ name, options, value }: { name: string; options: string[]; value: string }) => (
@@ -1067,10 +1052,10 @@ export function ConsultationPage({
     if (!patient) {
         return (
             <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-8 mb-6 text-amber-700 flex flex-col items-center justify-center text-center">
-                <div className="text-4xl mb-4">🩺</div>
+                <Icon name="stethoscope" className="h-10 w-10 mb-4" />
                 <h2 className="text-xl font-bold mb-2">No Patient Selected</h2>
                 <p className="text-sm font-semibold mb-6">Please go back to the dashboard and select a patient from the queue.</p>
-                <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors">← Return to Dashboard</button>
+                <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold shadow-sm hover:bg-blue-700 transition-colors">Return to Dashboard</button>
             </div>
         );
     }
@@ -1106,7 +1091,7 @@ export function ConsultationPage({
                     </div>
                 </div>
             </div>
-            <div className="flex justify-end pt-4"><button onClick={() => setActiveTab(isMale ? 3 : 2)} className={`w-full md:w-auto text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all active:scale-95 duration-200 ${primaryBtnBg}`}>{isMale ? 'Next: Assessment →' : 'Next: OBGyne & Pregnancy →'}</button></div>
+            <div className="flex justify-end pt-4"><button onClick={() => setActiveTab(isMale ? 3 : 2)} className={`w-full md:w-auto text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm transition-colors duration-200 ${primaryBtnBg}`}>{isMale ? 'Next: Assessment' : 'Next: OBGyne & Pregnancy'}</button></div>
         </div>
     );
 
@@ -1152,7 +1137,7 @@ export function ConsultationPage({
                     <div><label className={labelCls}>Pre-eclampsia</label><RadioGroup name="preEclampsia" options={['Yes', 'No']} value={formData.preEclampsia} /></div>
                 </div>
             </div>
-            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(1)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button><button onClick={() => setActiveTab(3)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Clinical Assessment →</button></div>
+            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(1)} className="bg-slate-100 py-2.5 px-6 rounded-lg font-semibold">Back</button><button onClick={() => setActiveTab(3)} className={`text-white py-2.5 px-6 rounded-lg shadow-sm font-semibold ${primaryBtnBg}`}>Next: Clinical Assessment</button></div>
         </div>
     );
 
@@ -1160,7 +1145,7 @@ export function ConsultationPage({
         <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">III. Clinical Assessment</h3>
             <div><label className={labelCls}>Medication and Treatment</label><textarea name="medicationAndTreatment" value={formData.medicationAndTreatment} onChange={handleChange} rows={7} className={textareaCls} /></div>
-            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(isMale ? 1 : 2)} className="bg-slate-100 py-3 px-6 rounded-lg font-semibold">← Back</button><button onClick={() => setActiveTab(4)} className={`text-white py-3 px-8 rounded-lg shadow-md font-semibold ${primaryBtnBg}`}>Next: Follow-up →</button></div>
+            <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(isMale ? 1 : 2)} className="bg-slate-100 py-2.5 px-6 rounded-lg font-semibold">Back</button><button onClick={() => setActiveTab(4)} className={`text-white py-2.5 px-6 rounded-lg shadow-sm font-semibold ${primaryBtnBg}`}>Next: Follow-up</button></div>
         </div>
     );
 
@@ -1171,8 +1156,8 @@ export function ConsultationPage({
             </div>
             {!consultationSaved && (
                 <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-                    <span className="text-lg leading-none">ℹ️</span>
-                    <span>No consultation saved yet — follow-up details will be saved when you save the consultation on Tab 5.</span>
+                    <Icon name="file-text" className="h-5 w-5 shrink-0" />
+                    <span>No consultation saved yet ? follow-up details will be saved when you save the consultation on Tab 5.</span>
                 </div>
             )}
             <div>
@@ -1192,7 +1177,7 @@ export function ConsultationPage({
                             <option value="Ambulatory">Ambulatory</option><option value="Wheelchair">Wheelchair</option><option value="Stretcher">Stretcher</option>
                         </select>
                     </div>
-                    <div><label className={labelCls}>Blood Type</label><input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '—'} /></div>
+                    <div><label className={labelCls}>Blood Type</label><input type="text" name="followUpBloodType" value={formData.followUpBloodType} onChange={handleChange} className={inputCls} placeholder={patient?.bloodType || '?'} /></div>
                     <div><label className={labelCls}>General Survey</label><input type="text" name="followUpGenSurvey" value={formData.followUpGenSurvey} onChange={handleChange} className={inputCls} placeholder="e.g. Awake, conscious, coherent..." /></div>
                 </div>
             </div>
@@ -1210,8 +1195,8 @@ export function ConsultationPage({
                     <div><label className={labelCls}>BP (mmHg)</label><input type="text" name="followUpBp" value={formData.followUpBp} onChange={handleChange} className={inputCls} placeholder="120/80" /></div>
                     <div><label className={labelCls}>Heart Rate (bpm)</label><input type="text" name="followUpHr" value={formData.followUpHr} onChange={handleChange} className={inputCls} placeholder="72" /></div>
                     <div><label className={labelCls}>Respiratory Rate (cpm)</label><input type="text" name="followUpRr" value={formData.followUpRr} onChange={handleChange} className={inputCls} placeholder="16" /></div>
-                    <div><label className={labelCls}>Temperature (°C)</label><input type="text" name="followUpTemp" value={formData.followUpTemp} onChange={handleChange} className={inputCls} placeholder="36.5" /></div>
-                    <div><label className={labelCls}>O₂ Saturation (%)</label><input type="text" name="followUpO2" value={formData.followUpO2} onChange={handleChange} className={inputCls} placeholder="98" /></div>
+                    <div><label className={labelCls}>Temperature (?C)</label><input type="text" name="followUpTemp" value={formData.followUpTemp} onChange={handleChange} className={inputCls} placeholder="36.5" /></div>
+                    <div><label className={labelCls}>O2 Saturation (%)</label><input type="text" name="followUpO2" value={formData.followUpO2} onChange={handleChange} className={inputCls} placeholder="98" /></div>
                     <div><label className={labelCls}>MUAC (cm)</label><input type="text" name="followUpMuac" value={formData.followUpMuac} onChange={handleChange} className={inputCls} placeholder="28.5" /></div>
                 </div>
             </div>
@@ -1222,11 +1207,11 @@ export function ConsultationPage({
                     <div><label className={labelCls}>Height (cm)</label><input type="text" name="followUpHeight" value={formData.followUpHeight} onChange={handleChange} className={inputCls} placeholder="165" /></div>
                     <div>
                         <label className={labelCls}>BMI <span className="text-slate-400 font-normal normal-case">(auto)</span></label>
-                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-100 text-slate-500 font-semibold cursor-default`} placeholder="—" />
+                        <input type="text" readOnly value={followUpBmiInfo ? followUpBmiInfo.value : ''} className={`${inputCls} bg-slate-100 text-slate-500 font-semibold cursor-default`} placeholder="?" />
                         {followUpBmiInfo && <p className={`text-xs mt-1.5 font-semibold ${followUpBmiInfo.color}`}>{followUpBmiInfo.status}</p>}
                     </div>
-                    <div><label className={labelCls}>Visual Acuity — Left</label><input type="text" name="followUpVaL" value={formData.followUpVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
-                    <div><label className={labelCls}>Visual Acuity — Right</label><input type="text" name="followUpVaR" value={formData.followUpVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                    <div><label className={labelCls}>Visual Acuity ? Left</label><input type="text" name="followUpVaL" value={formData.followUpVaL} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
+                    <div><label className={labelCls}>Visual Acuity ? Right</label><input type="text" name="followUpVaR" value={formData.followUpVaR} onChange={handleChange} className={inputCls} placeholder="20/20" /></div>
                 </div>
             </div>
             <div className="border-t border-slate-100 pt-6">
@@ -1239,14 +1224,9 @@ export function ConsultationPage({
                     <div>
                         <label className={labelCls}>
                             Lab Results <span className="text-slate-300 italic font-normal normal-case">(Doctor Only)</span>
-                            {/* ── live indicator dot next to Lab Results ── */}
-                            <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${realtimeStatus === 'live' ? 'bg-green-100 text-green-700' : realtimeStatus === 'error' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-400'}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' : realtimeStatus === 'error' ? 'bg-red-500' : 'bg-slate-300 animate-pulse'}`} />
-                                {realtimeStatus === 'live' ? 'LIVE' : realtimeStatus === 'error' ? 'OFFLINE' : 'CONNECTING'}
-                            </span>
                         </label>
                         <textarea rows={5} name="followUpLabResults" value={formData.followUpLabResults} onChange={handleChange} className={textareaCls} placeholder="Auto-fetched when lab submits results..." />
-                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2">✓ Results Synced from Laboratory</p>}
+                        {formData.followUpLabResults && <p className="text-[10px] text-green-600 font-bold uppercase mt-2 inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Results Synced from Laboratory</p>}
                     </div>
                 </div>
             </div>
@@ -1269,17 +1249,17 @@ export function ConsultationPage({
                 </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
+                <button onClick={() => setActiveTab(3)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors w-full sm:w-auto mb-1">Back</button>
                 <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm">
                     <p className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest text-center mb-1">Follow-up Actions</p>
                     {!followUpDone ? (
                         <button onClick={handleMarkFollowUpDone} disabled={loading || !patient?.id} className="w-full bg-white hover:bg-green-50 text-green-700 py-3 px-6 rounded-xl font-bold transition-colors border border-green-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
-                            {loading ? 'Processing...' : '✓ Mark Follow-up as Done'}
+                            {loading ? 'Processing...' : <><Icon name="check" className="h-4 w-4" /> Mark Follow-up as Done</>}
                         </button>
                     ) : (
-                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default">✓ Follow-up Completed</div>
+                        <div className="w-full bg-green-100 text-green-700 py-3 px-6 rounded-xl font-bold border border-green-300 flex items-center justify-center gap-2 shadow-sm cursor-default"><Icon name="check" className="h-4 w-4" /> Follow-up Completed</div>
                     )}
-                    <button onClick={() => setActiveTab(5)} className={`w-full text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Clinical Notes →</button>
+                    <button onClick={() => setActiveTab(5)} className={`w-full text-white py-2.5 px-6 rounded-lg font-semibold shadow-sm transition-colors ${primaryBtnBg}`}>Next: Clinical Notes</button>
                 </div>
             </div>
         </div>
@@ -1303,14 +1283,14 @@ export function ConsultationPage({
             <div className="pt-6 mt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-6">
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto mb-1">← Back</button>
+                <button onClick={() => setActiveTab(4)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors w-full sm:w-auto mb-1">Back</button>
                 <div className="order-1 sm:order-2 flex flex-col gap-3 w-full sm:w-auto">
                     <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">📄 Print Medical Certificate</button>
+                        <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="file-text" className="h-4 w-4" /> Print Medical Certificate</button>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors">💾 Save Consultation</button>
-                        <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>Next: Lab Request →</button>
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"><Icon name="save" className="h-4 w-4" /> Save Consultation</button>
+                        <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-2.5 px-6 rounded-lg font-semibold shadow-sm transition-colors ${primaryBtnBg}`}>Next: Lab Request</button>
                     </div>
                 </div>
             </div>
@@ -1342,7 +1322,7 @@ export function ConsultationPage({
                     <div className="pt-6 border-t border-slate-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="inline-block px-3 py-1 bg-white border border-slate-200 shadow-sm text-slate-600 text-xs font-black uppercase tracking-widest rounded-md">Fasting Tests</div>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-100 px-2 py-1 rounded-md">8–10 hrs required</span>
+                            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-md">8-10 hrs required</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-8">
                             {renderCheckbox('rbs', 'Random Blood Sugar (RBS)')}
@@ -1365,12 +1345,12 @@ export function ConsultationPage({
                 <div><label className={labelCls}>Requested By</label><input type="text" name="labRequestedBy" value={formData.labRequestedBy} onChange={handleChange} className={inputCls} /></div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-8 mt-6 border-t border-slate-100">
-                <button onClick={() => setActiveTab(5)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors">← Back</button>
+                <button onClick={() => setActiveTab(5)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors">Back</button>
                 <div className="flex flex-col sm:flex-row gap-4 order-1 sm:order-2">
                     <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto py-3.5 px-6 rounded-xl font-extrabold transition-colors shadow-sm border-2 disabled:opacity-50 ${isOnline ? 'bg-white border-blue-500 text-blue-600 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
-                        {loading ? 'Sending...' : '📋 Send to Laboratory'}
+                        {loading ? 'Sending...' : <><Icon name="clipboard" className="inline h-4 w-4 mr-2" />Send to Laboratory</>}
                     </button>
-                    <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold transition-all active:scale-95 ${primaryBtnBg}`}>Next: E-Prescription →</button>
+                    <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white py-2.5 px-6 rounded-lg font-semibold transition-colors ${primaryBtnBg}`}>Next: E-Prescription</button>
                 </div>
             </div>
         </div>
@@ -1423,12 +1403,12 @@ export function ConsultationPage({
                 </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between items-end gap-6 pt-8 mt-8 border-t border-slate-100">
-                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 px-6 rounded-xl font-bold transition-colors w-full sm:w-auto">← Back</button>
+                <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors w-full sm:w-auto">Back</button>
                 <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
                     <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100">🖨️ Print Physical Copy</button>
+                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="printer" className="h-4 w-4" /> Print Physical Copy</button>
                     </div>
-                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 ${primaryBtnBg}`}>💊 Authorize &amp; Send to Pharmacy</button>
+                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 ${primaryBtnBg}`}><Icon name="pill" className="h-4 w-4" /> Authorize &amp; Send to Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1445,9 +1425,9 @@ export function ConsultationPage({
     ];
 
     return (
-        <div className="w-full flex justify-center pb-12">
+        <div className="w-full min-w-0 pb-8">
             <ToastComponent />
-            <div className="w-full max-w-5xl">
+            <div className="w-full">
 
                 {/* Patient Info Card */}
                 <div className="w-full bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-4">
@@ -1461,13 +1441,9 @@ export function ConsultationPage({
                         </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        {/* ── realtime pill in patient header ── */}
-                        <span className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border ${realtimeStatus === 'live' ? 'bg-green-50 border-green-200 text-green-700' : realtimeStatus === 'error' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${realtimeStatus === 'live' ? 'bg-green-500 animate-pulse' : realtimeStatus === 'error' ? 'bg-red-500' : 'bg-slate-300 animate-pulse'}`} />
-                            {realtimeStatus === 'live' ? 'Live Updates' : realtimeStatus === 'error' ? 'Realtime Off' : 'Connecting…'}
-                        </span>
-                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5">🕐 View History</button>
-                        <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">← Dashboard</button>
+                        {/* -- realtime pill in patient header -- */}
+                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5"><Icon name="clock" className="h-3.5 w-3.5" /> View History</button>
+                        <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">? Dashboard</button>
                     </div>
                 </div>
 
@@ -1486,7 +1462,7 @@ export function ConsultationPage({
                 </div>
 
                 {/* Form Content Area */}
-                <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
+                <div className="w-full pwa-dense-panel">
                     {activeTab === 1 && renderTab1()}
                     {activeTab === 2 && renderTab2()}
                     {activeTab === 3 && renderTab3()}

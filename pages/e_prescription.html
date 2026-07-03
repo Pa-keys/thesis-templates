@@ -10,7 +10,7 @@
         * { box-sizing: border-box; }
         body { 
             background-color: #F8FAFC; margin: 0; padding: 0; 
-            font-family: ui-sans-serif, system-ui, sans-serif; 
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
             color: #1e293b; height: 100vh; overflow: hidden;
         }
         .main-wrapper { 
@@ -171,16 +171,16 @@
     <nav class="flex-1 flex flex-col gap-1 px-3 overflow-y-auto scrollbar-hide">
         <button onclick="window.location.href='doctor.html'" class="flex items-center w-full text-left gap-3 py-2.5 text-sm transition-all duration-500 font-semibold bg-[#EBF3FF] text-blue-600 rounded-r-lg relative -ml-3 pl-6 pr-3">
             <div class="absolute left-0 top-1 bottom-1 w-1 rounded-r-md transition-colors duration-500 bg-blue-600"></div>
-            <span>🏠</span> Dashboard
+            <span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg></span> Dashboard
         </button>
         <button onclick="window.location.href='records.html'" class="flex items-center w-full text-left gap-3 py-2.5 text-sm transition-all duration-500 font-medium text-slate-600 hover:bg-slate-50 rounded-lg px-3">
-            <span>📁</span> Patient Records
+            <span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg></span> Patient Records
         </button>
         <button onclick="window.location.href='templates.html'" class="flex items-center w-full text-left gap-3 py-2.5 text-sm transition-all duration-500 font-medium text-slate-600 hover:bg-slate-50 rounded-lg px-3">
-            <span>➕</span> New Record
+            <span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span> New Record
         </button>
         <button onclick="window.location.href='consultation.html'" class="flex items-center w-full text-left gap-3 py-2.5 text-sm transition-all duration-500 font-medium text-slate-600 hover:bg-slate-50 rounded-lg px-3">
-            <span>📋</span> Consultation
+            <span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 9h6M9 13h6M9 17h4"/></svg></span> Consultation
         </button>
     </nav>
 
@@ -219,45 +219,45 @@
     <div class="content">
         <div class="welcome-row">
             <div>
-                <h1>Good day! 👋</h1>
+                <h1>Good day!</h1>
                 <p>Here's your overview for today.</p>
             </div>
             <div class="sync-chip">
                 <div class="sync-dot"></div>
-                System Online • Live
+                System Online - Live
             </div>
         </div>
 
         <div class="stats-row">
             <div class="stat-card">
-                <div class="stat-icon-wrap si-blue">👥</div>
+                <div class="stat-icon-wrap si-blue"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span></div>
                 <div class="stat-body">
                     <div class="stat-label">Total Patients</div>
-                    <div class="stat-val" id="totalPatients">—</div>
-                    <div class="stat-hint up">↑ All registered</div>
+                    <div class="stat-val" id="totalPatients">-</div>
+                    <div class="stat-hint up">All registered</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon-wrap si-green">📅</div>
+                <div class="stat-icon-wrap si-green"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></span></div>
                 <div class="stat-body">
                     <div class="stat-label">Visits Today</div>
-                    <div class="stat-val" id="visitsToday">—</div>
+                    <div class="stat-val" id="visitsToday">-</div>
                     <div class="stat-hint">8 remaining appts</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon-wrap si-pink">📋</div>
+                <div class="stat-icon-wrap si-pink"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 9h6M9 13h6M9 17h4"/></svg></span></div>
                 <div class="stat-body">
                     <div class="stat-label">Pending Reports</div>
-                    <div class="stat-val" id="pendingReports">—</div>
+                    <div class="stat-val" id="pendingReports">-</div>
                     <div class="stat-hint down">Needs review</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon-wrap si-purple">🔁</div>
+                <div class="stat-icon-wrap si-purple"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>
                 <div class="stat-body">
                     <div class="stat-label">Follow-Ups Today</div>
-                    <div class="stat-val" id="followUpToday">—</div>
+                    <div class="stat-val" id="followUpToday">-</div>
                     <div class="stat-hint" id="followUpHint">Scheduled returns</div>
                 </div>
             </div>
@@ -270,7 +270,7 @@
                         <div class="card-title">Patient Queue</div>
                         <div class="card-sub">Waiting today</div>
                     </div>
-                    <span style="background:#2563eb;color:white;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;" id="queueCount">0</span>
+                    <span class="ds-badge ds-badge-blue" id="queueCount">0</span>
                 </div>
                 <div id="patientQueue"><div class="loading-msg">Loading...</div></div>
                 <button class="view-all-link" onclick="window.location.href='templates.html'">View all patients →</button>
@@ -283,7 +283,7 @@
                             <div class="card-title">Visit Trends</div>
                             <div class="card-sub">Last 7 days</div>
                         </div>
-                        <span style="color:#16a34a;font-size:1rem;">↗</span>
+                        <span class="ds-badge ds-badge-green">Live</span>
                     </div>
                     <canvas id="visitChart" height="110"></canvas>
                 </div>
@@ -296,9 +296,9 @@
                     <div class="card-title">Quick Actions</div>
                 </div>
                 <div class="quick-actions">
-                    <a href="templates.html" class="qa-btn"><span class="qa-icon">➕</span>Register</a>
-                    <a href="templates.html" class="qa-btn"><span class="qa-icon">🔍</span>Search</a>
-                    <a href="#" class="qa-btn"><span class="qa-icon">🔄</span>Sync</a>
+                    <a href="templates.html" class="qa-btn"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Register</a>
+                    <a href="templates.html" class="qa-btn"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>Search</a>
+                    <a href="#" class="qa-btn"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></svg></span>Sync</a>
                 </div>
             </div>
 
@@ -308,34 +308,34 @@
                     <div class="card-sub">Top conditions this month</div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-hd"><span class="progress-label">🤒 Fever & Cold</span><span class="progress-val">38%</span></div>
+                    <div class="progress-hd"><span class="progress-label">Fever & Cold</span><span class="progress-val">38%</span></div>
                     <div class="progress-track"><div class="progress-fill pf-blue" style="width:38%"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-hd"><span class="progress-label">❤️ Hypertension</span><span class="progress-val">24%</span></div>
+                    <div class="progress-hd"><span class="progress-label">Hypertension</span><span class="progress-val">24%</span></div>
                     <div class="progress-track"><div class="progress-fill pf-pink" style="width:24%"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-hd"><span class="progress-label">🩸 Diabetes</span><span class="progress-val">18%</span></div>
+                    <div class="progress-hd"><span class="progress-label">Diabetes</span><span class="progress-val">18%</span></div>
                     <div class="progress-track"><div class="progress-fill pf-indigo" style="width:18%"></div></div>
                 </div>
                 <div class="progress-item">
-                    <div class="progress-hd"><span class="progress-label">🌬️ Respiratory</span><span class="progress-val">12%</span></div>
+                    <div class="progress-hd"><span class="progress-label">Respiratory</span><span class="progress-val">12%</span></div>
                     <div class="progress-track"><div class="progress-fill pf-green" style="width:12%"></div></div>
                 </div>
-                <button class="morb-btn">🩺 Full Morbidity Analytics →</button>
+                <button class="morb-btn">Full Morbidity Analytics</button>
             </div>
 
             <div class="card">
                 <div class="card-hd">
                     <div>
-                        <div class="card-title">📅 Upcoming Follow-Ups</div>
+                        <div class="card-title">Upcoming Follow-Ups</div>
                         <div class="card-sub">Scheduled return visits</div>
                     </div>
-                    <span style="background:#7c3aed;color:white;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;" id="followUpCount">0</span>
+                    <span class="ds-badge ds-badge-blue" id="followUpCount">0</span>
                 </div>
                 <div id="followUpList"><div class="loading-msg">Loading...</div></div>
-                <button class="view-all-link" onclick="window.location.href='records.html'">View all follow-ups →</button>
+                <button class="view-all-link" onclick="window.location.href='records.html'">View all follow-ups</button>
             </div>
         </div>
 
@@ -345,11 +345,11 @@
                     <div class="card-title">All Patient Records</div>
                     <div class="card-sub">Click a row to open full profile</div>
                 </div>
-                <a href="templates.html" class="btn btn-primary btn-sm">➕ New Record</a>
+                <a href="templates.html" class="btn btn-primary btn-sm"><span class="ds-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span> New Record</a>
             </div>
             <div class="toolbar">
                 <div class="search-bar">
-                    <span class="search-icon">🔍</span>
+                    <span class="ds-icon search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span>
                     <input type="text" id="searchInput" placeholder="Search patients by name...">
                 </div>
             </div>
