@@ -11,6 +11,7 @@ import { Modal } from '../../components/ui/Modal';
 import type { Patient } from '../../components/patient/PatientDetailModal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { AuditLogPage } from '../../features/audit/AuditLogPage';
+import { ArchiveReviewPage } from '../../features/admin/ArchiveReviewPage';
 
 const ConsultationPage = lazy(() => import('../consultation'));
 const RecordsComponent = lazy(() => import('../patients/records').then(module => ({ default: module.RecordsComponent })));
@@ -107,6 +108,7 @@ const DoctorDashboard = () => {
         { id: 'dashboard', label: 'Dashboard', icon: 'home' },
         { id: 'records', label: 'Patient Records', icon: 'users' },
         { id: 'consultation', label: 'Consultation Room', icon: 'clipboard' },
+        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
         { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
     ];
 
@@ -497,7 +499,7 @@ const DoctorDashboard = () => {
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
                 <Topbar
-                    title={activePage === 'dashboard' ? 'Doctor Dashboard' : activePage === 'records' ? 'Patient Records' : activePage === 'audit-log' ? 'Audit Log' : 'Consultation Room'}
+                    title={activePage === 'dashboard' ? 'Doctor Dashboard' : activePage === 'records' ? 'Patient Records' : activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'Consultation Room'}
                     sectionLabel="Clinical Consultation"
                     userName={userName}
                     userInitials={userInitials}
@@ -671,6 +673,15 @@ const DoctorDashboard = () => {
                                 subtitle="Review read-only system activity for clinical governance."
                             />
                             <AuditLogPage />
+                        </>
+                    )}
+                    {activePage === 'archive-review' && (
+                        <>
+                            <PageHeader
+                                title="Patient Archive Review"
+                                subtitle="Read-only review of inactive patient records. Archive and restore actions are restricted to the Administrator."
+                            />
+                            <ArchiveReviewPage isOnline={isOnline} readOnly={true} />
                         </>
                     )}
                 </div>

@@ -58,7 +58,7 @@ function ArchiveStatusBadge({ patient }: { patient: ArchivePatient }) {
     return <span className="clinical-status-badge success">Active</span>;
 }
 
-export function ArchiveReviewPage({ isOnline }: { isOnline: boolean }) {
+export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: boolean; readOnly?: boolean }) {
     const { showToast, ToastComponent } = useToast();
     const [patients, setPatients] = useState<ArchivePatient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -214,7 +214,11 @@ export function ArchiveReviewPage({ isOnline }: { isOnline: boolean }) {
                 <div className="clinical-table-titlebar">
                     <div>
                         <h2 className="clinical-table-title">Patient Archive Review</h2>
-                        <p className="clinical-table-subtitle">Soft archive only. Patient records and relationships remain in place.</p>
+                        <p className="clinical-table-subtitle">
+                            {readOnly
+                                ? 'Read-only view. Archive and restore actions are restricted to the Administrator role.'
+                                : 'Soft archive only. Patient records and relationships remain in place.'}
+                        </p>
                     </div>
                     <span className="clinical-count-badge">{visiblePatients.length} result{visiblePatients.length !== 1 ? 's' : ''}</span>
                 </div>
@@ -259,7 +263,7 @@ export function ArchiveReviewPage({ isOnline }: { isOnline: boolean }) {
                                 <th>Last Activity</th>
                                 <th>Status</th>
                                 <th>Archive Notes</th>
-                                <th className="text-right">Action</th>
+                                <th className="text-right">{readOnly ? 'Status' : 'Action'}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -284,7 +288,11 @@ export function ArchiveReviewPage({ isOnline }: { isOnline: boolean }) {
                                         </div>
                                     </td>
                                     <td className="text-right">
-                                        {patient.archive_status === 'archived' ? (
+                                        {readOnly ? (
+                                            <span className="clinical-secondary">
+                                                {patient.archive_status === 'archived' ? 'Archived' : patient.archive_protected ? 'Protected' : 'Active'}
+                                            </span>
+                                        ) : patient.archive_status === 'archived' ? (
                                             <button type="button" className="clinical-row-action" onClick={() => openAction(patient, 'restore')}>Restore</button>
                                         ) : patient.archive_protected ? (
                                             <span className="clinical-secondary">Protected</span>
@@ -299,7 +307,7 @@ export function ArchiveReviewPage({ isOnline }: { isOnline: boolean }) {
                 </div>
             </section>
 
-            {selectedPatient && action && (
+            {!readOnly && selectedPatient && action && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isSaving) closeAction(); }}>
                     <div role="dialog" aria-modal="true" aria-labelledby="archive-action-title" className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div className="border-b border-slate-100 p-5">

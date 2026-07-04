@@ -805,7 +805,7 @@ td {
 .clinical-count-badge {
     border-color: #CBD5E1;
     background: #F8FAFC;
-    color: var(--slate-700);
+    color: var(--focus-color);
 }
 
 .clinical-toolbar {
@@ -865,23 +865,32 @@ td {
     white-space: nowrap;
 }
 
-.clinical-filter-button:hover {
+.clinical-filter-button:hover:not(:disabled) {
     background: var(--surface-muted);
     color: var(--text);
+}
+
+.clinical-filter-button:disabled,
+.clinical-filter-button:disabled:hover {
+    background: var(--surface);
+    color: var(--text-muted);
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: var(--border);
 }
 
 .clinical-filter-button:focus-visible,
 .clinical-secondary-action:focus-visible,
 .clinical-link-action:focus-visible,
 .clinical-row-action:focus-visible {
-    outline: 2px solid var(--slate-700);
+    outline: 2px solid var(--focus-color);
     outline-offset: 2px;
 }
 
 .clinical-filter-button.is-active,
 .clinical-filter-button[aria-pressed="true"] {
-    border-color: var(--slate-700);
-    background: var(--slate-700);
+    border-color: var(--focus-color);
+    background: var(--focus-color);
     color: #FFFFFF;
 }
 
@@ -920,7 +929,7 @@ td {
 }
 
 .clinical-filter-note span {
-    color: var(--slate-700);
+    color: var(--focus-color);
     font-weight: 700;
 }
 
@@ -999,7 +1008,7 @@ td {
     border-radius: 0.375rem;
     background: transparent;
     padding: 0.25rem 0.5rem;
-    color: var(--slate-700);
+    color: var(--focus-color);
     font-size: 0.8125rem;
     font-weight: 600;
 }

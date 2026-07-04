@@ -1,5 +1,57 @@
 # MEDISENS Update Log
 
+## 2026-07-04 Archive Review Doctor Visibility & Filter Button Fix
+
+### Files changed
+- `src/features/admin/ArchiveReviewPage.tsx`
+- `src/app/doctor/index.tsx`
+- `src/styles/dashboard.css` (filter button fix from prior session, confirmed)
+
+### Doctor visibility behavior
+- Archive Review tab is now visible in the Doctor sidebar navigation.
+- Doctor users can browse all four filter views: Candidates, Active, Archived, Protected.
+- Doctor users can search by patient name, address, or record number.
+- The last column shows a plain-text status label (Active / Archived / Protected) instead of action buttons.
+- The table subtitle explicitly states: "Read-only view. Archive and restore actions are restricted to the Administrator role."
+- No action modal is rendered for Doctor users — the `!readOnly && selectedPatient && action` guard prevents it entirely.
+
+### Admin vs Doctor permissions
+| Capability | Admin | Doctor |
+|---|---|---|
+| See Archive Review tab | ✅ | ✅ |
+| Filter Candidates / Active / Archived / Protected | ✅ | ✅ |
+| Search patient records | ✅ | ✅ |
+| Archive a patient record | ✅ | ❌ (button hidden) |
+| Restore a patient record | ✅ | ❌ (button hidden) |
+| Archive action modal | ✅ | ❌ (suppressed) |
+
+### Edge Function security
+Unchanged. `archive-patient-record` Edge Function still enforces `role = admin` server-side. Even if a Doctor somehow reached the action, the server would reject it.
+
+### Filter button UI fix (confirmed from prior session)
+- Replaced undefined `var(--slate-700)` with `var(--focus-color)` (#334155) in `dashboard.css`.
+- All filter button states (default, hover, focus-visible, active/selected, disabled) now show readable labels.
+
+### Build result
+- `npm run build` passed. ✓ built in 3.14s
+
+
+
+### Root cause
+- The Archive Review filter buttons used a CSS class `.clinical-filter-button`.
+- The active, focus, and text styles in `src/styles/dashboard.css` referenced an undefined CSS variable `var(--slate-700)`.
+- Because `var(--slate-700)` was undefined, the browser evaluated it as invalid/transparent. When a button was selected, it applied `color: #FFFFFF` on a transparent/white background, making the text invisible.
+
+### UI fix applied
+- Replaced the undefined `var(--slate-700)` with `var(--focus-color)` (a predefined slate/charcoal `#334155` from the clinical neutral palette) across `.clinical-filter-button`, `.clinical-count-badge`, `.clinical-link-action`, and `.clinical-filter-note`.
+- Added proper `:disabled` state styling for `.clinical-filter-button` so disabled buttons reduce opacity but remain readable.
+
+### Files changed
+- `src/styles/dashboard.css`
+
+### Build result
+- `npm run build` passed.
+
 ## 2026-07-04 Patient Soft Archiving Security Audit
 
 ### Security findings
