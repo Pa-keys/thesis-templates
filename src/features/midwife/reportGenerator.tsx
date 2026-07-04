@@ -196,7 +196,7 @@ const ReportGenerator = ({ records, isLoading = false }: Props) => {
                     <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20"/>
                 </div>
                 <div className="flex">
-                    <button onClick={handleExportPDF} disabled={isExporting || isLoading} className="w-full rounded-lg bg-slate-700 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-70">
+                    <button type="button" onClick={handleExportPDF} disabled={isExporting || isLoading} className="w-full rounded-lg bg-slate-700 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-70">
                         {isExporting ? 'Preparing PDF...' : isLoading ? 'Loading FHSIS records...' : 'Export FHSIS PDF'}
                     </button>
                 </div>

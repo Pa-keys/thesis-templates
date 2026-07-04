@@ -21,6 +21,8 @@ const MALVAR_BARANGAYS = [
 ] as const;
 
 const OUTSIDE_MALVAR = '__outside__';
+const PATIENT_REGISTRY_LIMIT = 1000;
+const PATIENT_REGISTRY_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, bloodType, address, contactNumber, birthday, civilStatus, nationality, religion, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress, created_at, archive_status, archive_protected';
 
 interface Patient {
     id: string;
@@ -46,6 +48,8 @@ interface Patient {
     relativeName?: string;
     relativeRelation?: string;
     relativeAddress?: string;
+    archive_status?: 'active' | 'archived' | null;
+    archive_protected?: boolean | null;
 }
 
 export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient: Patient) => void } = {}) {
@@ -59,8 +63,10 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
         setLoading(true);
         const { data, error } = await supabase
             .from('patients')
-            .select('*')
-            .order('lastName', { ascending: true });
+            .select(PATIENT_REGISTRY_COLUMNS)
+            .eq('archive_status', 'active')
+            .order('lastName', { ascending: true })
+            .limit(PATIENT_REGISTRY_LIMIT);
 
         if (error) {
             console.error('Database Error:', error);

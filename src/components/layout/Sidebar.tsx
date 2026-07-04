@@ -84,6 +84,7 @@ export function Sidebar({
                         const isActive = activePage === item.id;
                         return (
                             <button 
+                                type="button"
                                 key={item.id} 
                                 onClick={() => {
                                     if (item.disabled) return;
@@ -141,6 +142,7 @@ export function Sidebar({
                         <p id="logout-dialog-description" className="text-sm text-[#456987] mt-2 mb-4">Are you sure you want to end your session?</p>
                         <div className="flex w-full gap-3">
                             <button 
+                                type="button"
                                 ref={cancelLogoutRef}
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -151,6 +153,7 @@ export function Sidebar({
                                 Cancel
                             </button>
                             <button 
+                                type="button"
                                 onClick={async (e) => {
                                     e.stopPropagation();
                                     await logout();

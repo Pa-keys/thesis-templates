@@ -113,6 +113,7 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                             <p className="text-sm text-slate-500 mt-1">All registered patients</p>
                         </div>
                         <button
+                            type="button"
                             onClick={onNavigateToRecords}
                             className="text-xs font-bold text-slate-700 hover:underline shrink-0"
                         >

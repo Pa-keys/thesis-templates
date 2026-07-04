@@ -31,6 +31,7 @@ const FILTER_OPTIONS: { label: string; value: FilterPeriod }[] = [
     { label: 'Month', value: 'month' },
     { label: 'Year', value: 'year' },
 ];
+const COUNT_ONLY_COLUMN = 'id';
 
 const getDateRange = (period: FilterPeriod): { from: string; to: string } => {
     const now = new Date();
@@ -54,7 +55,7 @@ const getDateRange = (period: FilterPeriod): { from: string; to: string } => {
 const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: FilterPeriod) => void }) => (
     <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
         {FILTER_OPTIONS.map(opt => (
-            <button key={opt.value} onClick={() => onChange(opt.value)}
+            <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
                 className={`text-[0.7rem] font-bold px-2.5 py-1 rounded-md transition-all ${value === opt.value ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                 {opt.label}
             </button>
@@ -125,8 +126,9 @@ const DoctorDashboard = () => {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
         const { data } = await supabase
             .from('follow_up')
-            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
+            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex, archive_status)`)
             .neq('follow_up_status', 'done')
+            .eq('patients.archive_status', 'active')
             .gte('visit_date', today)
             .order('visit_date', { ascending: true });
         setAllFollowUps(data || []);
@@ -228,8 +230,9 @@ const DoctorDashboard = () => {
 
         let qQuery = supabase
             .from('initial_consultation')
-            .select(`initialconsultation_id, patient_id, consultation_time, patients!inner(firstName, lastName, sex, bloodType)`)
+            .select(`initialconsultation_id, patient_id, consultation_time, patients!inner(firstName, lastName, sex, bloodType, archive_status)`)
             .eq('consultation_date', today)
+            .eq('patients.archive_status', 'active')
             .order('initialconsultation_id', { ascending: true });
         if (completedIds.length > 0) {
             qQuery = qQuery.not('initialconsultation_id', 'in', `(${completedIds.join(',')})`);
@@ -240,8 +243,9 @@ const DoctorDashboard = () => {
         // Follow-ups preview (5 rows)
         const { data: fData } = await supabase
             .from('follow_up')
-            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex)`)
+            .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex, archive_status)`)
             .neq('follow_up_status', 'done')
+            .eq('patients.archive_status', 'active')
             .gte('visit_date', today)
             .order('visit_date', { ascending: true })
             .limit(5);
@@ -259,7 +263,7 @@ const DoctorDashboard = () => {
             const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
             const { count: pCount } = await supabase
-                .from('patients').select('*', { count: 'exact', head: true });
+                .from('patients').select(COUNT_ONLY_COLUMN, { count: 'exact', head: true });
             setTotalPatients(pCount || 0);
 
             const { data: completedToday } = await supabase
@@ -353,7 +357,7 @@ const DoctorDashboard = () => {
                 { event: 'INSERT', schema: 'public', table: 'patients' },
                 () => {
                     supabase.from('patients')
-                        .select('*', { count: 'exact', head: true })
+                        .select(COUNT_ONLY_COLUMN, { count: 'exact', head: true })
                         .then(({ count }) => setTotalPatients(count || 0));
                 }
             )
@@ -564,7 +568,7 @@ const DoctorDashboard = () => {
                                         )}
                                     </div>
                                     {queue.length > 0 && (
-                                        <button onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button type="button" onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
                                             View all patients →
                                         </button>
                                     )}
@@ -627,7 +631,7 @@ const DoctorDashboard = () => {
                                         )}
                                     </div>
                                     {followUps.length > 0 && (
-                                        <button onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button type="button" onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
                                             View all follow-ups →
                                         </button>
                                     )}
@@ -684,7 +688,7 @@ const DoctorDashboard = () => {
                                 </div>
                                 <p className="text-xs text-slate-400 mt-0.5">{allFollowUps.length} pending • sorted by date</p>
                             </div>
-                            <button onClick={() => setShowFollowUpsModal(false)}
+                            <button type="button" onClick={() => setShowFollowUpsModal(false)}
                                 aria-label="Close follow-up dialog" className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors font-bold text-base"><Icon name="close" className="h-4 w-4" label="Close follow-up dialog" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -716,7 +720,7 @@ const DoctorDashboard = () => {
                             )}
                         </div>
                         <div className="p-4 border-t border-slate-100 shrink-0">
-                            <button onClick={() => setShowFollowUpsModal(false)}
+                            <button type="button" onClick={() => setShowFollowUpsModal(false)}
                                 className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
                         </div>
                     </Modal>

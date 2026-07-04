@@ -130,6 +130,7 @@ function PatientDetailsPanel({
 
             {!consentSigned && (
                 <button
+                    type="button"
                     onClick={onProceedToConsent}
                     className="w-full bg-slate-700 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-sm hover:bg-slate-800 transition-all  flex items-center justify-center gap-3 mt-2"
                 >
@@ -174,6 +175,7 @@ function PatientModal({
                     <div className="flex items-center gap-3">
                         {step !== 'details' && (
                             <button
+                                type="button"
                                 onClick={() => setStep('details')}
                                 className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
                             >
@@ -183,6 +185,7 @@ function PatientModal({
                         {/* Step pills */}
                         <div className="flex items-center gap-1.5 text-xs font-bold">
                             <button
+                                type="button"
                                 onClick={() => setStep('details')}
                                 className={`px-2.5 py-1 rounded-md transition-colors ${step === 'details' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                             >
@@ -195,6 +198,7 @@ function PatientModal({
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold transition-colors"
                     >

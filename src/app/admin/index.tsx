@@ -15,6 +15,7 @@ import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { safeTrim } from '../../lib/utils/strings';
 import { AuditLogPage } from '../../features/audit/AuditLogPage';
 import { logAuditEvent } from '../../features/audit/services';
+import { ArchiveReviewPage } from '../../features/admin/ArchiveReviewPage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -152,6 +153,7 @@ const AdminDashboard = () => {
 
     const navItems = [
         { id: 'admin', label: 'User Management', icon: 'users' },
+        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
         { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
     ];
 
@@ -169,7 +171,7 @@ const AdminDashboard = () => {
             }
         };
 
-        if (activePage === 'admin') {
+        if (activePage === 'admin' || activePage === 'archive-review') {
             init();
         }
 
@@ -392,9 +394,9 @@ const AdminDashboard = () => {
             <main className="flex-1 min-w-0 overflow-auto md:ml-[240px] w-full">
                 {/* ─── Topbar ─── */}
                 <Topbar
-                    title={activePage === 'audit-log' ? 'Audit Log' : 'User Management'}
+                    title={activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'User Management'}
                     sectionLabel="Administration"
-                    breadcrumbs={[{ label: 'Administration' }, { label: activePage === 'audit-log' ? 'Audit Log' : 'User Management', current: true }]}
+                    breadcrumbs={[{ label: 'Administration' }, { label: activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'User Management', current: true }]}
                     userName={userName}
                     userInitials={userInitials}
                     userRole="Administrator"
@@ -410,6 +412,14 @@ const AdminDashboard = () => {
                                 subtitle="Review read-only system activity across MEDISENS workflows."
                             />
                             <AuditLogPage />
+                        </>
+                    ) : activePage === 'archive-review' ? (
+                        <>
+                            <PageHeader
+                                title="Patient Archive Review"
+                                subtitle="Review inactive patient records for soft archiving while preserving patient history and relationships."
+                            />
+                            <ArchiveReviewPage isOnline={isOnline} />
                         </>
                     ) : (
                         <>
@@ -457,6 +467,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex gap-3 w-full sm:w-auto">
                                 <select
+                                    aria-label="Filter staff accounts by role"
                                     value={roleFilter}
                                     onChange={(e) => setRoleFilter(e.target.value)}
                                     className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 hover:border-slate-300 transition-all min-w-[140px] cursor-pointer"
@@ -470,7 +481,7 @@ const AdminDashboard = () => {
                                     <option value="labaratory">Laboratory</option>
                                     <option value="admin">Admin</option>
                                 </select>
-                                <button onClick={openAddModal} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-none transition-all  shrink-0 justify-center">
+                                <button type="button" onClick={openAddModal} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-none transition-all  shrink-0 justify-center">
                                     <Icon name="user-plus" className="h-4 w-4" /> Add User
                                 </button>
                             </div>
@@ -518,10 +529,10 @@ const AdminDashboard = () => {
 
                                                 {/* Actions */}
                                                 <div className="flex items-center md:justify-end gap-2 md:pl-0 pl-[54px] mt-2 md:mt-0">
-                                                    <button onClick={() => openEditModal(u.id)} className="clinical-row-action min-w-[75px]">
+                                                    <button type="button" onClick={() => openEditModal(u.id)} className="clinical-row-action min-w-[75px]">
                                                         <Icon name="edit" className="h-3.5 w-3.5" /> Edit
                                                     </button>
-                                                    <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="clinical-row-action danger min-w-[75px]">
+                                                    <button type="button" onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="clinical-row-action danger min-w-[75px]">
                                                         <Icon name="trash" className="h-3.5 w-3.5" /> Delete
                                                     </button>
                                                 </div>
@@ -547,7 +558,7 @@ const AdminDashboard = () => {
                                 <h3 id="user-dialog-title" className="text-xl font-black text-slate-800 tracking-tight">{isEditMode ? `Edit: ${fFullName}` : 'Add New User'}</h3>
                                 <p className="text-xs font-medium text-slate-500 mt-1">{isEditMode ? 'Update name or role assignment' : 'Create a new system account'}</p>
                             </div>
-                            <button onClick={closeUserModal} aria-label="Close user dialog" className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:bg-slate-100 text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close user dialog" /></button>
+                            <button type="button" onClick={closeUserModal} aria-label="Close user dialog" className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:bg-slate-100 text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close user dialog" /></button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="space-y-1.5">
@@ -595,8 +606,8 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-                            <button onClick={closeUserModal} disabled={isSaving} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
-                            <button onClick={handleSaveUser} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-md shadow-none transition-all disabled:opacity-50 min-w-[140px] justify-center text-center">
+                            <button type="button" onClick={closeUserModal} disabled={isSaving} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
+                            <button type="button" onClick={handleSaveUser} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-md shadow-none transition-all disabled:opacity-50 min-w-[140px] justify-center text-center">
                                 {isSaving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create User'}
                             </button>
                         </div>
@@ -615,8 +626,8 @@ const AdminDashboard = () => {
                             Are you sure you want to permanently delete <strong className="text-slate-800 font-bold">{userToDelete?.name}</strong>? This action cannot be undone.
                         </p>
                         <div className="flex w-full gap-3">
-                            <button onClick={closeConfirmModal} disabled={isSaving} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors disabled:opacity-50">Cancel</button>
-                            <button onClick={handleDeleteUser} disabled={isSaving} className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 shadow-md shadow-red-500/20 transition-all disabled:opacity-50">
+                            <button type="button" onClick={closeConfirmModal} disabled={isSaving} className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors disabled:opacity-50">Cancel</button>
+                            <button type="button" onClick={handleDeleteUser} disabled={isSaving} className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 shadow-md shadow-red-500/20 transition-all disabled:opacity-50">
                                 {isSaving ? 'Deleting...' : 'Delete'}
                             </button>
                         </div>

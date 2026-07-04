@@ -300,20 +300,20 @@ export function AuditLogPage() {
                             />
                         </div>
                     </label>
-                    <input value={filters.user ?? ''} onChange={(event) => setFilter('user', event.target.value)} placeholder="Filter by user" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20 lg:col-span-2" />
-                    <select value={filters.role ?? ''} onChange={(event) => setFilter('role', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-2">
+                    <input aria-label="Filter audit logs by user" value={filters.user ?? ''} onChange={(event) => setFilter('user', event.target.value)} placeholder="Filter by user" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20 lg:col-span-2" />
+                    <select aria-label="Filter audit logs by role" value={filters.role ?? ''} onChange={(event) => setFilter('role', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-2">
                         <option value="">All roles</option>
                         {ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
-                    <select value={filters.module ?? ''} onChange={(event) => setFilter('module', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-2">
+                    <select aria-label="Filter audit logs by module" value={filters.module ?? ''} onChange={(event) => setFilter('module', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-2">
                         <option value="">All modules</option>
                         {MODULES.map(module => <option key={module} value={module}>{module}</option>)}
                     </select>
-                    <select value={filters.action ?? ''} onChange={(event) => setFilter('action', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-1">
+                    <select aria-label="Filter audit logs by action" value={filters.action ?? ''} onChange={(event) => setFilter('action', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-1">
                         <option value="">All actions</option>
                         {ACTIONS.map(action => <option key={action} value={action}>{actionStyles[action]?.label ?? prettify(action)}</option>)}
                     </select>
-                    <select value={filters.recordType ?? ''} onChange={(event) => setFilter('recordType', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-1">
+                    <select aria-label="Filter audit logs by record type" value={filters.recordType ?? ''} onChange={(event) => setFilter('recordType', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-1">
                         <option value="">All records</option>
                         {RECORD_TYPES.map(type => <option key={type} value={type}>{prettify(type)}</option>)}
                     </select>

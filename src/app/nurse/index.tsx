@@ -54,7 +54,8 @@ const NurseDashboard = () => {
     const loadPatients = async () => {
         const { count: totalCount } = await supabase
             .from('patients')
-            .select('id', { count: 'exact', head: true });
+            .select('id', { count: 'exact', head: true })
+            .eq('archive_status', 'active');
         setTotalPatientsCount(totalCount || 0);
 
         const { data, error } = await supabase
@@ -67,6 +68,7 @@ const NurseDashboard = () => {
                 relativeName, relativeRelation, relativeAddress,
                 patient_consent ( consent_id )
             `)
+            .eq('archive_status', 'active')
             .order('created_at', { ascending: false });
 
         if (!error && data) {
@@ -237,6 +239,7 @@ const NurseDashboard = () => {
                                                                 <td className="px-4 py-3 text-slate-500">{date}</td>
                                                                 <td className="px-4 py-3 text-right">
                                                                     <button
+                                                                        type="button"
                                                                         onClick={(e) => { e.stopPropagation(); handleConsultNavigate(p.id); }}
                                                                         className="clinical-row-action"
                                                                     >

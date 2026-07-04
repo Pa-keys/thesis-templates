@@ -99,6 +99,9 @@ interface InitialConsultationRecord {
 }
 
 const toNumberOrNull = (val: unknown): number | null => parseNumberOrNull(val);
+const FOLLOW_UP_LOAD_COLUMNS = 'followup_id, consultation_id, patient_id, visit_date, visit_time, mode_of_transaction, mode_of_transfer, chief_complaint, diagnosis, history_of_present_illness, bp, heart_rate, respiratory_rate, temperature, o2_saturation, weight, height, muac, nutritional_status, bmi, visual_acuity_left, visual_acuity_right, blood_type, general_survey, medication_treatment, follow_up_status';
+const LATEST_VITAL_COLUMNS = 'vitals_id, bp, heart_rate, respiratory_rate, temperature, o2_saturation, weight, height, muac, nutritional_status, bmi, visual_acuity_left, visual_acuity_right, general_survey, initial_consultation_id';
+const CONSULTATION_LOAD_COLUMNS = 'consultation_id, patient_id, initial_consultation_id, family_history, chief_complaints, diagnosis, hpi, attending_provider, medication_treatment, management_treatment, assessment, plan, follow_up_status';
 
 // --- History Panel Sub-Component ----------------------------------------------
 function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; patientName: string; onClose: () => void; }) {
@@ -488,7 +491,7 @@ export function ConsultationPage({
     // fetchFollowUp ? pulled out so the real-time handler can call it too
     // -------------------------------------------------------------------------
     const fetchFollowUp = useCallback(async (pid: string, cid: number | null) => {
-        const query = supabase.from('follow_up').select('*').eq('patient_id', pid);
+        const query = supabase.from('follow_up').select(FOLLOW_UP_LOAD_COLUMNS).eq('patient_id', pid);
         if (cid) query.eq('consultation_id', cid);
         else query.order('consultation_id', { ascending: false }).limit(1);
         const { data } = await query.single();
@@ -538,6 +541,7 @@ export function ConsultationPage({
                 .from('patients')
                 .select('id, firstName, lastName, middleName, age, sex, bloodType, address, contactNumber')
                 .eq('id', patientId)
+                .eq('archive_status', 'active')
                 .single();
             if (error) console.error('Failed to fetch patient:', error);
             else if (data) setPatient(data as PatientData);
@@ -551,7 +555,7 @@ export function ConsultationPage({
     // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
-        supabase.from('vital_sign').select('*').eq('patient_id', patient.id).order('vitals_id', { ascending: false }).limit(1).single().then(({ data }) => {
+        supabase.from('vital_sign').select(LATEST_VITAL_COLUMNS).eq('patient_id', patient.id).order('vitals_id', { ascending: false }).limit(1).single().then(({ data }) => {
             if (data) {
                 setFormData(prev => ({
                     ...prev, bp: data.bp ?? '', hr: data.heart_rate?.toString() ?? '', rr: data.respiratory_rate?.toString() ?? '',
@@ -576,7 +580,7 @@ export function ConsultationPage({
     // -------------------------------------------------------------------------
     useEffect(() => {
         if (!patient?.id) return;
-        const query = supabase.from('consultation').select('*').eq('patient_id', patient.id);
+        const query = supabase.from('consultation').select(CONSULTATION_LOAD_COLUMNS).eq('patient_id', patient.id);
         if (icidFromUrl) {
             query.eq('initial_consultation_id', parseInt(icidFromUrl as string));
         } else {

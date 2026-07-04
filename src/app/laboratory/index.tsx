@@ -53,6 +53,9 @@ interface PatientRow {
     sex: string;
 }
 
+const LAB_REQUEST_QUEUE_LIMIT = 200;
+const LAB_REQUEST_COLUMNS = 'labrequest_id, consultation_id, patient_id, request_date, lab_no, chief_complaint, is_cbc, is_cbc_platelet, is_hgb_hct, is_xray, is_ultrasound, is_rbs, is_fbs, is_uric_acid, is_cholesterol, is_urinalysis, is_fecalysis, is_sputum, others, requested_by, status';
+
 function formatDateTimeLocal(value?: string | null) {
     const date = value ? new Date(value) : new Date();
     if (isNaN(date.getTime())) {
@@ -206,7 +209,7 @@ function LabRequestDetail({
                         <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusColor(request.status)}`}>
                             {request.status || 'Pending'}
                         </span>
-                        <button onClick={onClose} aria-label="Close laboratory request" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 font-bold text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close laboratory request" /></button>
+                        <button type="button" onClick={onClose} aria-label="Close laboratory request" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 font-bold text-lg transition-colors"><Icon name="close" className="h-4 w-4" label="Close laboratory request" /></button>
                     </div>
                 </div>
 
@@ -336,6 +339,7 @@ function LabRequestDetail({
                 {request.status !== 'Completed' && (
                     <div className="lab-drawer-footer">
                         <button
+                            type="button"
                             onClick={handleMarkCompleted}
                             disabled={saving}
                             className="w-full font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all  disabled:opacity-50 text-sm"
@@ -405,13 +409,14 @@ const LaboratoryDashboard = () => {
         try {
             const { data: labData, error } = await supabase
                 .from('lab_request')
-                .select('*')
-                .order('labrequest_id', { ascending: false });
+                .select(LAB_REQUEST_COLUMNS)
+                .order('labrequest_id', { ascending: false })
+                .limit(LAB_REQUEST_QUEUE_LIMIT);
 
             if (error) throw error;
 
             if (labData && labData.length > 0) {
-                const typedLabData = labData as LabRequest[];
+                let typedLabData = labData as LabRequest[];
                 const patientIds = [...new Set(
                     typedLabData.map(r => r.patient_id).filter((id): id is number => id !== null && id !== undefined)
                 )];
@@ -422,6 +427,7 @@ const LaboratoryDashboard = () => {
                     const { data: patientData, error: patientError } = await supabase
                         .from('patients')
                         .select('id, firstName, lastName, age, sex')
+                        .eq('archive_status', 'active')
                         .in('id', patientIds);
 
                     if (patientError) console.error('Failed to fetch patients:', patientError.message);
@@ -429,6 +435,8 @@ const LaboratoryDashboard = () => {
                     (patientData || []).forEach((p: PatientRow) => {
                         patientMap[p.id] = p;
                     });
+
+                    typedLabData = typedLabData.filter(request => !request.patient_id || Boolean(patientMap[request.patient_id]));
                 }
 
                 const labrequestIds = typedLabData.map(r => r.labrequest_id);
@@ -568,6 +576,7 @@ const LaboratoryDashboard = () => {
                                     <span className="text-xs font-medium text-slate-500">{stats.pending} pending · {stats.completed} completed · {stats.total} total</span>
                                     {(['All', 'Pending',  'Completed'] as const).map(s => (
                                         <button
+                                            type="button"
                                             key={s}
                                             onClick={() => setStatusFilter(s)}
                                             className={`clinical-filter-button ${statusFilter === s ? 'is-active' : ''}`}
