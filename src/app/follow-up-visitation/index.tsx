@@ -13,6 +13,7 @@ import { upsertLatestFollowUpByPatient } from '../../features/consultation/servi
 import { getInitials } from '../../lib/utils/names';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { safeTrim, toNumberOrNull as parseNumberOrNull } from '../../lib/utils/strings';
+import { ClinicalField, ClinicalSectionHeader, clinicalInputClass, clinicalLabelClass } from '../../components/ui/ClinicalForm';
 
 interface FollowUpData {
     date: string; time: string; modeOfTx: string; modeOfTransfer: string;
@@ -112,7 +113,7 @@ export default function FollowUp() {
 
             if (isOnline) {
                 await upsertLatestFollowUpByPatient(patientId, payload);
-                showToast('Follow-up record saved to database successfully!', false);
+                showToast('Follow-up visit recorded.', false);
             } else {
                 await saveToIndexedDB('MediSensDB', 'offline_patients', { id: Date.now(), type: 'follow_up', data: payload });
                 showToast('Offline Mode: Follow-up record saved locally!', false);
@@ -131,10 +132,9 @@ export default function FollowUp() {
     // ─── STYLES & RENDER ─────────────────────────────────────────────────────
     if (!role) return null;
 
-    const inputCls = "w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm text-slate-800 transition-colors disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed";
-    const labelCls = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
+    const inputCls = clinicalInputClass;
+    const labelCls = clinicalLabelClass;
     const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm mb-4";
-    const headerCls = "text-sm font-semibold text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-3 mb-4";
 
     const navItems = role === 'doctor' 
         ? [ { id: 'dashboard', label: 'Dashboard', icon: 'home' }, { id: 'records', label: 'Patient Records', icon: 'users' }, { id: 'consultation', label: 'Consultation', icon: 'clipboard' } ]
@@ -179,7 +179,7 @@ export default function FollowUp() {
                             <div className="text-sm font-bold text-slate-900 leading-tight">{userName}</div>
                             <div className="text-[0.7rem] text-slate-500 capitalize">{role}</div>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-md">{userInitials}</div>
+                        <div className="w-10 h-10 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold shadow-md">{userInitials}</div>
                     </div>
                 </header>
 
@@ -187,7 +187,7 @@ export default function FollowUp() {
 
                 {/* MAIN CONTENT */}
                 <main className="w-full flex-1 pwa-page-pad">
-                    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="w-full ">
                         
                         <div className="flex items-center gap-4 mb-6">
                             <button onClick={() => window.history.back()} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">← Back</button>
@@ -200,7 +200,7 @@ export default function FollowUp() {
                         {/* Patient Card */}
                         {patient && (
                             <div className="w-full bg-white border border-slate-200 rounded-xl p-5 mb-6 flex flex-wrap items-center gap-4 shadow-sm">
-                                <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl shrink-0 shadow-md">
+                                <div className="w-14 h-14 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-xl shrink-0 shadow-md">
                                     {patientInitials}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -217,28 +217,30 @@ export default function FollowUp() {
                         <form onSubmit={handleSubmit}>
                             {/* SECTION 1: General Info */}
                             <div className={sectionCls}>
-                                <h3 className={headerCls}>General Information</h3>
+                                <ClinicalSectionHeader>General Information</ClinicalSectionHeader>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-                                    <div><label className={labelCls}>Date</label><input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className={inputCls} required /></div>
-                                    <div><label className={labelCls}>Time</label><input type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className={inputCls} /></div>
-                                    <div>
-                                        <label className={labelCls}>Mode of Tx</label>
+                                    <ClinicalField label="Date" required>
+                                        <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className={inputCls} required />
+                                    </ClinicalField>
+                                    <ClinicalField label="Time">
+                                        <input type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className={inputCls} />
+                                    </ClinicalField>
+                                    <ClinicalField label="Mode of Tx">
                                         <select value={formData.modeOfTx} onChange={e => setFormData({...formData, modeOfTx: e.target.value})} className={inputCls}>
                                             <option value="">Select...</option><option value="Walk-in">Walk-in</option><option value="Referral">Referral</option>
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Mode of Transfer</label>
+                                    </ClinicalField>
+                                    <ClinicalField label="Mode of Transfer">
                                         <select value={formData.modeOfTransfer} onChange={e => setFormData({...formData, modeOfTransfer: e.target.value})} className={inputCls}>
                                             <option value="">Select...</option><option value="Ambulatory">Ambulatory</option><option value="Wheelchair">Via wheelchair</option>
                                         </select>
-                                    </div>
+                                    </ClinicalField>
                                 </div>
                             </div>
 
                             {/* SECTION 2: Clinical Assessment */}
                             <div className={sectionCls}>
-                                <h3 className={headerCls}>Clinical Assessment</h3>
+                                <ClinicalSectionHeader>Clinical Assessment</ClinicalSectionHeader>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
                                     <div><label className={labelCls}>Chief Complaints</label><textarea rows={4} value={formData.chiefComplaint} onChange={e => setFormData({...formData, chiefComplaint: e.target.value})} className={`${inputCls} resize-y`} placeholder="Describe current symptoms..." /></div>
                                     <div>
@@ -251,7 +253,7 @@ export default function FollowUp() {
 
                             {/* SECTION 3: Vitals */}
                             <div className={sectionCls}>
-                                <h3 className={headerCls}>Physical Examination (Vitals)</h3>
+                                <ClinicalSectionHeader>Physical Examination (Vitals)</ClinicalSectionHeader>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
                                     <div><label className={labelCls}>BP (mmHg)</label><input type="text" value={formData.vitals.bp} onChange={e => handleVitalChange('bp', e.target.value)} className={inputCls} placeholder="120/80" /></div>
                                     <div><label className={labelCls}>Heart Rate (bpm)</label><input type="number" value={formData.vitals.hr} onChange={e => handleVitalChange('hr', e.target.value)} className={inputCls} placeholder="72" /></div>
@@ -290,7 +292,7 @@ export default function FollowUp() {
 
                             {/* SECTION 4: Treatment & Signature */}
                             <div className={sectionCls}>
-                                <h3 className={headerCls}>Treatment & Authentication</h3>
+                                <ClinicalSectionHeader>Treatment & Authentication</ClinicalSectionHeader>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     <div>
                                         <label className={labelCls}>Medication and Treatment <span className="text-slate-400 font-normal normal-case">(Doctor Only)</span></label>
@@ -316,8 +318,8 @@ export default function FollowUp() {
 
                             {/* SUBMIT BUTTON */}
                             <div className="flex justify-end pb-10">
-                                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-4 bg-blue-600 text-white font-extrabold text-sm rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2">
-                                    {isSubmitting ? <span className="animate-pulse">Saving Record...</span> : <><Icon name="save" className="h-4 w-4" /> Save Follow-up Record</>}
+                                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-10 py-4 bg-slate-700 text-white font-extrabold text-sm rounded-xl shadow-sm hover:bg-slate-800 hover:shadow-none transition-all  disabled:opacity-70 flex items-center justify-center gap-2">
+                                    {isSubmitting ? <span className="animate-pulse">Recording Follow-up...</span> : <><Icon name="save" className="h-4 w-4" /> Record Follow-up Visit</>}
                                 </button>
                             </div>
                         </form>

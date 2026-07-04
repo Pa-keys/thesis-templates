@@ -169,11 +169,11 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                 <tr>
                                     <td colSpan={6}>
                                         <div className="clinical-table-state">
-                                            <svg className="h-5 w-5 animate-spin text-[#2E9FE6]" fill="none" viewBox="0 0 24 24">
+                                            <svg className="h-5 w-5 animate-spin text-[#334155] motion-reduce:animate-none" fill="none" viewBox="0 0 24 24">
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                             </svg>
-                                            Loading patient records...
+                                            Loading patient registry...
                                         </div>
                                     </td>
                                 </tr>
@@ -182,7 +182,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                     <td colSpan={6}>
                                         <div className="clinical-table-state">
                                             <Icon name="inbox" className="h-5 w-5 text-[#7BA1C3]" />
-                                            No patients found.
+                                            No matching patients found.
                                         </div>
                                     </td>
                                 </tr>
@@ -191,7 +191,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                     <tr key={p.id} onClick={() => handleRowClick(p)} className="cursor-pointer">
                                         <td>
                                             <div className="clinical-primary">{p.lastName}, {p.firstName} {p.middleName || ''} {p.suffix || ''}</div>
-                                            <div className="clinical-secondary">ID: {p.id}</div>
+                                            <div className="clinical-secondary">Patient record no. {p.id}</div>
                                         </td>
                                         <td>{p.age ?? '-'} / {p.sex || '-'}</td>
                                         <td>{p.address?.split(',')[0] || '-'}</td>
@@ -206,7 +206,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
                                                 }}
                                                 className="clinical-link-action"
                                             >
-                                                View
+                                                View Chart
                                             </button>
                                         </td>
                                     </tr>

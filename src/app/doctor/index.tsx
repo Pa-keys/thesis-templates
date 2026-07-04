@@ -55,7 +55,7 @@ const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: Fi
     <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
         {FILTER_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => onChange(opt.value)}
-                className={`text-[0.7rem] font-bold px-2.5 py-1 rounded-md transition-all ${value === opt.value ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                className={`text-[0.7rem] font-bold px-2.5 py-1 rounded-md transition-all ${value === opt.value ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                 {opt.label}
             </button>
         ))}
@@ -502,7 +502,7 @@ const DoctorDashboard = () => {
                     onOpenNavigation={() => setIsMobileMenuOpen(true)}
                 />
 
-                <div className="w-full flex flex-col gap-5 animate-in fade-in duration-500">
+                <div className="w-full flex flex-col gap-5 ">
 
                     {activePage === 'dashboard' && (
                         <>
@@ -537,34 +537,34 @@ const DoctorDashboard = () => {
                                         <div className="flex items-center gap-2">
                                             {/* queue count badge */}
                                             {queue.length > 0 && (
-                                                <span className="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">{queue.length}</span>
+                                                <span className="text-[10px] font-black bg-slate-700 text-white px-2 py-0.5 rounded-full">{queue.length}</span>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex-1 overflow-y-auto">
                                         {queue.length === 0 ? (
-                                            <p className="text-center text-slate-400 py-16 text-sm">No patients in queue</p>
+                                            <div className="clinical-table-state">No patients in queue</div>
                                         ) : (
-                                            <div className="divide-y divide-slate-100">
+                                            <div>
                                                 {queue.map((q, index) => (
                                                     <div key={q.initialconsultation_id}
                                                         onClick={() => handleConsultNavigate(q.patient_id, q.initialconsultation_id.toString())}
-                                                        className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                                                        className="clinical-worklist-row cursor-pointer group">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-black text-slate-300 w-5 text-center">{index + 1}</span>
                                                             <div className="flex flex-col gap-0.5">
-                                                                <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">{q.patients?.lastName}, {q.patients?.firstName}</p>
+                                                                <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-slate-700">{q.patients?.lastName}, {q.patients?.firstName}</p>
                                                                 <p className="text-xs text-slate-500 font-medium">{q.patients?.sex} • {q.patients?.bloodType || '—'}</p>
                                                             </div>
                                                         </div>
-                                                        <p className="text-xs font-bold text-blue-600">{formatTime(q.consultation_time)}</p>
+                                                        <p className="text-xs font-bold text-slate-700">{formatTime(q.consultation_time)}</p>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
                                     {queue.length > 0 && (
-                                        <button onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
                                             View all patients →
                                         </button>
                                     )}
@@ -614,10 +614,10 @@ const DoctorDashboard = () => {
                                                             onClick={() => handleConsultNavigate(f.patient_id)}
                                                             className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
                                                             <div className="flex flex-col gap-0.5">
-                                                                <p className="font-bold text-slate-800 text-[0.9rem] truncate group-hover:text-blue-600 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
+                                                                <p className="font-bold text-slate-800 text-[0.9rem] truncate group-hover:text-slate-700 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
                                                                 <p className="text-[11px] text-slate-500 font-medium">Return Visit</p>
                                                             </div>
-                                                            <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ml-2 shrink-0 ${isToday ? 'text-blue-600 bg-blue-50' : 'text-amber-600 bg-amber-50'}`}>
+                                                            <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ml-2 shrink-0 ${isToday ? 'text-slate-700 bg-slate-50' : 'text-amber-600 bg-amber-50'}`}>
                                                                 {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                             </p>
                                                         </div>
@@ -627,7 +627,7 @@ const DoctorDashboard = () => {
                                         )}
                                     </div>
                                     {followUps.length > 0 && (
-                                        <button onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-blue-600 hover:bg-blue-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                        <button onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
                                             View all follow-ups →
                                         </button>
                                     )}
@@ -702,11 +702,11 @@ const DoctorDashboard = () => {
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xs font-black text-slate-300 w-5 text-center">{idx + 1}</span>
                                                     <div className="flex flex-col gap-0.5">
-                                                        <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-blue-600 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
+                                                        <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-slate-700 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
                                                         <p className="text-[11px] text-slate-400 font-medium">{f.patients?.sex} • Return Visit</p>
                                                     </div>
                                                 </div>
-                                                <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 ml-3 ${isToday ? 'text-blue-600 bg-blue-50' : 'text-amber-600 bg-amber-50'}`}>
+                                                <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 ml-3 ${isToday ? 'text-slate-700 bg-slate-50' : 'text-amber-600 bg-amber-50'}`}>
                                                     {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </p>
                                             </div>

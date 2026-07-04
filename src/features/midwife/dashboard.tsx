@@ -37,7 +37,7 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
     }, [censusRecords]);
 
     return (
-        <div className="w-full max-w-full px-2 sm:px-4 md:px-0 animate-in fade-in duration-300">
+        <div className="w-full max-w-full px-2 sm:px-4 md:px-0 ">
 
             {/* Header */}
             <div className="mb-4 flex justify-between items-end">
@@ -50,7 +50,7 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
             {/* Operational Summary */}
             <div className="ops-summary-grid mb-5 w-full">
                 {[
-                    { icon: 'users', label: 'Master Registry',      value: totalPatients, bg: 'bg-blue-50',    text: 'text-blue-600'   },
+                    { icon: 'users', label: 'Master Registry',      value: totalPatients, bg: 'bg-slate-50',    text: 'text-slate-700'   },
                     { icon: 'heart-pulse', label: 'Maternal Care',        value: maternalCount, bg: 'bg-pink-50',    text: 'text-pink-600'   },
                     { icon: 'baby', label: 'Child Care (Immu)',    value: childCount,    bg: 'bg-emerald-50', text: 'text-emerald-600'},
                     { icon: 'pill', label: 'Family Planning',      value: fpCount,       bg: 'bg-purple-50',  text: 'text-purple-600' },
@@ -72,10 +72,10 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                 <div className="lg:col-span-8 ops-panel flex flex-col w-full">
                     <div className="border-b border-slate-200 px-4 py-3 bg-slate-50/60 flex justify-between items-start w-full">
                         <div>
-                            <h3 className="text-base font-semibold text-slate-800 tracking-tight">Recent Reports Encodes</h3>
-                            <p className="text-sm text-slate-500 mt-1">Latest entries synchronized with the database.</p>
+                            <h3 className="text-base font-semibold text-slate-800 tracking-tight">Recent FHSIS Entries</h3>
+                            <p className="text-sm text-slate-500 mt-1">Latest census records submitted for the active reporting month.</p>
                         </div>
-                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-200 text-xs font-semibold shrink-0">
+                        <span className="px-2.5 py-1 bg-slate-50 text-slate-700 rounded-md border border-slate-200 text-xs font-semibold shrink-0">
                             {todayCount} Today
                         </span>
                     </div>
@@ -114,7 +114,7 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                         </div>
                         <button
                             onClick={onNavigateToRecords}
-                            className="text-xs font-bold text-blue-600 hover:underline shrink-0"
+                            className="text-xs font-bold text-slate-700 hover:underline shrink-0"
                         >
                             View All →
                         </button>
@@ -133,7 +133,7 @@ const Dashboard = ({ patients, censusRecords, onNavigateToRecords, onPatientClic
                                             {p.firstName?.[0]}{p.lastName?.[0]}
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight truncate">
+                                            <div className="text-sm font-semibold text-slate-800 group-hover:text-slate-700 transition-colors leading-tight truncate">
                                                 {p.lastName}, {p.firstName}
                                             </div>
                                             <div className="text-[0.7rem] text-slate-500 font-medium mt-1 truncate">

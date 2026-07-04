@@ -12,6 +12,8 @@ import type { Role } from '../../types/user';
 import { RELIGION_OPTIONS } from '../../types/patient';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { updatePatientRecord } from '../../features/patients/services';
+import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
+import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,10 +79,10 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 
 function RadioOption({ name, value, label, checked, onChange }: { name: string; value: string; label: string; checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; }) {
     return (
-        <label className={`cursor-pointer px-4 py-2 border rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${checked ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'}`}>
+        <label className={`cursor-pointer px-4 py-2 border rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${checked ? 'border-slate-700 bg-slate-50 text-slate-700 ring-1 ring-slate-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
             <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="hidden" />
-            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${checked ? 'border-blue-600' : 'border-slate-300'}`}>
-                {checked && <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />}
+            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${checked ? 'border-slate-700' : 'border-slate-300'}`}>
+                {checked && <div className="w-1.5 h-1.5 bg-slate-700 rounded-full" />}
             </div>
             {label}
         </label>
@@ -122,7 +124,7 @@ function DetailsPage() {
                 setUserInitials(profile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2));
 
                 if (!patientId) {
-                    setError('No patient ID provided in URL.');
+                    setError('Select a patient record before opening the chart.');
                     return;
                 }
 
@@ -212,8 +214,8 @@ function DetailsPage() {
     };
 
     const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 shadow-sm mb-4";
-    const headerCls = "flex items-center gap-3 text-sm font-semibold text-blue-600 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
-    const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-colors";
+    const headerCls = "flex items-center gap-3 text-sm font-semibold text-slate-700 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
+    const inputCls = "w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 outline-none transition-colors";
     const labelCls = "block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2";
 
     return (
@@ -230,7 +232,7 @@ function DetailsPage() {
                     </div>
                     <div className="flex items-center gap-3">
 
-                        <button onClick={() => window.history.back()} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Back</button>
+                        <button onClick={() => window.history.back()} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Back</button>
                     </div>
                 </header>
 
@@ -241,24 +243,24 @@ function DetailsPage() {
                         {error ? (
                             <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 font-semibold text-center">{error}</div>
                         ) : !patient ? (
-                            <div className="text-center py-10 text-slate-400 font-bold animate-pulse">Loading Patient Data...</div>
+                            <div className="text-center py-10 text-slate-400 font-bold animate-pulse">Loading patient chart...</div>
                         ) : showConsent ? (
-                            <div className="animate-in fade-in duration-300">
-                                <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Back to Details</button>
+                            <div className="">
+                                <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Back to Details</button>
                                 <PatientConsent patientId={patient.id} patientName={`${patient.firstName} ${patient.lastName}`} rhuPersonnel={userName} onConsentSaved={() => { setShowConsent(false); loadPatient(); }} />
                             </div>
                         ) : editing ? (
                             // Edit Mode Form...
-                            <form onSubmit={handleEditSubmit} className="animate-in fade-in duration-300">
-                                <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative ring-1 ring-blue-500/10">
-                                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">{patient.firstName?.[0]}{patient.lastName?.[0]}</div>
+                            <form onSubmit={handleEditSubmit} className="">
+                                <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative ring-1 ring-slate-500/10">
+                                    <div className="w-16 h-16 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">{patient.firstName?.[0]}{patient.lastName?.[0]}</div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-black text-blue-900 text-xl leading-tight truncate">Editing: {patient.firstName} {patient.lastName}</div>
-                                        <div className="text-sm text-blue-700 mt-1 font-medium">Update the necessary fields below and save your changes.</div>
+                                        <div className="font-black text-slate-900 text-xl leading-tight truncate">Editing: {patient.firstName} {patient.lastName}</div>
+                                        <div className="text-sm text-slate-700 mt-1 font-medium">Update the necessary fields below and save your changes.</div>
                                     </div>
                                     <div className="shrink-0 flex gap-2 w-full md:w-auto mt-4 md:mt-0">
                                         <button type="button" onClick={() => setEditing(false)} className="px-5 py-2.5 bg-white text-slate-600 border border-slate-300 hover:bg-slate-50 text-sm font-bold rounded-lg transition-colors flex-1 md:flex-none text-center">Cancel</button>
-                                        <button type="submit" disabled={saving} className={`px-5 py-2.5 text-white text-sm font-bold rounded-lg transition-all flex-1 md:flex-none text-center shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/30'}`}>{saving ? 'Saving...' : 'Save Changes'}</button>
+                                        <button type="submit" disabled={saving} className={`px-5 py-2.5 text-white text-sm font-bold rounded-lg transition-all flex-1 md:flex-none text-center shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 ${saving ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-800 hover:shadow-none'}`}>{saving ? 'Updating Chart...' : 'Update Patient Chart'}</button>
                                     </div>
                                 </div>
 
@@ -352,9 +354,9 @@ function DetailsPage() {
                             </form>
                         ) : (
                             // Read-Only Mode
-                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="">
                                 <div className="w-full bg-white border border-slate-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative">
-                                    <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
+                                    <div className="w-16 h-16 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
                                         {patient.firstName?.[0]}{patient.lastName?.[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -425,14 +427,14 @@ function DetailsPage() {
                                 <div className="flex flex-col gap-3">
                                     {/* Midwife action */}
                                     {role === 'midwives' && !patient.consent_signed && (
-                                        <button onClick={() => setShowConsent(true)} className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                        <button onClick={() => setShowConsent(true)} className="w-full bg-slate-700 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-sm hover:bg-slate-800 hover:shadow-none transition-all  flex items-center justify-center gap-3">
                                             Proceed to Patient Consent
                                         </button>
                                     )}
 
                                     {/* Nurse / Doctor / any role action */}
                                     {(role === 'nurse' || role === 'doctor' || role === 'midwives' || role === 'BHW') && (
-                                        <button onClick={handleOpenHistory} className="w-full bg-teal-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-teal-700 hover:shadow-teal-600/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                        <button onClick={handleOpenHistory} className="w-full bg-teal-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-sm hover:bg-teal-700 hover:shadow-teal-600/30 transition-all  flex items-center justify-center gap-3">
                                             View Complete Transaction History
                                         </button>
                                     )}
@@ -445,28 +447,17 @@ function DetailsPage() {
 
             {/* ─── UNIFIED TRANSACTION HISTORY MODAL ─── */}
             {historyModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-
-                        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
-                            <div>
-                                <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
-                                    Transaction History
-                                </h3>
-                                <p className="text-sm text-slate-500 font-medium mt-0.5">
-                                    {patient?.lastName}, {patient?.firstName} — Registration, consultations, lab, pharmacy, vaccines, follow-ups
-                                </p>
-                            </div>
-                            <button onClick={() => setHistoryModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold shrink-0">
-                                X
-                            </button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto bg-[#F8FAFC] flex-1 scrollbar-thin">
-                            {patientId && <PatientTransactionHistory patientId={patientId} />}
-                        </div>
-                    </div>
-                </div>
+                <ClinicalDrawer
+                    title="Transaction History"
+                    labelledBy="patient-transaction-history-title"
+                    onClose={() => setHistoryModalOpen(false)}
+                    subtitle={<>{patient?.lastName}, {patient?.firstName} - Registration, consultations, lab, pharmacy, vaccines, follow-ups</>}
+                >
+                    {patient && <PatientChartIdentityHeader patient={patient} compact className="mb-4" />}
+                    <PatientHistoryPanel>
+                        {patientId && <PatientTransactionHistory patientId={patientId} />}
+                    </PatientHistoryPanel>
+                </ClinicalDrawer>
             )}
 
         </div>

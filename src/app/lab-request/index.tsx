@@ -63,7 +63,7 @@ function LabRequest() {
         requested_by: formData.requestedBy || null,
         status: formData.status
       });
-      showToast(`Lab Request ${formData.status === 'Completed' ? 'Results Saved' : 'Submitted'}!`, false);
+      showToast(formData.status === 'Completed' ? 'Laboratory results recorded.' : 'Laboratory request sent to the work queue.', false);
     } catch (err) {
       logError('Failed to submit lab request', err);
       showToast(healthcareErrorMessage("submit the lab request"), true);
@@ -72,10 +72,10 @@ function LabRequest() {
     }
   };
 
-  if (!role) return <div>Loading...</div>;
+  if (!role) return <div>Loading clinical workspace...</div>;
 
   const isLab = role === 'labaratory';
-  const inputStyle = "border-b border-gray-400 focus:border-blue-600 outline-none bg-transparent px-2 text-sm w-full";
+  const inputStyle = "border-b border-gray-400 focus:border-slate-700 outline-none bg-transparent px-2 text-sm w-full";
 
   return (
     <>
@@ -128,17 +128,17 @@ function LabRequest() {
 
         {/* Lab Department Section */}
         {isLab && (
-          <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-bold text-blue-800 mb-4">Laboratory Results Entry</h3>
+          <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+            <h3 className="font-bold text-slate-800 mb-4">Laboratory Results Entry</h3>
             <textarea className="w-full p-3 border rounded mb-4 h-32" placeholder="Enter findings or append link to result file..." value={formData.labNotes} onChange={e => setFormData({...formData, labNotes: e.target.value})}></textarea>
             <label className="flex items-center gap-2 font-bold text-sm text-green-700">
               <input type="checkbox" checked={formData.status === 'Completed'} onChange={e => setFormData({...formData, status: e.target.checked ? 'Completed' : 'Pending'})} />
-              Mark as Completed (Sends back to Doctor)
+              Mark results as completed for doctor review
             </label>
           </div>
         )}
 
-        <button type="submit" disabled={isSubmitting} className="w-full bg-blue-700 text-white font-bold py-3 rounded mt-4 disabled:opacity-60">{isSubmitting ? 'Saving...' : isLab ? 'Save Lab Results' : 'Submit Lab Request'}</button>
+        <button type="submit" disabled={isSubmitting} className="w-full bg-slate-800 text-white font-bold py-3 rounded mt-4 disabled:opacity-60">{isSubmitting ? 'Recording...' : isLab ? 'Record Lab Results' : 'Send Lab Request'}</button>
       </form>
     </div>
     </>

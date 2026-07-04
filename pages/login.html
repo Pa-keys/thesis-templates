@@ -10,7 +10,7 @@
         :root {
             --navy: #0b1f3a;
             --navy-mid: #112b50;
-            --teal: #0fbfad;
+            --teal: #2f7d75;
             --surface: #f8fbff;
             --surface-line: #d9e5ef;
             --text: #10253d;
@@ -33,7 +33,7 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background: linear-gradient(135deg, #07192f 0%, #0b1f3a 55%, #0a2f4d 100%);
+            background: #0f172a;
         }
 
         .bg::before,
@@ -50,8 +50,7 @@
             height: 620px;
             top: -210px;
             right: -160px;
-            background: radial-gradient(circle, rgba(15, 191, 173, 0.12) 0%, transparent 68%);
-            animation: pulse 10s ease-in-out infinite;
+            display: none;
         }
 
         .bg::after {
@@ -59,8 +58,7 @@
             height: 480px;
             bottom: -130px;
             left: -110px;
-            background: radial-gradient(circle, rgba(15, 191, 173, 0.07) 0%, transparent 70%);
-            animation: pulse 12s ease-in-out infinite reverse;
+            display: none;
         }
 
         .bg-slide {
@@ -69,16 +67,13 @@
             z-index: 1;
             background-size: cover;
             background-position: center;
-            filter: blur(12px) saturate(0.9);
+            filter: saturate(0.75);
             opacity: 0;
-            transform: scale(1.04);
-            animation: loginCarousel 36s ease-in-out infinite;
-            will-change: opacity;
         }
 
-        .bg-slide:nth-child(1) { background-image: var(--login-bg-1, none); animation-delay: 0s; }
-        .bg-slide:nth-child(2) { background-image: var(--login-bg-2, none); animation-delay: 12s; }
-        .bg-slide:nth-child(3) { background-image: var(--login-bg-3, none); animation-delay: 24s; }
+        .bg-slide:nth-child(1) { background-image: var(--login-bg-1, none); opacity: 0.62; }
+        .bg-slide:nth-child(2) { background-image: var(--login-bg-2, none); }
+        .bg-slide:nth-child(3) { background-image: var(--login-bg-3, none); }
 
         .bg-tint {
             position: absolute;
@@ -94,20 +89,9 @@
             inset: 0;
             z-index: 4;
             background-image:
-                linear-gradient(rgba(120, 201, 222, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(120, 201, 222, 0.04) 1px, transparent 1px);
+                linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
             background-size: 56px 56px;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.7; }
-        }
-
-        @keyframes loginCarousel {
-            0%, 28% { opacity: 0; }
-            6%, 22% { opacity: 0.78; }
-            34%, 100% { opacity: 0; }
         }
 
         .page {
@@ -123,12 +107,6 @@
             flex-direction: column;
             justify-content: center;
             padding: clamp(40px, 6vw, 84px);
-            animation: fadeInLeft 0.8s ease both;
-        }
-
-        @keyframes fadeInLeft {
-            from { opacity: 0; transform: translateX(-30px); }
-            to { opacity: 1; transform: translateX(0); }
         }
 
         .brand {
@@ -203,7 +181,6 @@
             color: rgba(244, 251, 253, 0.88);
             font-size: 0.82rem;
             font-weight: 600;
-            backdrop-filter: blur(10px);
         }
 
         .trust-item::before {
@@ -212,15 +189,15 @@
             height: 8px;
             flex: 0 0 auto;
             border-radius: 999px;
-            background: #48d6c9;
-            box-shadow: 0 0 0 4px rgba(72, 214, 201, 0.13);
+            background: #2f7d75;
+            box-shadow: 0 0 0 4px rgba(47, 125, 117, 0.13);
         }
 
         .facility-note {
             max-width: 480px;
             margin-top: 48px;
             padding-left: 18px;
-            border-left: 3px solid rgba(72, 214, 201, 0.72);
+            border-left: 3px solid rgba(47, 125, 117, 0.72);
             color: rgba(226, 243, 248, 0.78);
             font-size: 0.88rem;
             line-height: 1.55;
@@ -231,12 +208,6 @@
             align-items: center;
             justify-content: center;
             padding: 40px clamp(28px, 4vw, 56px);
-            animation: fadeInRight 0.8s 0.2s ease both;
-        }
-
-        @keyframes fadeInRight {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
         }
 
         .card {
@@ -245,15 +216,15 @@
             padding: 42px 40px;
             border: 1px solid rgba(208, 224, 237, 0.95);
             border-radius: 16px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 249, 253, 0.97) 100%);
-            box-shadow: 0 22px 54px rgba(4, 18, 35, 0.28);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 8px 24px rgba(4, 18, 35, 0.18);
         }
 
         .card-header { margin-bottom: 30px; }
 
         .card-kicker {
             margin-bottom: 8px;
-            color: #087fb9;
+            color: #334155;
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.14em;
@@ -299,8 +270,8 @@
         }
 
         .field input:focus {
-            border-color: var(--teal);
-            box-shadow: 0 0 0 3px rgba(15, 191, 173, 0.15);
+            border-color: #334155;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.14);
         }
 
         .field input::placeholder { color: #8fa3b7; }
@@ -312,23 +283,22 @@
             padding: 13px 14px;
             border: none;
             border-radius: 8px;
-            background: #0c8cd4;
+            background: #334155;
             color: var(--white);
             font-family: 'DM Sans', sans-serif;
             font-size: 0.95rem;
             font-weight: 700;
             letter-spacing: 0.01em;
             cursor: pointer;
-            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            transition: background 0.2s, box-shadow 0.2s;
         }
 
         .login-btn:hover {
-            background: #087fbd;
-            box-shadow: 0 8px 18px rgba(12, 140, 212, 0.24);
-            transform: translateY(-1px);
+            background: #1e293b;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
         }
 
-        .login-btn:active { transform: translateY(0); }
+        .login-btn:active { background: #0f172a; }
         .login-btn.loading { pointer-events: none; opacity: 0.7; }
 
         .spinner {

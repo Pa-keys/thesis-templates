@@ -212,7 +212,7 @@ function LabRequestDetail({
 
                 <div className="lab-drawer-body space-y-6">
                     <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow">
+                        <div className="w-12 h-12 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow">
                             {request.patient_firstName?.[0]?.toUpperCase() ?? '?'}
                         </div>
                         <div>
@@ -253,7 +253,7 @@ function LabRequestDetail({
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {routine.map(t => (
                                                             <div key={t.label} className="flex items-center gap-2.5">
-                                                                <div className="w-4 h-4 rounded bg-blue-600 flex items-center justify-center shrink-0">
+                                                                <div className="w-4 h-4 rounded bg-slate-700 flex items-center justify-center shrink-0">
                                                                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                                                     </svg>
@@ -311,7 +311,7 @@ function LabRequestDetail({
                                 value={datePerformed}
                                 onChange={e => setDatePerformed(e.target.value)}
                                 disabled={request.status === 'Completed'}
-                                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-left focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-slate-800 disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-semibold disabled:cursor-not-allowed"
+                                className="w-full bg-white border border-slate-300 rounded-lg p-3 text-left focus:border-slate-500 focus:ring-1 focus:ring-slate-500 outline-none text-sm text-slate-800 disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-semibold disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
@@ -319,16 +319,16 @@ function LabRequestDetail({
                     <div>
                         <label className="clinical-field-label">
                             Lab Results / Findings
-                            {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Submitted</span>}
-                            {loadingLabResult && <span className="ml-2 text-blue-600 normal-case font-semibold">Loading saved result...</span>}
+                            {request.status === 'Completed' && <span className="ml-2 text-green-600 normal-case font-semibold inline-flex items-center gap-1"><Icon name="check" className="h-3.5 w-3.5" /> Result recorded</span>}
+                            {loadingLabResult && <span className="ml-2 text-slate-700 normal-case font-semibold">Loading recorded result...</span>}
                         </label>
                         <textarea
                             rows={6}
                             value={results}
                             onChange={e => setResults(e.target.value)}
                             disabled={request.status === 'Completed'}
-                            className="w-full bg-white border border-slate-300 rounded-lg p-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm leading-relaxed text-slate-800 resize-y disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-medium disabled:cursor-not-allowed"
-                            placeholder="Enter lab results, findings, or notes here..."
+                            className="w-full bg-white border border-slate-300 rounded-lg p-4 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 outline-none text-sm leading-relaxed text-slate-800 resize-y disabled:bg-slate-100 disabled:border-slate-300 disabled:text-slate-600 disabled:font-medium disabled:cursor-not-allowed"
+                            placeholder="Enter laboratory findings, interpretation, and relevant notes..."
                         />
                     </div>
                 </div>
@@ -338,9 +338,9 @@ function LabRequestDetail({
                         <button
                             onClick={handleMarkCompleted}
                             disabled={saving}
-                            className="w-full font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 text-sm"
+                            className="w-full font-semibold py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white shadow-sm transition-all  disabled:opacity-50 text-sm"
                         >
-                            {saving ? 'Submitting...' : <span className="inline-flex items-center justify-center gap-1.5"><Icon name="check" className="h-4 w-4" /> Submit Results</span>}
+                            {saving ? 'Recording Results...' : <span className="inline-flex items-center justify-center gap-1.5"><Icon name="check" className="h-4 w-4" /> Record Lab Results</span>}
                         </button>
                     </div>
                 )}
@@ -482,8 +482,8 @@ const LaboratoryDashboard = () => {
     };
 
     const statusBadge = (s: string | null) => {
-        if (s === 'Completed') return 'bg-green-100 text-green-700';
-        return 'bg-amber-100 text-amber-700';
+        if (s === 'Completed') return 'success';
+        return 'warning';
     };
 
     const countTests = (r: LabRequest) =>
@@ -562,7 +562,7 @@ const LaboratoryDashboard = () => {
                             <div className="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60">
                                 <div>
                                     <h2 className="text-base font-semibold text-slate-800">Lab Requests</h2>
-                                    <p className="text-xs text-slate-500">Click a row to view details and submit results</p>
+                                    <p className="text-xs text-slate-500">Select a request to review details and record laboratory results.</p>
                                 </div>
                                 <div className="flex items-center gap-3 flex-wrap">
                                     <span className="text-xs font-medium text-slate-500">{stats.pending} pending · {stats.completed} completed · {stats.total} total</span>
@@ -570,7 +570,8 @@ const LaboratoryDashboard = () => {
                                         <button
                                             key={s}
                                             onClick={() => setStatusFilter(s)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                            className={`clinical-filter-button ${statusFilter === s ? 'is-active' : ''}`}
+                                            aria-pressed={statusFilter === s}
                                         >
                                             {s}
                                         </button>
@@ -585,7 +586,7 @@ const LaboratoryDashboard = () => {
                                         type="text"
                                         aria-label="Search lab requests by patient, lab number, or complaint"
                                         placeholder="Search by patient name, lab no, complaint..."
-                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white"
+                                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 text-sm bg-white"
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                     />
@@ -628,11 +629,11 @@ const LaboratoryDashboard = () => {
                                                     <tr
                                                         key={r.labrequest_id}
                                                         onClick={() => setSelectedRequest(r)}
-                                                        className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                                                        className="cursor-pointer group"
                                                     >
                                                         <td className="px-6 py-3">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                                                <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
                                                                     {r.patient_firstName?.[0]?.toUpperCase() ?? '?'}
                                                                 </div>
                                                                 <div>
@@ -647,19 +648,19 @@ const LaboratoryDashboard = () => {
                                                         </td>
                                                         <td className="px-6 py-3 text-slate-600">{formatDisplayDate(r.request_date)}</td>
                                                         <td className="px-6 py-3">
-                                                            <span className="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">
+                                                            <span className="clinical-neutral-badge">
                                                                 {testCount} test{testCount !== 1 ? 's' : ''}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-3 text-slate-600 max-w-[180px] truncate">{r.chief_complaint || '—'}</td>
                                                         <td className="px-6 py-3 text-slate-600">{r.requested_by || '—'}</td>
                                                         <td className="px-6 py-3">
-                                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${statusBadge(r.status)}`}>
+                                                            <span className={`clinical-status-badge ${statusBadge(r.status)}`}>
                                                                 {r.status || 'Pending'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-3 text-center">
-                                                            <span className="text-blue-600 font-bold group-hover:translate-x-1 inline-block transition-transform">→</span>
+                                                        <td className="px-6 py-3 text-right">
+                                                            <span className="clinical-link-action">Review</span>
                                                         </td>
                                                     </tr>
                                                 );

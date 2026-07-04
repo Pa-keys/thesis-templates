@@ -151,7 +151,7 @@ const BhwDashboard = () => {
                 />
 
                 <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
-                    <div className="w-full animate-in fade-in duration-500">
+                    <div className="w-full ">
                         
                         {/* ─── DASHBOARD VIEW ─── */}
                         {activePage === 'dashboard' && (
@@ -203,7 +203,7 @@ const BhwDashboard = () => {
                                             )}
                                         </div>
                                         <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/60 text-right">
-                                            <button onClick={() => setActivePage('records')} className="text-blue-600 font-semibold text-sm hover:text-blue-700">View Patient Registry</button>
+                                            <button onClick={() => setActivePage('records')} className="text-slate-700 font-semibold text-sm hover:text-slate-700">View Patient Registry</button>
                                         </div>
                                     </div>
 
@@ -228,7 +228,7 @@ const BhwDashboard = () => {
                                             ))}
                                         </div>
                                         <div className="grid grid-cols-1 gap-2 p-4 border-t border-slate-200 bg-slate-50/60">
-                                            <button onClick={() => setActivePage('new-record')} className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">
+                                            <button onClick={() => setActivePage('new-record')} className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
                                                 <Icon name="user-plus" className="h-4 w-4" /> Register Patient
                                             </button>
                                             <button onClick={() => setActivePage('reports')} className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">

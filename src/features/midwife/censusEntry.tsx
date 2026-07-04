@@ -205,7 +205,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
             });
             
             // Show Global UI Success Toast
-            showToast('Record Saved Successfully', false, 'The database has been updated.');
+            showToast('FHSIS entry recorded.', false, 'The patient census record is now available for reporting.');
             
             setTimeout(async () => {
                 setFormData({}); 
@@ -239,7 +239,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
     ];
 
     return (
-        <div className="w-full animate-in fade-in duration-500 relative pb-10">
+        <div className="w-full  relative pb-10">
             
             <ToastComponent />
             <div className="mb-8">
@@ -259,7 +259,8 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 })]);
                                 setSelectedPatient(null);
                             }}
-                            className={`flex-none px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${ activeLogbook === log.id ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' }`}
+                            className={`clinical-filter-button flex-none ${activeLogbook === log.id ? 'is-active' : ''}`}
+                            aria-pressed={activeLogbook === log.id}
                         >
                             <span className="inline-flex items-center gap-2"><Icon name={log.icon} className="h-4 w-4" />{log.label}</span>
                         </button>
@@ -274,37 +275,37 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             <div>
                                 <h3 className="text-lg font-bold text-slate-800">{logbooks.find(l => l.id === activeLogbook)?.label} Registry</h3>
                             </div>
-                            <button onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-700">
+                            <button onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-bold shadow-md hover:bg-slate-800">
                                 <Icon name="plus" className="inline h-4 w-4 mr-1" /> New Entry
                             </button>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-white border-b border-slate-200">
+                        <div className="clinical-table-scroll">
+                            <table className="clinical-table min-w-[720px]">
+                                <thead>
                                     <tr>
-                                        <th className="p-4 pl-6 font-bold text-xs text-slate-500 uppercase">Date</th>
-                                        <th className="p-4 font-bold text-xs text-slate-500 uppercase">Patient Name</th>
-                                        <th className="p-4 font-bold text-xs text-slate-500 uppercase">Address</th>
-                                        <th className="p-4 pr-6 font-bold text-xs text-slate-500 uppercase text-right">Status</th>
+                                        <th>Date</th>
+                                        <th>Patient Name</th>
+                                        <th>Address</th>
+                                        <th className="text-right">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100 bg-white">
+                                <tbody>
                                     {activeRecords.length > 0 ? activeRecords.map(record => (
-                                        <tr key={record.id} className="hover:bg-slate-50">
-                                            <td className="p-4 pl-6 text-slate-600 font-medium">{new Date(record.created_at).toLocaleDateString()}</td>
-                                            <td className="p-4 font-bold text-slate-800 capitalize">{record.patientName}</td>
-                                            <td className="p-4 capitalize text-slate-600">{record.address || 'No Address'}</td>
-                                            <td className="p-4 pr-6 text-right"><span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-xs font-bold">Saved</span></td>
+                                        <tr key={record.id}>
+                                            <td className="text-slate-600 font-medium">{new Date(record.created_at).toLocaleDateString()}</td>
+                                            <td className="font-bold text-slate-800 capitalize">{record.patientName}</td>
+                                            <td className="capitalize text-slate-600">{record.address || 'No Address'}</td>
+                                            <td className="text-right"><span className="clinical-status-badge success">Saved</span></td>
                                         </tr>
                                     )) : (
-                                        <tr><td colSpan={4} className="p-12 text-center text-slate-400">No census entries found. Click 'New Entry' to start.</td></tr>
+                                        <tr><td colSpan={4}><div className="clinical-table-state">No census entries recorded for this logbook yet. Use New Entry to add a patient record.</div></td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 ) : (
-                    <div className="card shadow-sm border border-slate-200 p-8 animate-in slide-in-from-right-8">
+                    <div className="card shadow-sm border border-slate-200 p-8 ">
                         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
                             <button onClick={() => setIsAddingEntry(false)} className="px-3 py-1.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">← Back</button>
                             <h3 className="text-xl font-extrabold text-slate-800">New {logbooks.find(l => l.id === activeLogbook)?.label} Entry</h3>
@@ -318,9 +319,9 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">1. Select Patient</label>
                                 {!selectedPatient ? (
                                     <div className="relative">
-                                        <input type="text" aria-label="Search patient name for census entry" placeholder="Search patient name..." value={searchQuery} onFocus={() => setShowDropdown(true)} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-4 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
+                                        <input type="text" aria-label="Search patient name for census entry" placeholder="Search patient name..." value={searchQuery} onFocus={() => setShowDropdown(true)} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-4 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-500 outline-none shadow-sm" />
                                         {showDropdown && searchQuery && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-64 overflow-y-auto z-50">
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-sm border border-slate-200 max-h-64 overflow-y-auto z-50">
                                                 {filteredPatients.length > 0 ? filteredPatients.map(p => (
                                                     <button
                                                         key={p.id}
@@ -335,7 +336,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                             setSelectedPatient(p);
                                                             setShowDropdown(false);
                                                         }}
-                                                        className="w-full text-left px-5 py-4 hover:bg-blue-50 border-b border-slate-50 flex justify-between"
+                                                        className="w-full text-left px-5 py-4 hover:bg-slate-50 border-b border-slate-50 flex justify-between"
                                                     >
                                                         <span className="font-bold text-slate-800 capitalize">{p.firstName} {p.lastName}</span>
                                                         <span className="text-[0.65rem] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded uppercase">{p.address}</span>
@@ -351,11 +352,11 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="bg-blue-50 border border-blue-200 p-5 rounded-xl flex justify-between items-center">
+                                    <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl flex justify-between items-center">
                                         <div>
                                             <p className="font-bold text-slate-900 capitalize text-lg">{selectedPatient.firstName} {selectedPatient.lastName}</p>
                                             {/* READ-ONLY DISPLAY FOR ALL TABS */}
-                                            <p className="text-xs font-semibold text-blue-600 mt-1 uppercase">
+                                            <p className="text-xs font-semibold text-slate-700 mt-1 uppercase">
                                                 Brgy. {selectedPatient.address} • Age: {selectedPatient.age || 'N/A'} • Sex: {selectedPatient.sex || 'N/A'} 
                                                 {activeLogbook === 'child' && ` • DOB: ${selectedPatient.birthday}`}
                                             </p>
@@ -396,7 +397,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                     <input type="number" name="weight" onChange={handleInputChange} required className="w-full p-2 border border-slate-300 rounded-lg text-left text-slate-900 bg-white shadow-sm" />
                                                 </div>
                                                 {calculatedBMI && (
-                                                    <div className="col-span-2 mt-2 p-3 bg-blue-50 rounded-lg text-sm border border-blue-100 flex justify-between">
+                                                    <div className="col-span-2 mt-2 p-3 bg-slate-50 rounded-lg text-sm border border-slate-200 flex justify-between">
                                                         <span>Calculated BMI: <strong>{calculatedBMI.value}</strong></span>
                                                         <span>Status: <strong className={calculatedBMI.status === 'Normal' ? 'text-green-600' : 'text-amber-600'}>{calculatedBMI.status}</strong></span>
                                                     </div>
@@ -420,9 +421,9 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                                                     <div>
                                                         <label className="block text-xs font-bold text-slate-500 uppercase">Multiple Vaccine Records</label>
-                                                        <p className="mt-1 text-xs font-medium text-slate-500">Each vaccine is saved as an item inside this child FHSIS record.</p>
+                                                        <p className="mt-1 text-xs font-medium text-slate-500">Record each vaccine dose as part of this child health entry.</p>
                                                     </div>
-                                                    <button type="button" onClick={addVaccineRow} className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                                                    <button type="button" onClick={addVaccineRow} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">
                                                         Add Vaccine
                                                     </button>
                                                 </div>
@@ -485,7 +486,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                     ))}
                                                 </div>
                                                 {calculatedBCGAge && (
-                                                    <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm border border-blue-100 font-semibold text-blue-800">
+                                                    <div className="mt-3 p-3 bg-slate-50 rounded-lg text-sm border border-slate-200 font-semibold text-slate-800">
                                                         Auto-tagged Category: {calculatedBCGAge}
                                                     </div>
                                                 )}
@@ -525,7 +526,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                     {activeLogbook === 'dental' && (
                                         <div>
                                             <label className="flex items-center gap-3 p-4 bg-white border border-slate-300 rounded-xl cursor-pointer">
-                                                <input type="checkbox" name="received_bohc" onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" />
+                                                <input type="checkbox" name="received_bohc" onChange={handleInputChange} className="w-5 h-5 text-slate-700 rounded focus:ring-slate-500" />
                                                 <span className="text-sm font-bold text-slate-800">Received Basic Oral Health Care (BOHC)</span>
                                             </label>
                                             {formData.received_bohc && selectedPatient && (
@@ -583,7 +584,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                             <div className="p-4 bg-white border border-slate-200 rounded-lg">
                                                 <h4 className="font-bold text-sm text-slate-800 mb-3 border-b pb-2">Rabies / Animal Bite</h4>
                                                 <label className="flex items-center gap-3 mb-3 cursor-pointer">
-                                                    <input type="checkbox" name="animal_bite" onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded" />
+                                                    <input type="checkbox" name="animal_bite" onChange={handleInputChange} className="w-4 h-4 text-slate-700 rounded" />
                                                     <span className="text-sm font-medium">Patient had an animal bite</span>
                                                 </label>
                                                 {formData.animal_bite && (
@@ -602,8 +603,8 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                 </div>
                                 
                                 <div className="flex justify-end pt-4">
-                                    <button type="submit" disabled={isSubmitting || !selectedPatient} className="px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
-                                        {isSubmitting ? <span className="animate-pulse">Saving Record...</span> : 'Save FHSIS Record'}
+                                    <button type="submit" disabled={isSubmitting || !selectedPatient} className="px-8 py-3 bg-slate-700 text-white text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 transition flex items-center gap-2">
+                                        {isSubmitting ? <span className="animate-pulse">Recording Census Entry...</span> : 'Record FHSIS Entry'}
                                     </button>
                                 </div>
                             </form>

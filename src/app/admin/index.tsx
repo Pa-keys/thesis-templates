@@ -70,7 +70,7 @@ async function getFunctionErrorMessage(error: unknown, data?: CreateUserResponse
 // ─── Utility Components ───────────────────────────────────────────────────────
 const RoleBadge = ({ role }: { role: string }) => {
     const roleColors: Record<string, string> = {
-        doctor: 'bg-blue-50 text-blue-600',
+        doctor: 'bg-slate-50 text-slate-700',
         nurse: 'bg-green-50 text-green-600',
         BHW: 'bg-orange-50 text-orange-600',
         midwives: 'bg-pink-50 text-pink-700',
@@ -103,7 +103,7 @@ const RoleBadge = ({ role }: { role: string }) => {
 const getAvatarColor = (role: string): string => {
     const normalizedRole = role === 'labaratory' ? 'laboratory' : role;
     const map: Record<string, string> = {
-        doctor: 'bg-blue-600',
+        doctor: 'bg-slate-700',
         nurse: 'bg-green-600',
         BHW: 'bg-orange-600',
         midwives: 'bg-pink-700',
@@ -402,7 +402,7 @@ const AdminDashboard = () => {
                     onOpenNavigation={() => setIsMobileMenuOpen(true)}
                 />
 
-                <div className="w-full flex flex-col gap-5 animate-in fade-in duration-500">
+                <div className="w-full flex flex-col gap-5 ">
                     {activePage === 'audit-log' ? (
                         <>
                             <PageHeader
@@ -438,8 +438,8 @@ const AdminDashboard = () => {
                     <div className="ops-panel flex flex-col">
                         {/* Card Header */}
                         <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60">
-                            <h2 className="text-base font-semibold text-slate-800 tracking-tight">System Users</h2>
-                            <p className="text-sm text-slate-500">Manage accounts and role assignments</p>
+                            <h2 className="text-base font-semibold text-slate-800 tracking-tight">Staff Accounts</h2>
+                            <p className="text-sm text-slate-500">Maintain authorized MEDISENS access and role assignments.</p>
                         </div>
 
                         {/* Filter Bar */}
@@ -452,14 +452,14 @@ const AdminDashboard = () => {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     aria-label="Search users by name or email"
                                     placeholder="Search by name or email..."
-                                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all"
                                 />
                             </div>
                             <div className="flex gap-3 w-full sm:w-auto">
                                 <select
                                     value={roleFilter}
                                     onChange={(e) => setRoleFilter(e.target.value)}
-                                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300 transition-all min-w-[140px] cursor-pointer"
+                                    className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 hover:border-slate-300 transition-all min-w-[140px] cursor-pointer"
                                 >
                                     <option value="">All Roles</option>
                                     <option value="doctor">Doctor</option>
@@ -470,14 +470,14 @@ const AdminDashboard = () => {
                                     <option value="labaratory">Laboratory</option>
                                     <option value="admin">Admin</option>
                                 </select>
-                                <button onClick={openAddModal} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-blue-600/20 transition-all active:scale-95 shrink-0 justify-center">
+                                <button onClick={openAddModal} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-none transition-all  shrink-0 justify-center">
                                     <Icon name="user-plus" className="h-4 w-4" /> Add User
                                 </button>
                             </div>
                         </div>
 
                         {/* Table Header */}
-                        <div className="hidden md:grid grid-cols-[minmax(0,2fr)_160px_200px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-black uppercase tracking-wider text-slate-400">
+                        <div className="hidden md:grid grid-cols-[minmax(0,2fr)_160px_200px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             <div>User</div>
                             <div>Role</div>
                             <div className="text-right">Actions</div>
@@ -486,12 +486,12 @@ const AdminDashboard = () => {
                         {/* Table List */}
                         <div className="flex flex-col flex-1">
                             {isLoading ? (
-                                <LoadingState label="Loading users..." />
+                                <LoadingState label="Loading staff accounts..." />
                             ) : filteredUsers.length === 0 ? (
-                                <div className="p-16 flex flex-col items-center justify-center text-center">
+                                <div className="clinical-table-state flex-col p-12">
                                     <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-2xl flex items-center justify-center mb-4"><Icon name="users" className="h-8 w-8" /></div>
-                                    <h3 className="text-lg font-bold text-slate-700">No Users Found</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Try adjusting your filters or search query.</p>
+                                    <h3 className="text-lg font-bold text-slate-700">No staff accounts found</h3>
+                                    <p className="text-sm text-slate-500 mt-1">Adjust the role filter or search by staff name or email.</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-slate-100">
@@ -499,7 +499,7 @@ const AdminDashboard = () => {
                                         const av = (u.full_name?.[0] || '?').toUpperCase();
                                         const colorClass = getAvatarColor(u.role);
                                         return (
-                                            <div key={u.id} className="flex flex-col md:grid md:grid-cols-[minmax(0,2fr)_160px_200px] md:items-center gap-4 p-5 hover:bg-slate-50/80 transition-colors group">
+                                            <div key={u.id} className="flex flex-col md:grid md:grid-cols-[minmax(0,2fr)_160px_200px] md:items-center gap-4 px-5 py-3.5 hover:bg-slate-50/80 group">
                                                 {/* User Info */}
                                                 <div className="flex items-center gap-3.5 min-w-0">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0 shadow-sm ${colorClass}`}>
@@ -518,10 +518,10 @@ const AdminDashboard = () => {
 
                                                 {/* Actions */}
                                                 <div className="flex items-center md:justify-end gap-2 md:pl-0 pl-[54px] mt-2 md:mt-0">
-                                                    <button onClick={() => openEditModal(u.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
+                                                    <button onClick={() => openEditModal(u.id)} className="clinical-row-action min-w-[75px]">
                                                         <Icon name="edit" className="h-3.5 w-3.5" /> Edit
                                                     </button>
-                                                    <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded-lg text-[10px] font-bold transition-all shadow-sm min-w-[75px]">
+                                                    <button onClick={() => openConfirmDelete(u.id, u.full_name || 'User')} className="clinical-row-action danger min-w-[75px]">
                                                         <Icon name="trash" className="h-3.5 w-3.5" /> Delete
                                                     </button>
                                                 </div>
@@ -540,8 +540,8 @@ const AdminDashboard = () => {
 
             {/* ─── Add/Edit User Modal ─── */}
             {isUserModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={(e) => { if (e.target === e.currentTarget) closeUserModal(); }}>
-                    <div role="dialog" aria-modal="true" aria-labelledby="user-dialog-title" className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 " onClick={(e) => { if (e.target === e.currentTarget) closeUserModal(); }}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="user-dialog-title" className="bg-white w-full max-w-md rounded-2xl shadow-sm flex flex-col  overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
                                 <h3 id="user-dialog-title" className="text-xl font-black text-slate-800 tracking-tight">{isEditMode ? `Edit: ${fFullName}` : 'Add New User'}</h3>
@@ -552,29 +552,29 @@ const AdminDashboard = () => {
                         <div className="p-6 space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
-                                <input type="text" value={fFullName} onChange={e => setFFullName(e.target.value)} placeholder="e.g. Dr. Juan Dela Cruz" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                <input type="text" value={fFullName} onChange={e => setFFullName(e.target.value)} placeholder="e.g. Dr. Juan Dela Cruz" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all" />
                             </div>
 
                             {!isEditMode && (
                                 <>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
-                                        <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="e.g. user@medisens.com" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                        <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="e.g. user@medisens.com" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all" />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
-                                            <input type="password" value={fPassword} onChange={e => setFPassword(e.target.value)} placeholder="Min. 6 chars" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                            <input type="password" value={fPassword} onChange={e => setFPassword(e.target.value)} placeholder="Min. 6 chars" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all" />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Confirm Password</label>
-                                            <input type="password" value={fConfirmPassword} onChange={e => setFConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all" />
+                                            <input type="password" value={fConfirmPassword} onChange={e => setFConfirmPassword(e.target.value)} placeholder="Repeat password" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all" />
                                         </div>
                                     </div>
                                     <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-2">
-                                        <div className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Secure Account Creation</div>
+                                        <div className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Authorized Account Creation</div>
                                         <p className="text-[11px] text-amber-800 font-medium leading-snug">
-                                            New accounts are created through the Supabase create-user Edge Function. The service role key must stay server-side in Edge Function secrets.
+                                            New accounts must be created only for approved RHU personnel. Assign the correct role before saving access.
                                         </p>
                                     </div>
                                 </>
@@ -582,7 +582,7 @@ const AdminDashboard = () => {
 
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role Assignment</label>
-                                <select value={fRole} onChange={e => setFRole(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+                                <select value={fRole} onChange={e => setFRole(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all cursor-pointer">
                                     <option value="" disabled>Select a role...</option>
                                     <option value="doctor">Doctor</option>
                                     <option value="nurse">Nurse</option>
@@ -596,7 +596,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
                             <button onClick={closeUserModal} disabled={isSaving} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
-                            <button onClick={handleSaveUser} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-600/20 transition-all disabled:opacity-50 min-w-[140px] justify-center text-center">
+                            <button onClick={handleSaveUser} disabled={isSaving} className="flex items-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-sm font-bold shadow-md shadow-none transition-all disabled:opacity-50 min-w-[140px] justify-center text-center">
                                 {isSaving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create User'}
                             </button>
                         </div>
@@ -606,8 +606,8 @@ const AdminDashboard = () => {
 
             {/* ─── Confirm Delete Modal ─── */}
             {isConfirmModalOpen && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={(e) => { if (e.target === e.currentTarget && !isSaving) closeConfirmModal(); }}>
-                    <div role="dialog" aria-modal="true" aria-labelledby="delete-user-dialog-title" className="bg-white w-full max-w-[360px] rounded-[24px] shadow-2xl flex flex-col items-center p-8 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 " onClick={(e) => { if (e.target === e.currentTarget && !isSaving) closeConfirmModal(); }}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="delete-user-dialog-title" className="bg-white w-full max-w-[360px] rounded-[24px] shadow-sm flex flex-col items-center p-8  text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-red-500"></div>
                         <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-5 shadow-inner"><Icon name="trash" className="h-8 w-8" /></div>
                         <h3 id="delete-user-dialog-title" className="text-xl font-black text-slate-800 tracking-tight mb-2">Delete User?</h3>

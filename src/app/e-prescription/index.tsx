@@ -58,7 +58,7 @@ function EPrescription() {
         signature_url: sigUrl,
         status: 'Pending'
       });
-      showToast('Prescription saved successfully!', false);
+      showToast('E-prescription authorized and sent to pharmacy.', false);
       sigCanvas.current?.clear();
     } catch (err) {
       logError('Failed to save prescription', err);
@@ -68,14 +68,14 @@ function EPrescription() {
     }
   };
 
-  if (!role) return <div>Loading...</div>;
+  if (!role) return <div>Loading clinical workspace...</div>;
 
-  const inputStyle = "w-full border-b border-gray-400 focus:border-blue-600 outline-none bg-transparent py-1 px-2 text-sm";
+  const inputStyle = "w-full border-b border-gray-400 focus:border-slate-700 outline-none bg-transparent py-1 px-2 text-sm";
 
   return (
     <>
     <ToastComponent />
-    <div className="w-full p-4 md:p-6 bg-white shadow-lg rounded-lg mt-4 md:mt-6 border-t-8 border-blue-800">
+    <div className="w-full p-4 md:p-6 bg-white shadow-sm rounded-lg mt-4 md:mt-6 border-t-8 border-slate-800">
       <div className="flex justify-between items-center mb-8 border-b-2 border-gray-800 pb-4">
         <div className="text-center w-full">
           <h2 className="text-xl font-bold uppercase">Republic of the Philippines</h2>
@@ -105,7 +105,7 @@ function EPrescription() {
               <div><label className="text-xs text-gray-500">Qty</label><input type="text" placeholder="#21" value={med.quantity} onChange={e => handleMedChange(i, 'quantity', e.target.value)} className={inputStyle} /></div>
             </div>
           ))}
-          {role === 'doctor' && <button type="button" onClick={handleAddMed} className="text-blue-600 text-sm font-bold">+ Add Another Medication</button>}
+          {role === 'doctor' && <button type="button" onClick={handleAddMed} className="text-slate-700 text-sm font-bold">+ Add Another Medication</button>}
         </div>
 
         <div className="flex justify-end mt-16">
@@ -123,7 +123,7 @@ function EPrescription() {
           </div>
         </div>
 
-        {role === 'doctor' && <button type="submit" disabled={isSubmitting} className="w-full bg-blue-700 text-white font-bold py-3 rounded hover:bg-blue-800 disabled:opacity-60">{isSubmitting ? 'Saving Prescription...' : 'Authorize & Save Prescription'}</button>}
+        {role === 'doctor' && <button type="submit" disabled={isSubmitting} className="w-full bg-slate-700 text-white font-bold py-3 rounded hover:bg-slate-800 disabled:opacity-60">{isSubmitting ? 'Authorizing Prescription...' : 'Authorize E-Prescription'}</button>}
       </form>
     </div>
     </>

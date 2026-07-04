@@ -9,14 +9,14 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const toneClasses: Record<BadgeTone, string> = {
-    blue: 'border-[#BFE3F7] bg-[#EAF6FF] text-[#147EC1]',
-    green: 'border-[#BFE3F7] bg-[#EAF6FF] text-[#147EC1]',
+    blue: 'border-[#CBD5E1] bg-[#F1F5F9] text-[#334155]',
+    green: 'border-[#A7D8D1] bg-[#ECFDF5] text-[#2F7D75]',
     amber: 'border-amber-200 bg-amber-50 text-amber-700',
     red: 'border-red-200 bg-red-50 text-red-700',
     slate: 'border-[#DDE7EF] bg-[#F8FAFC] text-[#456987]',
     pink: 'border-pink-200 bg-pink-50 text-pink-700',
     indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-    teal: 'border-[#BFE3F7] bg-[#EAF6FF] text-[#147EC1]',
+    teal: 'border-[#A7D8D1] bg-[#ECFDF5] text-[#2F7D75]',
 };
 
 export function Badge({ children, tone = 'slate', className, ...props }: BadgeProps) {

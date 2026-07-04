@@ -3,6 +3,7 @@ import { fetchAuditLogs, type AuditLog, type AuditLogFilters } from './services'
 import { Icon } from '../../components/shared/Icon';
 import { LoadingState } from '../../components/shared/LoadingState';
 import { EmptyState } from '../../components/shared/EmptyState';
+import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 
 const PAGE_SIZE = 25;
@@ -26,24 +27,24 @@ const DATE_PRESETS: Array<{ id: DatePreset; label: string }> = [
 
 const actionStyles: Record<string, { label: string; icon: string; className: string }> = {
     create: { label: 'Create', icon: 'plus', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-    update: { label: 'Update', icon: 'edit', className: 'border-blue-200 bg-blue-50 text-blue-700' },
+    update: { label: 'Update', icon: 'edit', className: 'border-slate-200 bg-slate-50 text-slate-700' },
     login: { label: 'Login', icon: 'lock', className: 'border-violet-200 bg-violet-50 text-violet-700' },
     logout: { label: 'Logout', icon: 'logout', className: 'border-slate-200 bg-slate-100 text-slate-700' },
     generate: { label: 'Generate Report', icon: 'printer', className: 'border-orange-200 bg-orange-50 text-orange-700' },
     delete: { label: 'Delete', icon: 'trash', className: 'border-red-200 bg-red-50 text-red-700' },
     archive: { label: 'Archive', icon: 'inbox', className: 'border-red-200 bg-red-50 text-red-700' },
-    dispense: { label: 'Dispense', icon: 'pill', className: 'border-cyan-200 bg-cyan-50 text-cyan-700' },
+    dispense: { label: 'Dispense', icon: 'pill', className: 'border-teal-200 bg-teal-50 text-teal-700' },
     view: { label: 'View', icon: 'file-text', className: 'border-slate-200 bg-white text-slate-700' },
 };
 
 const moduleStyles: Record<string, { icon: string; className: string }> = {
     Authentication: { icon: 'lock', className: 'bg-violet-50 text-violet-700 ring-violet-100' },
     Administration: { icon: 'shield-plus', className: 'bg-slate-100 text-slate-700 ring-slate-200' },
-    'Patient Records': { icon: 'id-card', className: 'bg-blue-50 text-blue-700 ring-blue-100' },
+    'Patient Records': { icon: 'id-card', className: 'bg-slate-50 text-slate-700 ring-slate-100' },
     Consultation: { icon: 'stethoscope', className: 'bg-teal-50 text-teal-700 ring-teal-100' },
-    'Census Entry': { icon: 'clipboard', className: 'bg-sky-50 text-sky-700 ring-sky-100' },
+    'Census Entry': { icon: 'clipboard', className: 'bg-slate-50 text-slate-700 ring-slate-100' },
     Laboratory: { icon: 'flask', className: 'bg-purple-50 text-purple-700 ring-purple-100' },
-    Pharmacy: { icon: 'pill', className: 'bg-cyan-50 text-cyan-700 ring-cyan-100' },
+    Pharmacy: { icon: 'pill', className: 'bg-teal-50 text-teal-700 ring-teal-100' },
     Reports: { icon: 'chart', className: 'bg-orange-50 text-orange-700 ring-orange-100' },
 };
 
@@ -144,25 +145,14 @@ function DetailDrawer({ log, onClose }: { log: AuditLog | null; onClose: () => v
     const metadata = safeMetadataEntries(log.metadata);
 
     return (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/35 backdrop-blur-[2px]" onMouseDown={onClose}>
-            <aside
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="audit-details-title"
-                className="h-full w-full max-w-[560px] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl"
-                onMouseDown={event => event.stopPropagation()}
-            >
-                <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4">
-                    <div>
-                        <h3 id="audit-details-title" className="text-lg font-black tracking-tight text-slate-900">Audit Entry Details</h3>
-                        <p className="text-sm font-medium text-slate-500">Read-only review of a recorded system event.</p>
-                    </div>
-                    <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800" aria-label="Close audit details">
-                        <Icon name="close" className="h-4 w-4" />
-                    </button>
-                </div>
-
-                <div className="space-y-5 p-5">
+        <ClinicalDrawer
+            title="Audit Entry Details"
+            labelledBy="audit-details-title"
+            onClose={onClose}
+            subtitle="Read-only review of a recorded system event."
+            className="max-w-[560px]"
+        >
+                <div className="space-y-5">
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <div className="mb-3 flex flex-wrap items-center gap-2">
                             <ActionBadge action={log.action} />
@@ -198,8 +188,7 @@ function DetailDrawer({ log, onClose }: { log: AuditLog | null; onClose: () => v
                         )}
                     </section>
                 </div>
-            </aside>
-        </div>
+        </ClinicalDrawer>
     );
 }
 
@@ -262,8 +251,8 @@ export function AuditLogPage() {
 
     const datePresetButtonClass = (preset: DatePreset) => (
         datePreset === preset
-            ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20'
-            : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+            ? 'clinical-filter-button is-active'
+            : 'clinical-filter-button'
     );
 
     const setCustomDate = (key: 'fromDate' | 'toDate', value: string) => {
@@ -279,7 +268,7 @@ export function AuditLogPage() {
                         <h2 className="text-base font-black tracking-tight text-slate-900">Audit Log</h2>
                         <p className="text-sm font-medium text-slate-500">Read-only system activity log for administrative and clinical governance review.</p>
                         <p className="mt-2 flex max-w-3xl gap-2 text-xs font-semibold leading-5 text-slate-500">
-                            <Icon name="lock" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" />
+                            <Icon name="lock" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-700" />
                             User activities are recorded for accountability, security, and compliance with the Philippine Data Privacy Act of 2012.
                         </p>
                     </div>
@@ -289,7 +278,7 @@ export function AuditLogPage() {
                                 key={preset.id}
                                 type="button"
                                 onClick={() => applyDatePreset(preset.id)}
-                                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${datePresetButtonClass(preset.id)}`}
+                                className={`${datePresetButtonClass(preset.id)} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600`}
                                 aria-pressed={datePreset === preset.id}
                             >
                                 {preset.label}
@@ -307,11 +296,11 @@ export function AuditLogPage() {
                                 value={filters.search ?? ''}
                                 onChange={(event) => setFilter('search', event.target.value)}
                                 placeholder="Search user, patient, ID, module, description..."
-                                className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm font-medium text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20"
                             />
                         </div>
                     </label>
-                    <input value={filters.user ?? ''} onChange={(event) => setFilter('user', event.target.value)} placeholder="Filter by user" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 lg:col-span-2" />
+                    <input value={filters.user ?? ''} onChange={(event) => setFilter('user', event.target.value)} placeholder="Filter by user" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20 lg:col-span-2" />
                     <select value={filters.role ?? ''} onChange={(event) => setFilter('role', event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 lg:col-span-2">
                         <option value="">All roles</option>
                         {ROLES.map(role => <option key={role} value={role}>{role}</option>)}
@@ -333,7 +322,7 @@ export function AuditLogPage() {
                 {datePreset === 'custom' && (
                     <div className="grid grid-cols-1 gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:grid-cols-[auto_1fr_1fr] sm:items-center">
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-                            <Icon name="calendar" className="h-4 w-4 text-blue-600" />
+                            <Icon name="calendar" className="h-4 w-4 text-slate-700" />
                             Custom Range
                         </div>
                         <label className="flex flex-col gap-1">
@@ -354,38 +343,38 @@ export function AuditLogPage() {
                 ) : logs.length === 0 ? (
                     <EmptyState title="No audit logs found" description="Try adjusting the filters or date range." />
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-[1100px] w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    <div className="clinical-table-scroll">
+                        <table className="clinical-table min-w-[1100px]">
+                            <thead>
                                 <tr>
-                                    <th className="px-4 py-3">Time</th>
-                                    <th className="px-4 py-3">Actor</th>
-                                    <th className="px-4 py-3">Action</th>
-                                    <th className="px-4 py-3">Module</th>
-                                    <th className="px-4 py-3">Affected Record</th>
-                                    <th className="px-4 py-3">Description</th>
-                                    <th className="px-4 py-3 text-right">Details</th>
+                                    <th>Time</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Module</th>
+                                    <th>Affected Record</th>
+                                    <th>Description</th>
+                                    <th className="text-right">Details</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
+                            <tbody>
                                 {logs.map(log => (
-                                    <tr key={log.id} className="hover:bg-slate-50/80">
-                                        <td className="whitespace-nowrap px-4 py-3 text-xs font-bold text-slate-600">{formatTimestamp(log.created_at)}</td>
-                                        <td className="px-4 py-3">
+                                    <tr key={log.id}>
+                                        <td className="whitespace-nowrap text-xs font-bold text-slate-600">{formatTimestamp(log.created_at)}</td>
+                                        <td>
                                             <div className="font-bold text-slate-900">{log.user_name || 'Unknown user'}</div>
                                             <div className="text-xs font-semibold text-slate-500">{prettify(log.user_role)}</div>
                                         </td>
-                                        <td className="px-4 py-3"><ActionBadge action={log.action} /></td>
-                                        <td className="px-4 py-3"><ModuleBadge module={log.module} /></td>
-                                        <td className="max-w-[260px] px-4 py-3">
+                                        <td><ActionBadge action={log.action} /></td>
+                                        <td><ModuleBadge module={log.module} /></td>
+                                        <td className="max-w-[260px]">
                                             <div className="truncate text-sm font-bold text-slate-800">{formatRecord(log)}</div>
                                             <div className="text-xs font-semibold text-slate-400">{prettify(log.record_type)}</div>
                                         </td>
-                                        <td className="max-w-[320px] px-4 py-3">
+                                        <td className="max-w-[320px]">
                                             <div className="line-clamp-2 text-sm font-medium text-slate-700">{log.description || '-'}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <button type="button" onClick={() => setSelectedLog(log)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                                        <td className="text-right">
+                                            <button type="button" onClick={() => setSelectedLog(log)} className="clinical-row-action focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">
                                                 <Icon name="file-text" className="h-3.5 w-3.5" />
                                                 View Details
                                             </button>
