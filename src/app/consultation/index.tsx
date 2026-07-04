@@ -9,6 +9,9 @@ import { isBlank, safeTrim, toNumberOrNull as parseNumberOrNull } from '../../li
 import { printHtmlDocument } from '../../lib/utils/print';
 import { itemizeText } from '../../features/patients/itemization';
 import { Icon } from '../../components/shared/Icon';
+import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
+import { clinicalInputClass, clinicalLabelClass, clinicalTextareaClass } from '../../components/ui/ClinicalForm';
+import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 // --- Interfaces ---------------------------------------------------------------
 export interface ConsultationPageProps {
@@ -165,9 +168,9 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
     const sectionBtn = (label: string, key: typeof activeSection, count: number) => (
         <button
             onClick={() => setActiveSection(key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeSection === key ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
         >
-            {label} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-blue-500' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
+            {label} <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${activeSection === key ? 'bg-slate-600' : 'bg-slate-200 text-slate-600'}`}>{count}</span>
         </button>
     );
 
@@ -207,33 +210,30 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
     );
 
     const totalCount = consultations.length + initialConsults.length;
+    const nameParts = patientName.split(' ').filter(Boolean);
+    const historyPatient = {
+        firstName: nameParts[0] || patientName,
+        lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : '',
+    };
 
     return (
-        <>
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200]" onClick={onClose} />
-            <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-transparent">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                                {patientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                            </div>
-                            <div>
-                                <div className="font-extrabold text-slate-900 text-base leading-tight">Patient History</div>
-                                <div className="text-xs text-slate-500 mt-0.5">{patientName} ? {totalCount} record{totalCount !== 1 ? 's' : ''}</div>
-                            </div>
-                        </div>
-                        <button onClick={onClose} aria-label="Close patient history" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors font-bold text-sm"><Icon name="close" className="h-4 w-4" label="Close patient history" /></button>
-                    </div>
-                    <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-white shrink-0 flex-wrap">
+        <ClinicalDrawer
+            title="Patient History"
+            labelledBy="consultation-patient-history-title"
+            onClose={onClose}
+            subtitle={<>{patientName} ? {totalCount} record{totalCount !== 1 ? 's' : ''}</>}
+        >
+                    <PatientChartIdentityHeader patient={historyPatient} compact className="mb-4" subtitle={`${totalCount} record${totalCount !== 1 ? 's' : ''}`} />
+                    <PatientHistoryPanel title="Consultation History">
+                    <div className="flex gap-2 border-b border-slate-100 bg-white pb-3 shrink-0 flex-wrap">
                         {sectionBtn('All', 'all', totalCount)}
                         {sectionBtn('Consultations', 'consultation', consultations.length)}
                         {sectionBtn('Initial', 'initial', initialConsults.length)}
                     </div>
-                    <div className="flex-1 overflow-y-auto px-6 py-4 bg-[#F8FAFC]">
+                    <div className="py-4 bg-[#F8FAFC]">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-3">
-                                <svg className="animate-spin w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24">
+                                <svg className="animate-spin w-7 h-7 text-slate-600" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                 </svg>
@@ -297,7 +297,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                                     </RecordCard>
                                 ))}
                                 {(activeSection === 'all' || activeSection === 'consultation') && consultations.map((rec) => (
-                                    <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-blue-100 text-blue-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
+                                    <RecordCard key={`consult-${rec.consultation_id}`} id={`consult-${rec.consultation_id}`} badge="Consult" badgeColor="bg-slate-100 text-slate-700" date={`#${rec.consultation_id}`} title={rec.chief_complaints || `Consultation #${rec.consultation_id}`} subtitle={rec.diagnosis}>
                                         <SectionHeader label="Clinical" />
                                         <div className="space-y-2">
                                             {(() => {
@@ -384,12 +384,11 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                             </>
                         )}
                     </div>
-                    <div className="px-6 py-4 border-t border-slate-100 shrink-0 bg-white">
+                    </PatientHistoryPanel>
+                    <div className="mt-4 border-t border-slate-100 shrink-0 bg-white pt-4">
                         <button onClick={onClose} className="w-full py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
                     </div>
-                </div>
-            </div>
-        </>
+        </ClinicalDrawer>
     );
 }
 
@@ -461,7 +460,7 @@ export function ConsultationPage({
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'live' | 'error'>('connecting');
 
     const { isOnline } = useNetworkSync();
-    const primaryBtnBg = isOnline ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
+    const primaryBtnBg = isOnline ? 'bg-slate-700 hover:bg-slate-800 shadow-none' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20';
 
     const { showToast, ToastComponent } = useToast();
 
@@ -792,7 +791,7 @@ export function ConsultationPage({
                 const followUpPayload = buildFollowUpPayload(resolvedConsultationId, 'pending');
                 await upsertFollowUpByConsultation(resolvedConsultationId, followUpPayload);
                 setConsultationSaved(true);
-                showToast('Consultation saved successfully!', false);
+                showToast('Consultation recorded.', false);
                 // Automatically go back to dashboard after a short delay
                 setTimeout(() => {
                     goBack();
@@ -1008,7 +1007,7 @@ export function ConsultationPage({
                     doctor_name: doctorName // Ensure doctor's name is saved
                 };
                 await createPrescription(rxPayload);
-                showToast('Prescription saved and sent to pharmacy!', false);
+                showToast('E-prescription sent to pharmacy.', false);
                 sigCanvas.current?.clear();
             } else { showToast('Offline mode requires connecting to the server to generate a consultation ID first.', true); }
         } catch (error) {
@@ -1020,15 +1019,15 @@ export function ConsultationPage({
     const patientFullName = patient ? `${patient.firstName} ${patient.middleName ? patient.middleName + ' ' : ''}${patient.lastName}` : '—';
     const patientInitials = patient ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase() : '?';
     const isMale = patient?.sex?.toLowerCase() === 'male';
-    const inputCls = "w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-left focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-medium text-slate-800";
-    const labelCls = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2";
-    const textareaCls = "w-full bg-white border border-slate-200 rounded-lg p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm text-slate-800 resize-y";
-    const cardCls = "space-y-6 animate-in fade-in pb-20 md:pb-0";
+    const inputCls = clinicalInputClass;
+    const labelCls = clinicalLabelClass;
+    const textareaCls = clinicalTextareaClass;
+    const cardCls = "space-y-6  pb-20 md:pb-0";
 
     const RadioGroup = ({ name, options, value }: { name: string; options: string[]; value: string }) => (
         <div className="flex gap-3 flex-wrap">
             {options.map(opt => (
-                <label key={opt} className={`cursor-pointer px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${value === opt ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}>
+                <label key={opt} className={`cursor-pointer px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${value === opt ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
                     <input type="radio" name={name} value={opt} checked={value === opt} onChange={handleRadioChange} className="hidden" />{opt}
                 </label>
             ))}
@@ -1037,31 +1036,31 @@ export function ConsultationPage({
 
     const renderCheckbox = (key: keyof typeof formData.labTests, label: string) => (
         <label key={key} className="flex items-center gap-3 cursor-pointer group min-h-[40px]">
-            <div className="relative flex items-center justify-center w-5 h-5 border-2 border-slate-300 rounded bg-white shrink-0 transition-colors group-hover:border-blue-400">
+            <div className="relative flex items-center justify-center w-5 h-5 border-2 border-slate-300 rounded bg-white shrink-0 transition-colors group-hover:border-slate-400">
                 <input type="checkbox" checked={formData.labTests[key]} onChange={() => handleLabTestChange(key)} className="absolute opacity-0 w-0 h-0" />
-                {formData.labTests[key] && <svg className="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                {formData.labTests[key] && <svg className="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
             </div>
             <span className="text-sm font-medium text-slate-700">{label}</span>
         </label>
     );
 
     if (patientLoading) {
-        return <div className="p-8 text-center text-slate-500 animate-pulse">Loading patient data...</div>;
+        return <div className="p-8 text-center text-slate-500 animate-pulse">Loading patient chart...</div>;
     }
 
     if (!patient) {
         return (
             <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-8 mb-6 text-amber-700 flex flex-col items-center justify-center text-center">
                 <Icon name="stethoscope" className="h-10 w-10 mb-4" />
-                <h2 className="text-xl font-bold mb-2">No Patient Selected</h2>
-                <p className="text-sm font-semibold mb-6">Please go back to the dashboard and select a patient from the queue.</p>
-                <button onClick={goBack} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold shadow-sm hover:bg-blue-700 transition-colors">Return to Dashboard</button>
+                <h2 className="text-xl font-bold mb-2">No patient selected</h2>
+                <p className="text-sm font-semibold mb-6">Select a patient from the clinical work queue to begin consultation.</p>
+                <button onClick={goBack} className="px-6 py-2.5 bg-slate-700 text-white rounded-lg font-semibold shadow-sm hover:bg-slate-800 transition-colors">Return to Work Queue</button>
             </div>
         );
     }
 
     const renderTab1 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
+        <div className="space-y-6  pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">I. Histories</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -1096,7 +1095,7 @@ export function ConsultationPage({
     );
 
     const renderTab2 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
+        <div className="space-y-6  pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">II. OBGyne &amp; Pregnancy History</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
@@ -1142,7 +1141,7 @@ export function ConsultationPage({
     );
 
     const renderTab3 = () => (
-        <div className="space-y-6 animate-in fade-in pb-20 md:pb-0">
+        <div className="space-y-6  pb-20 md:pb-0">
             <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-3">III. Clinical Assessment</h3>
             <div><label className={labelCls}>Medication and Treatment</label><textarea name="medicationAndTreatment" value={formData.medicationAndTreatment} onChange={handleChange} rows={7} className={textareaCls} /></div>
             <div className="flex justify-between pt-4"><button onClick={() => setActiveTab(isMale ? 1 : 2)} className="bg-slate-100 py-2.5 px-6 rounded-lg font-semibold">Back</button><button onClick={() => setActiveTab(4)} className={`text-white py-2.5 px-6 rounded-lg shadow-sm font-semibold ${primaryBtnBg}`}>Next: Follow-up</button></div>
@@ -1150,14 +1149,14 @@ export function ConsultationPage({
     );
 
     const renderTab4 = () => (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 md:pb-0">
+        <div className="space-y-6  pb-20 md:pb-0">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">IV. Follow-up Visit</h3>
             </div>
             {!consultationSaved && (
-                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800">
                     <Icon name="file-text" className="h-5 w-5 shrink-0" />
-                    <span>No consultation saved yet ? follow-up details will be saved when you save the consultation on Tab 5.</span>
+                    <span>Follow-up details will be recorded when the consultation is finalized.</span>
                 </div>
             )}
             <div>
@@ -1289,7 +1288,7 @@ export function ConsultationPage({
                         <button onClick={handlePrintMedCert} className="w-full bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="file-text" className="h-4 w-4" /> Print Medical Certificate</button>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-blue-500 text-blue-600 py-3 px-6 rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"><Icon name="save" className="h-4 w-4" /> Save Consultation</button>
+                        <button onClick={handleSaveConsultation} className="flex-1 bg-white border-2 border-slate-500 text-slate-700 py-3 px-6 rounded-xl font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"><Icon name="save" className="h-4 w-4" /> Record Consultation</button>
                         <button onClick={() => setActiveTab(7)} className={`flex-1 text-white py-2.5 px-6 rounded-lg font-semibold shadow-sm transition-colors ${primaryBtnBg}`}>Next: Lab Request</button>
                     </div>
                 </div>
@@ -1338,7 +1337,7 @@ export function ConsultationPage({
                     <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="shrink-0">{renderCheckbox('others', 'Others:')}</div>
                         <input type="text" name="labTestsOther" value={formData.labTestsOther} onChange={handleChange} disabled={!formData.labTests.others}
-                            className={`flex-1 bg-white border-2 ${formData.labTests.others ? 'border-blue-400 focus:border-blue-500 shadow-sm' : 'border-slate-100'} rounded-xl outline-none px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50 disabled:bg-slate-50 transition-all`}
+                            className={`flex-1 bg-white border-2 ${formData.labTests.others ? 'border-slate-400 focus:border-slate-500 shadow-sm' : 'border-slate-100'} rounded-xl outline-none px-4 py-2.5 text-sm font-medium text-slate-800 disabled:opacity-50 disabled:bg-slate-50 transition-all`}
                             placeholder={formData.labTests.others ? 'Specify other tests here...' : ''} />
                     </div>
                 </div>
@@ -1347,7 +1346,7 @@ export function ConsultationPage({
             <div className="flex flex-col sm:flex-row justify-between gap-3 pt-8 mt-6 border-t border-slate-100">
                 <button onClick={() => setActiveTab(5)} className="order-2 sm:order-1 w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors">Back</button>
                 <div className="flex flex-col sm:flex-row gap-4 order-1 sm:order-2">
-                    <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto py-3.5 px-6 rounded-xl font-extrabold transition-colors shadow-sm border-2 disabled:opacity-50 ${isOnline ? 'bg-white border-blue-500 text-blue-600 hover:bg-blue-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
+                    <button onClick={handleSaveLabRequest} disabled={loading || !patient?.id} className={`w-full sm:w-auto py-3.5 px-6 rounded-xl font-extrabold transition-colors shadow-sm border-2 disabled:opacity-50 ${isOnline ? 'bg-white border-slate-500 text-slate-700 hover:bg-slate-50' : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'}`}>
                         {loading ? 'Sending...' : <><Icon name="clipboard" className="inline h-4 w-4 mr-2" />Send to Laboratory</>}
                     </button>
                     <button onClick={() => setActiveTab(8)} className={`w-full sm:w-auto text-white py-2.5 px-6 rounded-lg font-semibold transition-colors ${primaryBtnBg}`}>Next: E-Prescription</button>
@@ -1363,7 +1362,7 @@ export function ConsultationPage({
             </div>
             <div className="space-y-4 mb-6">
                 {medications.map((med, i) => (
-                    <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all hover:border-blue-200">
+                    <div key={i} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm relative group transition-all hover:border-slate-200">
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                             {medications.length > 1 && <button onClick={() => handleRemoveMed(i)} className="text-xs bg-white border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg font-bold transition-colors">Remove</button>}
                         </div>
@@ -1379,7 +1378,7 @@ export function ConsultationPage({
                     </div>
                 ))}
             </div>
-            <button onClick={handleAddMed} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-sm font-bold text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all mb-8">
+            <button onClick={handleAddMed} className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-sm font-bold text-slate-500 hover:border-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all mb-8">
                 + Add Another Medication
             </button>
 
@@ -1406,9 +1405,9 @@ export function ConsultationPage({
                 <button onClick={() => setActiveTab(7)} className="order-2 sm:order-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-6 rounded-lg font-semibold transition-colors w-full sm:w-auto">Back</button>
                 <div className="order-1 sm:order-2 flex flex-col items-end gap-3 w-full sm:w-auto">
                     <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
-                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="printer" className="h-4 w-4" /> Print Physical Copy</button>
+                        <button onClick={handlePrintPrescription} className="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-slate-100"><Icon name="printer" className="h-4 w-4" /> Print Prescription Copy</button>
                     </div>
-                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 ${primaryBtnBg}`}><Icon name="pill" className="h-4 w-4" /> Authorize &amp; Send to Pharmacy</button>
+                    <button onClick={handleSavePrescription} className={`w-full sm:w-auto text-white py-3.5 px-8 rounded-xl font-bold shadow-md transition-all  flex items-center justify-center gap-2 ${primaryBtnBg}`}><Icon name="pill" className="h-4 w-4" /> Authorize &amp; Send to Pharmacy</button>
                 </div>
             </div>
         </div>
@@ -1431,7 +1430,7 @@ export function ConsultationPage({
 
                 {/* Patient Info Card */}
                 <div className="w-full bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-md">{patientInitials}</div>
+                    <div className="w-12 h-12 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-md">{patientInitials}</div>
                     <div className="flex-1 min-w-0">
                         <div className="font-bold text-slate-900 text-base leading-tight truncate">{patientFullName}</div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
@@ -1442,8 +1441,8 @@ export function ConsultationPage({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {/* -- realtime pill in patient header -- */}
-                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5"><Icon name="clock" className="h-3.5 w-3.5" /> View History</button>
-                        <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">? Dashboard</button>
+                        <button onClick={() => setShowHistory(true)} className="text-xs font-semibold text-slate-700 hover:text-slate-800 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg transition-all flex items-center gap-1.5"><Icon name="clock" className="h-3.5 w-3.5" /> View Patient History</button>
+                        <button onClick={goBack} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">Return to Work Queue</button>
                     </div>
                 </div>
 
@@ -1454,7 +1453,7 @@ export function ConsultationPage({
                             key={tab.id}
                             onClick={() => !tab.disabled && setActiveTab(tab.id)}
                             disabled={tab.disabled}
-                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${tab.disabled ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through' : activeTab === tab.id ? 'text-blue-600 bg-white border-blue-600 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'}`}
+                            className={`px-4 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 flex-shrink-0 ${tab.disabled ? 'text-slate-300 border-transparent cursor-not-allowed bg-slate-50 line-through' : activeTab === tab.id ? 'text-slate-700 bg-white border-slate-700 shadow-[0_-4px_15px_rgba(0,0,0,0.03)]' : 'text-slate-400 border-transparent hover:bg-white hover:text-slate-600'}`}
                         >
                             {tab.label}
                         </button>

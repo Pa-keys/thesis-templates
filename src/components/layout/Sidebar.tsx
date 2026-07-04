@@ -41,11 +41,11 @@ export function Sidebar({
         return () => window.removeEventListener('keydown', handleEscape);
     }, [showLogoutModal]);
 
-    const logoBg = isOnline ? 'bg-[#0EA5E9]' : 'bg-amber-500';
+    const logoBg = isOnline ? 'bg-[#2F7D75]' : 'bg-amber-500';
     const avatarBg = isOnline ? 'bg-[#334155]' : 'bg-amber-500';
-    const activeBg = isOnline ? 'bg-[#0B8FD3]' : 'bg-amber-500/20';
+    const activeBg = isOnline ? 'bg-[#334155]' : 'bg-amber-500/20';
     const activeText = isOnline ? 'text-white' : 'text-amber-100';
-    const activeIndicator = isOnline ? 'bg-[#7DD3FC]' : 'bg-amber-300';
+    const activeIndicator = isOnline ? 'bg-[#A7D8D1]' : 'bg-amber-300';
 
     return (
         <>
@@ -114,7 +114,7 @@ export function Sidebar({
                 <button
                     type="button"
                     onClick={() => setShowLogoutModal(true)}
-                    className="mt-auto w-full shrink-0 border-t border-white/15 bg-[#0C8CD4] p-3 text-left transition-colors hover:bg-[#0B7FC2] group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white"
+                    className="mt-auto w-full shrink-0 border-t border-white/15 bg-[#243B53] p-3 text-left transition-colors hover:bg-[#1E3348] group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-white"
                     title="Log out"
                 >
                     <div className="flex items-center justify-between">
@@ -135,7 +135,7 @@ export function Sidebar({
             {/* Custom Logout Modal */}
             {showLogoutModal && (
                 <div onClick={() => setShowLogoutModal(false)} className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm transition-opacity" role="presentation">
-                    <div onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title" aria-describedby="logout-dialog-description" className="flex w-full max-w-sm flex-col items-center rounded-lg border border-[#DDE7EF] bg-white p-4 text-center shadow-lg animate-in zoom-in-95 duration-200">
+                    <div onClick={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title" aria-describedby="logout-dialog-description" className="flex w-full max-w-sm flex-col items-center rounded-lg border border-[#DDE7EF] bg-white p-4 text-center shadow-sm">
                         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600"><Icon name="logout" className="h-5 w-5" /></div>
                         <h3 id="logout-dialog-title" className="text-lg font-semibold text-[#0F3154] tracking-tight">Log out</h3>
                         <p id="logout-dialog-description" className="text-sm text-[#456987] mt-2 mb-4">Are you sure you want to end your session?</p>
@@ -146,7 +146,7 @@ export function Sidebar({
                                     e.stopPropagation();
                                     setShowLogoutModal(false);
                                 }}
-                                className="min-h-10 flex-1 rounded-lg border border-[#DDE7EF] bg-white px-4 py-2.5 font-semibold text-[#456987] transition-colors hover:bg-[#F3F7FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#42AEE8]"
+                                className="min-h-10 flex-1 rounded-lg border border-[#DDE7EF] bg-white px-4 py-2.5 font-semibold text-[#475569] transition-colors hover:bg-[#F3F7FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#334155]"
                             >
                                 Cancel
                             </button>

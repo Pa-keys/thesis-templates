@@ -8,6 +8,7 @@ import { Icon } from '../../components/shared/Icon';
 import { Topbar } from '../../components/layout/Topbar';
 import { safeTrim } from '../../lib/utils/strings';
 import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
+import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 import Dashboard from '../../features/midwife/dashboard';
 import PatientRecords from '../../features/midwife/patientRecords';
@@ -31,7 +32,7 @@ function DetailItem({ label, value }: { label: string; value?: string | number |
 }
 
 const sectionCls = "bg-white border border-slate-200 rounded-lg p-4 md:p-5 mb-4 shadow-sm";
-const headerCls  = "flex items-center gap-2 text-sm font-semibold text-blue-600 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
+const headerCls  = "flex items-center gap-2 text-sm font-semibold text-slate-700 uppercase tracking-wide border-b border-slate-200 pb-3 mb-4";
 
 // ─── Patient Details Panel ────────────────────────────────────────────────────
 function PatientDetailsPanel({
@@ -51,10 +52,10 @@ function PatientDetailsPanel({
     };
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="">
             {/* Profile banner */}
             <div className="bg-white border border-slate-200 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4 shadow-sm">
-                <div className="w-12 h-12 rounded-md bg-blue-600 text-white flex items-center justify-center font-semibold text-lg shadow-sm shrink-0 uppercase">
+                <div className="w-12 h-12 rounded-md bg-slate-700 text-white flex items-center justify-center font-semibold text-lg shadow-sm shrink-0 uppercase">
                     {patient.firstName?.[0]}{patient.lastName?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -72,7 +73,7 @@ function PatientDetailsPanel({
                     <button
                         type="button"
                         onClick={onViewHistory}
-                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[0.65rem] font-extrabold text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[0.65rem] font-extrabold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
                     >
                         <Icon name="clock" className="mr-1 inline h-3.5 w-3.5" /> History
                     </button>
@@ -130,7 +131,7 @@ function PatientDetailsPanel({
             {!consentSigned && (
                 <button
                     onClick={onProceedToConsent}
-                    className="w-full bg-blue-600 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-3 mt-2"
+                    className="w-full bg-slate-700 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-sm hover:bg-slate-800 transition-all  flex items-center justify-center gap-3 mt-2"
                 >
                     <Icon name="clipboard" className="h-5 w-5" /> Proceed to Patient Consent →
                 </button>
@@ -165,8 +166,8 @@ function PatientModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-            <div className="bg-[#F8FAFC] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 ">
+            <div className="bg-[#F8FAFC] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-sm flex flex-col max-h-[92vh] sm:max-h-[88vh]">
 
                 {/* Modal Header */}
                 <div className="px-5 py-4 border-b border-slate-200 bg-white rounded-t-2xl flex items-center justify-between shrink-0">
@@ -183,12 +184,12 @@ function PatientModal({
                         <div className="flex items-center gap-1.5 text-xs font-bold">
                             <button
                                 onClick={() => setStep('details')}
-                                className={`px-2.5 py-1 rounded-md transition-colors ${step === 'details' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                className={`px-2.5 py-1 rounded-md transition-colors ${step === 'details' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                             >
                                 1 · Details
                             </button>
                             <span className="text-slate-300">›</span>
-                            <span className={`px-2.5 py-1 rounded-md ${step === 'consent' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                            <span className={`px-2.5 py-1 rounded-md ${step === 'consent' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-400'}`}>
                                 2 · Consent
                             </span>
                         </div>
@@ -211,7 +212,7 @@ function PatientModal({
                             onViewHistory={() => setStep('history')}
                         />
                     ) : step === 'consent' ? (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="">
                             <PatientConsent
                                 patientId={patient.id}
                                 patientName={`${patient.firstName} ${patient.lastName}`}
@@ -220,11 +221,11 @@ function PatientModal({
                             />
                         </div>
                     ) : (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                            <div className={sectionCls}>
-                                <div className={headerCls}><Icon name="clock" className="h-4 w-4" /> Patient History</div>
+                        <div className="">
+                            <PatientChartIdentityHeader patient={patient} compact className="mb-4" />
+                            <PatientHistoryPanel title="Patient History">
                                 <PatientTransactionHistory patientId={patient.id} />
-                            </div>
+                            </PatientHistoryPanel>
                         </div>
                     )}
                 </div>

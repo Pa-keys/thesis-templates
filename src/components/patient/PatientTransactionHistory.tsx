@@ -46,10 +46,10 @@ const TYPE_MARK: Record<PatientTransaction['type'], string> = {
 };
 
 const TYPE_MARK_CLASS: Record<PatientTransaction['type'], string> = {
-    registration: 'bg-blue-50 text-blue-700 ring-blue-200',
+    registration: 'bg-slate-50 text-slate-700 ring-slate-200',
     consent: 'bg-amber-50 text-amber-800 ring-amber-200',
-    initial_consultation: 'bg-cyan-50 text-cyan-800 ring-cyan-200',
-    doctor_consultation: 'bg-blue-50 text-blue-700 ring-blue-200',
+    initial_consultation: 'bg-slate-50 text-slate-800 ring-slate-200',
+    doctor_consultation: 'bg-slate-50 text-slate-700 ring-slate-200',
     lab_request: 'bg-violet-50 text-violet-800 ring-violet-200',
     lab_result: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
     prescription: 'bg-rose-50 text-rose-800 ring-rose-200',
@@ -212,7 +212,7 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                 description: 'Registration, consent, consultations, lab, pharmacy, vaccine, and follow-up records will appear here.',
             };
 
-    if (isLoading || isFetching) return <LoadingState label="Loading complete transaction history..." />;
+    if (isLoading || isFetching) return <LoadingState label="Loading complete patient history..." />;
 
     if (visibleError) {
         return (
@@ -231,10 +231,10 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                     key={option.id}
                     type="button"
                     onClick={() => setActiveFilter(option.id)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+                    className={`rounded-lg border px-3 py-2 text-xs font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 ${
                         activeFilter === option.id
-                            ? 'border-blue-600 bg-blue-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                            ? 'border-slate-700 bg-slate-700 text-white'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700'
                     }`}
                 >
                     {option.label}
@@ -254,7 +254,7 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                 <div>
                     <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
                     <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-700">
-                        No history records can be shown until the failed sections are retried or checked.
+                        Some patient history sections are unavailable. Retry to refresh the record.
                     </div>
                 </div>
             );
@@ -291,7 +291,7 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                                     : transaction.type === 'vaccine'
                                         ? 'bg-indigo-500'
                                         : transaction.type === 'registration'
-                                            ? 'bg-blue-500'
+                                            ? 'bg-slate-600'
                                             : transaction.type === 'consent'
                                                 ? 'bg-amber-500'
                                                 : transaction.type === 'follow_up'

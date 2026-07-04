@@ -196,7 +196,7 @@ const NurseDashboard = () => {
                                                 type="text"
                                                 aria-label="Search consented patients by name"
                                                 placeholder="Search by name..."
-                                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm bg-white"
+                                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 text-sm bg-white"
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                             />
@@ -238,7 +238,7 @@ const NurseDashboard = () => {
                                                                 <td className="px-4 py-3 text-right">
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); handleConsultNavigate(p.id); }}
-                                                                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                                                                        className="clinical-row-action"
                                                                     >
                                                                         Initial Intake
                                                                     </button>

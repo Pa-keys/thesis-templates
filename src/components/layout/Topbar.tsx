@@ -38,7 +38,7 @@ export function Topbar({
                     type="button"
                     onClick={onOpenNavigation}
                     aria-label="Open navigation menu"
-                    className="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#456987] transition-colors hover:bg-[#EAF6FF] hover:text-[#147EC1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#42AEE8] md:hidden"
+                    className="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-[#1E293B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#334155] md:hidden"
                 >
                     <Icon name="menu" className="h-5 w-5" />
                 </button>
