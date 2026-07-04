@@ -97,17 +97,19 @@ function PharmacyDashboard() {
             .from('prescription')
             .select(`
                 *,
-                patients (
+                patients!inner (
                     id,
                     firstName,
                     middleName,
                     lastName,
                     age,
                     sex,
-                    address
+                    address,
+                    archive_status
                 )
             `)
             .eq('status', 'Pending')
+            .eq('patients.archive_status', 'active')
             .order('prescription_id', { ascending: false });
 
         if (!error && data) {
@@ -400,11 +402,12 @@ function PharmacyDashboard() {
                     subtitle={<>Patient: <span className="font-semibold text-slate-700">{selectedRx.patients?.firstName} {selectedRx.patients?.lastName}</span></>}
                     footer={(
                         <>
-                            <button onClick={() => setSelectedRx(null)} className="px-5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 transition-colors w-full sm:w-auto">
+                            <button type="button" onClick={() => setSelectedRx(null)} className="px-5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 transition-colors w-full sm:w-auto">
                                 Cancel
                             </button>
 
                             <button
+                                type="button"
                                 onClick={handlePrintUnavailable}
                                 disabled={allChecked}
                                 className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 ${allChecked ? 'opacity-40 cursor-not-allowed bg-slate-200 text-slate-500 border border-slate-300' : 'text-pink-700 bg-pink-100 border border-pink-200 hover:bg-pink-200 shadow-sm hover:shadow'}`}
@@ -413,6 +416,7 @@ function PharmacyDashboard() {
                             </button>
 
                             <button
+                                type="button"
                                 onClick={handleDispense}
                                 disabled={isDispensing}
                                 className="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-slate-700 hover:bg-slate-800 disabled:opacity-50 transition-colors w-full sm:w-auto flex items-center justify-center gap-2"

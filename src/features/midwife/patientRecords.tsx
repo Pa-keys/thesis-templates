@@ -155,6 +155,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
                             >
                                 {/* Clickable left side → details modal */}
                                 <button
+                                    type="button"
                                     onClick={() => onPatientClick?.(patient)}
                                     className="flex items-center gap-4 flex-1 min-w-0 text-left"
                                 >
@@ -189,6 +190,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
 
                                     {/* History button */}
                                     <button
+                                        type="button"
                                         onClick={e => { e.stopPropagation(); setHistoryPatient(patient); }}
                                         className="clinical-row-action"
                                         title="View FHSIS History"

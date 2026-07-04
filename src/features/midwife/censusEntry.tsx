@@ -247,6 +247,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-5">
                     {logbooks.map(log => (
                         <button 
+                            type="button"
                             key={log.id}
                             onClick={() => { 
                                 setActiveLogbook(log.id); 
@@ -275,7 +276,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                             <div>
                                 <h3 className="text-lg font-bold text-slate-800">{logbooks.find(l => l.id === activeLogbook)?.label} Registry</h3>
                             </div>
-                            <button onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-bold shadow-md hover:bg-slate-800">
+                            <button type="button" onClick={() => setIsAddingEntry(true)} className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-bold shadow-md hover:bg-slate-800">
                                 <Icon name="plus" className="inline h-4 w-4 mr-1" /> New Entry
                             </button>
                         </div>
@@ -307,7 +308,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                 ) : (
                     <div className="card shadow-sm border border-slate-200 p-8 ">
                         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
-                            <button onClick={() => setIsAddingEntry(false)} className="px-3 py-1.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">← Back</button>
+                            <button type="button" onClick={() => setIsAddingEntry(false)} className="px-3 py-1.5 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200">← Back</button>
                             <h3 className="text-xl font-extrabold text-slate-800">New {logbooks.find(l => l.id === activeLogbook)?.label} Entry</h3>
                         </div>
 
@@ -361,7 +362,7 @@ const CensusEntry = ({ patients, records, onSaveSuccess }: Props) => {
                                                 {activeLogbook === 'child' && ` • DOB: ${selectedPatient.birthday}`}
                                             </p>
                                         </div>
-                                        <button onClick={() => { setSelectedPatient(null); setSearchQuery(''); }} className="px-3 py-1.5 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100">Change</button>
+                                        <button type="button" onClick={() => { setSelectedPatient(null); setSearchQuery(''); }} className="px-3 py-1.5 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100">Change</button>
                                     </div>
                                 )}
                             </div>

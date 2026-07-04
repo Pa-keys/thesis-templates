@@ -27,6 +27,7 @@ const EMPTY_FORM: FollowUpData = {
     vitals: { bp: '', hr: '', rr: '', temp: '', o2: '', wt: '', ht: '', muac: '', nutStatus: '', bmi: '', vaL: '', vaR: '', bloodType: '', genSurvey: '' },
     medicationTreatment: '', labResults: '', signatureUrl: ''
 };
+const FOLLOW_UP_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, birthday, birthPlace, bloodType, nationality, religion, civilStatus, address, contactNumber, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress';
 
 export default function FollowUp() {
     const [role, setRole] = useState<Role | null>(null);
@@ -57,7 +58,7 @@ export default function FollowUp() {
             const pId = new URLSearchParams(window.location.search).get('id');
             if (pId) {
                 setPatientId(pId);
-                const { data: ptData } = await supabase.from('patients').select('*').eq('id', pId).single();
+                const { data: ptData } = await supabase.from('patients').select(FOLLOW_UP_PATIENT_COLUMNS).eq('id', pId).eq('archive_status', 'active').single();
                 if (ptData) setPatient(ptData);
             }
         }).catch(() => undefined);

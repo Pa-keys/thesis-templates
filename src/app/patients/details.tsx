@@ -26,6 +26,7 @@ interface Patient {
     category: string; categoryOthers: string; relativeName: string;
     relativeRelation: string; relativeAddress: string;
     consent_signed: boolean;
+    archive_status?: 'active' | 'archived';
 }
 
 interface EditForm extends Omit<Patient, 'id' | 'age' | 'consent_signed'> { age: string; }
@@ -39,6 +40,7 @@ const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student
 
 const patientId = new URLSearchParams(window.location.search).get('id');
 const PATIENT_DETAILS_ROLES = ['BHW', 'nurse', 'doctor', 'midwives'] as const satisfies readonly Role[];
+const PATIENT_DETAILS_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, birthday, birthPlace, bloodType, nationality, religion, civilStatus, address, contactNumber, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress, archive_status';
 
 const PATIENT_DETAILS_NAV_ITEMS: Record<(typeof PATIENT_DETAILS_ROLES)[number], NavItem[]> = {
     doctor: [
@@ -100,6 +102,7 @@ function DetailsPage() {
 
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [otherReligion, setOtherReligion] = useState('');
+    const isArchivedPatient = patient?.archive_status === 'archived';
 
     const [role, setRole] = useState<Role | null>(null);
     const [userName, setUserName] = useState('Loading...');
@@ -139,7 +142,7 @@ function DetailsPage() {
     }, []);
 
     async function loadPatient() {
-        const { data: patientData, error: pError } = await supabase.from('patients').select('*').eq('id', patientId).single();
+        const { data: patientData, error: pError } = await supabase.from('patients').select(PATIENT_DETAILS_COLUMNS).eq('id', patientId).single();
         if (pError || !patientData) { setError('Patient not found.'); return; }
 
         const { data: consentData } = await supabase.from('patient_consent').select('consent_id').eq('patient_id', patientId).maybeSingle();
@@ -177,6 +180,11 @@ function DetailsPage() {
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isArchivedPatient) {
+            showToast('Archived patient records are read-only. Restore the record before making changes.', true);
+            setEditing(false);
+            return;
+        }
         setSaving(true);
         const parsed = parseInt(editForm.age);
         const updates = { ...editForm, age: isNaN(parsed) ? null : parsed };
@@ -249,7 +257,7 @@ function DetailsPage() {
                                 <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Back to Details</button>
                                 <PatientConsent patientId={patient.id} patientName={`${patient.firstName} ${patient.lastName}`} rhuPersonnel={userName} onConsentSaved={() => { setShowConsent(false); loadPatient(); }} />
                             </div>
-                        ) : editing ? (
+                        ) : editing && !isArchivedPatient ? (
                             // Edit Mode Form...
                             <form onSubmit={handleEditSubmit} className="">
                                 <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-6 mb-6 flex flex-wrap items-center gap-5 shadow-sm relative ring-1 ring-slate-500/10">
@@ -370,11 +378,15 @@ function DetailsPage() {
                                     </div>
 
                                     <div className="shrink-0 flex flex-col md:items-end gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                        <div className="flex gap-2 w-full md:w-auto">
-                                            <button onClick={() => setEditing(true)} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 flex-1 md:flex-none">
-                                                Edit Profile
-                                            </button>
-                                        </div>
+                                        {isArchivedPatient ? (
+                                            <span className="bg-slate-100 text-slate-700 border border-slate-200 text-xs font-extrabold px-3 py-1.5 rounded-lg flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">Archived Read-Only</span>
+                                        ) : (
+                                            <div className="flex gap-2 w-full md:w-auto">
+                                                <button onClick={() => setEditing(true)} className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 flex-1 md:flex-none">
+                                                    Edit Profile
+                                                </button>
+                                            </div>
+                                        )}
 
                                         {patient.consent_signed ? (
                                             <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-extrabold px-3 py-1.5 rounded-lg flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">Consent Signed</span>
@@ -426,7 +438,7 @@ function DetailsPage() {
 
                                 <div className="flex flex-col gap-3">
                                     {/* Midwife action */}
-                                    {role === 'midwives' && !patient.consent_signed && (
+                                    {role === 'midwives' && !patient.consent_signed && !isArchivedPatient && (
                                         <button onClick={() => setShowConsent(true)} className="w-full bg-slate-700 text-white font-extrabold text-sm uppercase tracking-wider py-4 rounded-xl shadow-sm hover:bg-slate-800 hover:shadow-none transition-all  flex items-center justify-center gap-3">
                                             Proceed to Patient Consent
                                         </button>

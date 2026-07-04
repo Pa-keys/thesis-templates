@@ -67,6 +67,8 @@ const VITAL_FIELDS: {
 ];
 
 const toNumberOrNull = (val: unknown) => parseNumberOrNull(val);
+const CONSENTED_PATIENT_SEARCH_LIMIT = 300;
+const INITIAL_CONSULT_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, birthday, birthPlace, bloodType, nationality, religion, civilStatus, address, contactNumber, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress';
 
 const computeBmi = (weight: string, height: string) => {
     const weightKg = parseFloat(weight);
@@ -117,7 +119,9 @@ export function ConsultationComponent() {
                     id, firstName, middleName, lastName, age, sex, bloodType,
                     patient_consent ( consent_id )
                 `)
-                .order('lastName', { ascending: true });
+                .eq('archive_status', 'active')
+                .order('lastName', { ascending: true })
+                .limit(CONSENTED_PATIENT_SEARCH_LIMIT);
 
             if (!error && data) {
                 const consentedOnly = data.filter((p: any) =>
@@ -133,8 +137,9 @@ export function ConsultationComponent() {
         setCurrentPatientId(id);
         const { data, error } = await supabase
             .from('patients')
-            .select('*')
+            .select(INITIAL_CONSULT_PATIENT_COLUMNS)
             .eq('id', id)
+            .eq('archive_status', 'active')
             .single();
 
         if (data) {
