@@ -240,7 +240,12 @@ function PatientModal({
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 const MidwifeApp = () => {
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'dashboard');
+
+    useEffect(() => {
+        window.location.hash = activeTab;
+    }, [activeTab]);
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [userData, setUserData] = useState({ name: 'Loading...', initials: 'U' });

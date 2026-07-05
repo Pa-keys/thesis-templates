@@ -57,7 +57,12 @@ function PharmacyDashboard() {
     const { showToast, ToastComponent } = useToast();
 
     // Sidebar & Layout State
-    const [activePage, setActivePage] = useState('queue');
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'queue');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const isOnline = useOnlineStatus();
 

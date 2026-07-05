@@ -121,7 +121,12 @@ const AdminDashboard = () => {
 
     // Context & Auth
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [activePage, setActivePage] = useState('admin');
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'admin');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
+
     const isOnline = useOnlineStatus();
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('A');

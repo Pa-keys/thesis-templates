@@ -355,6 +355,12 @@ function LabRequestDetail({
 
 const LaboratoryDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'lab');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
+
     const isOnline = useOnlineStatus();
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('?');

@@ -64,7 +64,7 @@ export function RecordsComponent({ onPatientClick }: { onPatientClick?: (patient
         const { data, error } = await supabase
             .from('patients')
             .select(PATIENT_REGISTRY_COLUMNS)
-            .eq('archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null')
             .order('lastName', { ascending: true })
             .limit(PATIENT_REGISTRY_LIMIT);
 

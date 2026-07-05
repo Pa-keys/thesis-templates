@@ -58,7 +58,7 @@ export default function FollowUp() {
             const pId = new URLSearchParams(window.location.search).get('id');
             if (pId) {
                 setPatientId(pId);
-                const { data: ptData } = await supabase.from('patients').select(FOLLOW_UP_PATIENT_COLUMNS).eq('id', pId).eq('archive_status', 'active').single();
+                const { data: ptData } = await supabase.from('patients').select(FOLLOW_UP_PATIENT_COLUMNS).eq('id', pId).or('archive_status.eq.active,archive_status.is.null').single();
                 if (ptData) setPatient(ptData);
             }
         }).catch(() => undefined);

@@ -70,7 +70,12 @@ const DoctorDashboard = () => {
     const [userName, setUserName] = useState('Loading...');
     const [userInitials, setUserInitials] = useState('D');
 
-    const [activePage, setActivePage] = useState('dashboard');
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'dashboard');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
+
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [selectedIcid, setSelectedIcid] = useState<string | null>(null);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -130,7 +135,7 @@ const DoctorDashboard = () => {
             .from('follow_up')
             .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex, archive_status)`)
             .neq('follow_up_status', 'done')
-            .eq('patients.archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null', { foreignTable: 'patients' })
             .gte('visit_date', today)
             .order('visit_date', { ascending: true });
         setAllFollowUps(data || []);
@@ -234,7 +239,7 @@ const DoctorDashboard = () => {
             .from('initial_consultation')
             .select(`initialconsultation_id, patient_id, consultation_time, patients!inner(firstName, lastName, sex, bloodType, archive_status)`)
             .eq('consultation_date', today)
-            .eq('patients.archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null', { foreignTable: 'patients' })
             .order('initialconsultation_id', { ascending: true });
         if (completedIds.length > 0) {
             qQuery = qQuery.not('initialconsultation_id', 'in', `(${completedIds.join(',')})`);
@@ -247,7 +252,7 @@ const DoctorDashboard = () => {
             .from('follow_up')
             .select(`followup_id, patient_id, visit_date, patients!inner(firstName, lastName, sex, archive_status)`)
             .neq('follow_up_status', 'done')
-            .eq('patients.archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null', { foreignTable: 'patients' })
             .gte('visit_date', today)
             .order('visit_date', { ascending: true })
             .limit(5);
@@ -420,47 +425,47 @@ const DoctorDashboard = () => {
             if (trendChartRef.current && trendData.length > 0) {
                 if (trendChartInst.current) trendChartInst.current.destroy();
                 trendChartInst.current = new Chart(trendChartRef.current, {
-                type: 'line',
-                data: {
-                    labels: trendData.map(d => d.date),
-                    datasets: [{
-                        label: 'Visits', data: trendData.map(d => d.count),
-                        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)',
-                        borderWidth: 2, fill: true, tension: 0.4,
-                        pointBackgroundColor: '#3b82f6', pointRadius: 4, pointHoverRadius: 6,
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                        y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, precision: 0, color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+                    type: 'line',
+                    data: {
+                        labels: trendData.map(d => d.date),
+                        datasets: [{
+                            label: 'Visits', data: trendData.map(d => d.count),
+                            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)',
+                            borderWidth: 2, fill: true, tension: 0.4,
+                            pointBackgroundColor: '#3b82f6', pointRadius: 4, pointHoverRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                            y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, precision: 0, color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+                        }
                     }
-                }
-            });
+                });
             }
 
             if (morbChartRef.current && morbidityData.length > 0) {
                 if (morbChartInst.current) morbChartInst.current.destroy();
                 morbChartInst.current = new Chart(morbChartRef.current, {
-                type: 'bar',
-                data: {
-                    labels: morbidityData.map(m => m.label),
-                    datasets: [{ label: 'Cases', data: morbidityData.map(m => m.percentage), backgroundColor: '#93c5fd', borderRadius: 2, barThickness: 16 }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: (ctx) => { const item = morbidityData[ctx.dataIndex]; return ` ${item.percentage}%  (${item.count} cases)`; } } }
+                    type: 'bar',
+                    data: {
+                        labels: morbidityData.map(m => m.label),
+                        datasets: [{ label: 'Cases', data: morbidityData.map(m => m.percentage), backgroundColor: '#93c5fd', borderRadius: 2, barThickness: 16 }]
                     },
-                    scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => `${v}%` }, beginAtZero: true, max: 100 },
-                        y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (ctx) => { const item = morbidityData[ctx.dataIndex]; return ` ${item.percentage}%  (${item.count} cases)`; } } }
+                        },
+                        scales: {
+                            x: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => `${v}%` }, beginAtZero: true, max: 100 },
+                            y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+                        }
                     }
-                }
-            });
+                });
             }
         };
 
@@ -518,127 +523,127 @@ const DoctorDashboard = () => {
                             />
                             <div className="pwa-page-pad flex flex-col pwa-panel-gap">
 
-                            <div className="ops-summary-grid">
-                                {[
-                                    ['Waiting Patients', queue.length, 'Ready for consultation'],
-                                    ['Follow-ups Due', followUps.length, 'Scheduled returns'],
-                                    ['Visits Today', visitsToday, 'Completed encounters'],
-                                    ['Total Patients', totalPatients, 'Registry baseline'],
-                                ].map(([label, value, note]) => (
-                                    <div key={label} className="ops-summary-card">
-                                        <p className="ops-summary-label">{label}</p>
-                                        <h2 className="ops-summary-value tabular-nums">{value}</h2>
-                                        <p className="ops-summary-note">{note}</p>
-                                    </div>
-                                ))}
-                            </div>
+                                <div className="ops-summary-grid">
+                                    {[
+                                        ['Waiting Patients', queue.length, 'Ready for consultation'],
+                                        ['Follow-ups Due', followUps.length, 'Scheduled returns'],
+                                        ['Visits Today', visitsToday, 'Completed encounters'],
+                                        ['Total Patients', totalPatients, 'Registry baseline'],
+                                    ].map(([label, value, note]) => (
+                                        <div key={label} className="ops-summary-card">
+                                            <p className="ops-summary-label">{label}</p>
+                                            <h2 className="ops-summary-value tabular-nums">{value}</h2>
+                                            <p className="ops-summary-note">{note}</p>
+                                        </div>
+                                    ))}
+                                </div>
 
-                            {/* Queue + Trends */}
-                            <div className="ops-grid">
+                                {/* Queue + Trends */}
+                                <div className="ops-grid">
 
-                                {/* ── Patient Queue ── */}
-                                <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 shrink-0 flex items-center justify-between">
-                                        <h3 className="font-semibold text-slate-800 text-[0.95rem]">Waiting Patients</h3>
-                                        <div className="flex items-center gap-2">
-                                            {/* queue count badge */}
-                                            {queue.length > 0 && (
-                                                <span className="text-[10px] font-black bg-slate-700 text-white px-2 py-0.5 rounded-full">{queue.length}</span>
+                                    {/* ── Patient Queue ── */}
+                                    <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 shrink-0 flex items-center justify-between">
+                                            <h3 className="font-semibold text-slate-800 text-[0.95rem]">Waiting Patients</h3>
+                                            <div className="flex items-center gap-2">
+                                                {/* queue count badge */}
+                                                {queue.length > 0 && (
+                                                    <span className="text-[10px] font-black bg-slate-700 text-white px-2 py-0.5 rounded-full">{queue.length}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto">
+                                            {queue.length === 0 ? (
+                                                <div className="clinical-table-state">No patients in queue</div>
+                                            ) : (
+                                                <div>
+                                                    {queue.map((q, index) => (
+                                                        <div key={q.initialconsultation_id}
+                                                            onClick={() => handleConsultNavigate(q.patient_id, q.initialconsultation_id.toString())}
+                                                            className="clinical-worklist-row cursor-pointer group">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs font-black text-slate-300 w-5 text-center">{index + 1}</span>
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-slate-700">{q.patients?.lastName}, {q.patients?.firstName}</p>
+                                                                    <p className="text-xs text-slate-500 font-medium">{q.patients?.sex} • {q.patients?.bloodType || '—'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-xs font-bold text-slate-700">{formatTime(q.consultation_time)}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto">
-                                        {queue.length === 0 ? (
-                                            <div className="clinical-table-state">No patients in queue</div>
-                                        ) : (
-                                            <div>
-                                                {queue.map((q, index) => (
-                                                    <div key={q.initialconsultation_id}
-                                                        onClick={() => handleConsultNavigate(q.patient_id, q.initialconsultation_id.toString())}
-                                                        className="clinical-worklist-row cursor-pointer group">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-xs font-black text-slate-300 w-5 text-center">{index + 1}</span>
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <p className="font-bold text-slate-800 text-[0.9rem] group-hover:text-slate-700">{q.patients?.lastName}, {q.patients?.firstName}</p>
-                                                                <p className="text-xs text-slate-500 font-medium">{q.patients?.sex} • {q.patients?.bloodType || '—'}</p>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xs font-bold text-slate-700">{formatTime(q.consultation_time)}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                        {queue.length > 0 && (
+                                            <button type="button" onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                                View all patients →
+                                            </button>
                                         )}
                                     </div>
-                                    {queue.length > 0 && (
-                                        <button type="button" onClick={() => setActivePage('records')} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
-                                            View all patients →
-                                        </button>
-                                    )}
-                                </div>
 
-                                {/* Visit Trends */}
-                                <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
-                                    <div className="flex justify-between items-center mb-4 shrink-0">
-                                        <h3 className="font-bold text-slate-800 text-[0.95rem]">Visit Trends</h3>
-                                        <FilterTabs value={trendFilter} onChange={setTrendFilter} />
-                                    </div>
-                                    <div className="flex-1 relative w-full h-full">
-                                        <canvas ref={trendChartRef} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Morbidity + Follow-ups */}
-                            <div className="ops-grid">
-
-                                {/* Morbidity */}
-                                <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
-                                    <div className="flex justify-between items-center mb-2 shrink-0">
-                                        <h3 className="font-bold text-slate-800 text-[0.95rem]">Morbidity Analytics</h3>
-                                        <FilterTabs value={morbFilter} onChange={setMorbFilter} />
-                                    </div>
-                                    <div className="flex-1 relative w-full h-full">
-                                        <canvas ref={morbChartRef} />
+                                    {/* Visit Trends */}
+                                    <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
+                                        <div className="flex justify-between items-center mb-4 shrink-0">
+                                            <h3 className="font-bold text-slate-800 text-[0.95rem]">Visit Trends</h3>
+                                            <FilterTabs value={trendFilter} onChange={setTrendFilter} />
+                                        </div>
+                                        <div className="flex-1 relative w-full h-full">
+                                            <canvas ref={trendChartRef} />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* ── Upcoming Follow-ups ── */}
-                                <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
-                                    <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 flex justify-between items-center shrink-0">
-                                        <h3 className="font-semibold text-slate-800 text-[0.95rem]">Follow-ups Due</h3>
+                                {/* Morbidity + Follow-ups */}
+                                <div className="ops-grid">
+
+                                    {/* Morbidity */}
+                                    <div className="lg:col-span-7 bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px]">
+                                        <div className="flex justify-between items-center mb-2 shrink-0">
+                                            <h3 className="font-bold text-slate-800 text-[0.95rem]">Morbidity Analytics</h3>
+                                            <FilterTabs value={morbFilter} onChange={setMorbFilter} />
+                                        </div>
+                                        <div className="flex-1 relative w-full h-full">
+                                            <canvas ref={morbChartRef} />
+                                        </div>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto">
-                                        {followUps.length === 0 ? (
-                                            <p className="text-center text-slate-400 py-16 text-sm">No follow-ups scheduled</p>
-                                        ) : (
-                                            <div className="divide-y divide-slate-100">
-                                                {followUps.map(f => {
-                                                    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-                                                    const isToday = f.visit_date === today;
-                                                    return (
-                                                        <div key={f.followup_id}
-                                                            onClick={() => handleConsultNavigate(f.patient_id)}
-                                                            className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <p className="font-bold text-slate-800 text-[0.9rem] truncate group-hover:text-slate-700 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
-                                                                <p className="text-[11px] text-slate-500 font-medium">Return Visit</p>
+
+                                    {/* ── Upcoming Follow-ups ── */}
+                                    <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+                                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 flex justify-between items-center shrink-0">
+                                            <h3 className="font-semibold text-slate-800 text-[0.95rem]">Follow-ups Due</h3>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto">
+                                            {followUps.length === 0 ? (
+                                                <p className="text-center text-slate-400 py-16 text-sm">No follow-ups scheduled</p>
+                                            ) : (
+                                                <div className="divide-y divide-slate-100">
+                                                    {followUps.map(f => {
+                                                        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+                                                        const isToday = f.visit_date === today;
+                                                        return (
+                                                            <div key={f.followup_id}
+                                                                onClick={() => handleConsultNavigate(f.patient_id)}
+                                                                className="cursor-pointer px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <p className="font-bold text-slate-800 text-[0.9rem] truncate group-hover:text-slate-700 transition-colors">{f.patients?.lastName}, {f.patients?.firstName}</p>
+                                                                    <p className="text-[11px] text-slate-500 font-medium">Return Visit</p>
+                                                                </div>
+                                                                <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ml-2 shrink-0 ${isToday ? 'text-slate-700 bg-slate-50' : 'text-amber-600 bg-amber-50'}`}>
+                                                                    {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                </p>
                                                             </div>
-                                                            <p className={`text-[10px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ml-2 shrink-0 ${isToday ? 'text-slate-700 bg-slate-50' : 'text-amber-600 bg-amber-50'}`}>
-                                                                {isToday ? 'Today' : new Date(f.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                            </p>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {followUps.length > 0 && (
+                                            <button type="button" onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
+                                                View all follow-ups →
+                                            </button>
                                         )}
                                     </div>
-                                    {followUps.length > 0 && (
-                                        <button type="button" onClick={loadAllFollowUps} className="p-4 text-xs font-bold text-slate-700 hover:bg-slate-50 border-t border-slate-100 transition-colors text-center shrink-0">
-                                            View all follow-ups →
-                                        </button>
-                                    )}
                                 </div>
-                            </div>
                             </div>
                         </>
                     )}
