@@ -16,7 +16,7 @@ export const midwifeAPI = {
         const { data, error } = await supabase
             .from('patients')
             .select('id, firstName, lastName, address, birthday, sex, age')
-            .eq('archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null')
             .order('lastName', { ascending: true });
 
         if (error) {

@@ -119,7 +119,7 @@ export function ConsultationComponent() {
                     id, firstName, middleName, lastName, age, sex, bloodType,
                     patient_consent ( consent_id )
                 `)
-                .eq('archive_status', 'active')
+                .or('archive_status.eq.active,archive_status.is.null')
                 .order('lastName', { ascending: true })
                 .limit(CONSENTED_PATIENT_SEARCH_LIMIT);
 
@@ -139,7 +139,7 @@ export function ConsultationComponent() {
             .from('patients')
             .select(INITIAL_CONSULT_PATIENT_COLUMNS)
             .eq('id', id)
-            .eq('archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null')
             .single();
 
         if (data) {

@@ -541,7 +541,7 @@ export function ConsultationPage({
                 .from('patients')
                 .select('id, firstName, lastName, middleName, age, sex, bloodType, address, contactNumber')
                 .eq('id', patientId)
-                .eq('archive_status', 'active')
+                .or('archive_status.eq.active,archive_status.is.null')
                 .single();
             if (error) console.error('Failed to fetch patient:', error);
             else if (data) setPatient(data as PatientData);

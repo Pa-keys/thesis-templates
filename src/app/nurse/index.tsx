@@ -32,7 +32,11 @@ const NurseDashboard = () => {
     const [consentedPatients, setConsentedPatients] = useState<Patient[]>([]);
     const [totalPatientsCount, setTotalPatientsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activePage, setActivePage] = useState('dashboard');
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'dashboard');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
 
     // Modal state — still used by Records component
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -55,7 +59,7 @@ const NurseDashboard = () => {
         const { count: totalCount } = await supabase
             .from('patients')
             .select('id', { count: 'exact', head: true })
-            .eq('archive_status', 'active');
+            .or('archive_status.eq.active,archive_status.is.null');
         setTotalPatientsCount(totalCount || 0);
 
         const { data, error } = await supabase
@@ -68,7 +72,7 @@ const NurseDashboard = () => {
                 relativeName, relativeRelation, relativeAddress,
                 patient_consent ( consent_id )
             `)
-            .eq('archive_status', 'active')
+            .or('archive_status.eq.active,archive_status.is.null')
             .order('created_at', { ascending: false });
 
         if (!error && data) {

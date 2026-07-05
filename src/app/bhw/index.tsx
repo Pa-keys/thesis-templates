@@ -37,7 +37,11 @@ const BhwDashboard = () => {
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     // ─── SPA Navigation State ───
-    const [activePage, setActivePage] = useState('dashboard');
+    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'dashboard');
+
+    useEffect(() => {
+        window.location.hash = activePage;
+    }, [activePage]);
 
     const navItems = [
         { id: 'dashboard', label: 'Home', icon: 'home' },
@@ -62,7 +66,7 @@ const BhwDashboard = () => {
             const { data: allPatients, error: statsError } = await supabase
                 .from('patients')
                 .select(BHW_PATIENT_COLUMNS)
-                .eq('archive_status', 'active')
+                .or('archive_status.eq.active,archive_status.is.null')
                 .order('created_at', { ascending: false })
                 .limit(BHW_PATIENT_LIMIT);
 

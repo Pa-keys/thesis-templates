@@ -32,6 +32,7 @@ interface ArchivePatient {
 }
 
 const ARCHIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, age, sex, address, contactNumber, created_at, archive_status, archived_at, archived_by, archive_reason, archive_reviewed_at, archive_reviewed_by, archive_protected, archive_protection_reason, last_activity_at';
+const ACTIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, bloodType, address, contactNumber, birthday, civilStatus, nationality, religion, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress, created_at, archive_status, archive_protected';
 const ARCHIVE_REVIEW_LIMIT = 200;
 
 function formatDate(value?: string | null) {
@@ -72,25 +73,40 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
     const loadArchivePatients = async () => {
         setIsLoading(true);
         try {
-            let query = supabase
+            const selectColumns = filter === 'active' ? ACTIVE_PATIENT_COLUMNS : ARCHIVE_PATIENT_COLUMNS;
+            // @ts-ignore
+            let query: any = supabase
                 .from('patients')
-                .select(ARCHIVE_PATIENT_COLUMNS)
-                .order('last_activity_at', { ascending: true, nullsFirst: true })
-                .limit(ARCHIVE_REVIEW_LIMIT);
+                .select(selectColumns);
 
-            if (filter === 'archived') {
-                query = query.eq('archive_status', 'archived');
+            if (filter === 'active') {
+                query = query
+                    .or('archive_status.eq.active,archive_status.is.null')
+                    .order('lastName', { ascending: true });
+            } else if (filter === 'candidates') {
+                query = query
+                    .or('archive_status.eq.active,archive_status.is.null')
+                    .or('archive_protected.eq.false,archive_protected.is.null')
+                    .lte('last_activity_at', archiveCutoffIso())
+                    .order('last_activity_at', { ascending: true, nullsFirst: true });
             } else if (filter === 'protected') {
-                query = query.eq('archive_protected', true).eq('archive_status', 'active');
-            } else {
-                query = query.eq('archive_status', 'active').eq('archive_protected', false);
-                if (filter === 'candidates') query = query.lte('last_activity_at', archiveCutoffIso());
+                query = query
+                    .eq('archive_protected', true)
+                    .or('archive_status.eq.active,archive_status.is.null')
+                    .order('lastName', { ascending: true });
+            } else if (filter === 'archived') {
+                query = query
+                    .eq('archive_status', 'archived')
+                    .order('lastName', { ascending: true });
             }
 
-            const { data, error } = await query;
+            const finalQuery = query.limit(ARCHIVE_REVIEW_LIMIT);
+            const { data, error } = await finalQuery;
+
             if (error) throw error;
 
             let nextPatients = ((data || []) as ArchivePatient[]);
+
             if (filter === 'candidates' && nextPatients.length > 0) {
                 const ids = nextPatients.map(patient => patient.id);
                 const [{ data: pendingFollowUps, error: followUpError }, { data: pendingLabRequests, error: labError }] = await Promise.all([
@@ -117,6 +133,7 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
     };
 
     useEffect(() => {
+        console.log('[DEBUG Admin Archive] useEffect triggered, filter:', filter);
         void loadArchivePatients();
     }, [filter]);
 

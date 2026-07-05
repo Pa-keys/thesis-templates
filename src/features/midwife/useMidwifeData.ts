@@ -44,7 +44,7 @@ export const useMidwifeData = () => {
                     created_at,
                     patient_consent ( consent_id )
                 `)
-                .eq('archive_status', 'active')
+                .or('archive_status.eq.active,archive_status.is.null')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
