@@ -1,8 +1,8 @@
 # MEDISENS
 
-**MEDISENS** is a secure, role-based Healthcare Information System / Electronic Medical Record (EMR) prototype designed for the **Malvar Rural Health Unit (RHU)**. It supports digital patient records, consultation workflows, laboratory requests, pharmacy dispensing, census reporting, patient history tracking, and audit logging.
+**MEDISENS** is a secure, role-based Healthcare Information System / Electronic Medical Record (EMR) prototype designed for the **Malvar Rural Health Unit (RHU)**. It supports digital patient records, consultation workflows, initial intake, laboratory requests, pharmacy dispensing, census reporting, patient history tracking, audit logging, and soft archiving of inactive patient records.
 
-This project was developed as an academic capstone system to help improve manual RHU workflows through a responsive and healthcare-focused web application.
+This project was developed as an academic capstone system to help improve manual RHU workflows through a responsive, healthcare-focused, and role-based web application.
 
 ---
 
@@ -15,19 +15,21 @@ MEDISENS aims to address these issues through:
 - Digital patient records
 - Role-based access control
 - Patient consultation workflow support
+- Initial consultation and vital signs recording
 - Laboratory request and result management
-- E-prescription and pharmacy workflow support
-- Midwife census and reporting support
-- Patient history tracking
-- Audit logging for accountability
-- Responsive Progressive Web App-ready interface
+- E-prescription and pharmacy dispensing workflow
+- Midwife census, maternal care, vaccination, and reporting support
+- Patient history and transaction tracking
+- Read-only audit logging for accountability
+- Soft archiving for inactive patient records
 - Data privacy notices aligned with the Philippine Data Privacy Act of 2012
+- Responsive Progressive Web App-ready interface
 
 ---
 
 ## User Roles
 
-MEDISENS supports the following users:
+MEDISENS supports the following role-based users:
 
 - Admin
 - Barangay Health Worker (BHW)
@@ -47,9 +49,10 @@ Each role only has access to its approved modules and workflows based on the sys
 
 - Patient registration and profile management
 - Patient information preview
-- Patient history viewing
-- Consultation, initial consultation, lab, prescription, vaccination, and follow-up tracking
-- Doctor-only Consult action from Patient Records
+- Patient history viewing from Patient Records
+- Consultation, initial consultation, laboratory, prescription, vaccination, and follow-up tracking
+- Doctor-only **Consult** action from Patient Records
+- Active and archived patient record handling
 
 ### Doctor Module
 
@@ -57,32 +60,38 @@ Each role only has access to its approved modules and workflows based on the sys
 - Consultation Room workflow
 - Consultation record creation and updates
 - Patient history access during consultation
+- Follow-up handling
 - Audit Log access
+- Archive Review access with read/review visibility where enabled
 
 ### Nurse Module
 
 - Initial consultation workflow
 - Vital signs and patient assessment recording
 - Patient Records access
+- Initial intake queue support
 
 ### Laboratory Module
 
 - Requested tests viewing
-- Laboratory results and findings management
-- Right-side slide-out patient detail panel
+- Laboratory result and finding management
+- Right-side slide-out patient laboratory detail panel
+- Status-based laboratory workflow
 
 ### Pharmacist Module
 
 - Prescription viewing
-- Dispensing workflow
-- Patient preview with optimized readable layout
+- Prescription dispensing workflow
+- Patient preview with improved readable layout
+- Dispensing status handling
 
 ### Midwife Module
 
 - Census Entry
 - Maternal care validation
+- Male patient restriction for Maternal Care entries
 - Vaccination and follow-up support
-- Reporting features
+- FHSIS/report generation features
 
 ### BHW Module
 
@@ -95,14 +104,25 @@ Each role only has access to its approved modules and workflows based on the sys
 - User management
 - Secure account creation
 - Audit Log access
+- Archive Review workspace
 - System oversight
 
 ### Audit Log
 
 - Read-only audit trail for Admin and Doctor users
-- Tracks important actions such as login/logout, patient updates, consultations, laboratory actions, pharmacy actions, and report generation
-- Uses Supabase Edge Function for secure audit log insertion
+- Tracks important actions such as login/logout, patient updates, consultations, laboratory actions, pharmacy actions, report generation, and archive/restore activity
+- Uses a Supabase Edge Function for secure audit log insertion
 - Prevents users from editing or deleting audit entries
+
+### Patient Record Archiving
+
+- Soft archive only; patient records are not moved or deleted
+- Preserves all existing patient relationships and medical history
+- Supports archive review for inactive patient records
+- Supports archive and restore actions with required reasons
+- Uses archive event logging through `patient_archive_events`
+- Uses Audit Log integration for system-wide accountability
+- Archive/restore actions are protected through a Supabase Edge Function
 
 ---
 
@@ -135,10 +155,80 @@ MEDISENS/
 ├── supabase/
 │   └── functions/
 ├── docs/
+├── README.md
 ├── package.json
-├── vite.config.ts
-└── README.md
+└── vite.config.ts
 ```
+
+---
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Pa-keys/thesis-templates.git
+cd thesis-templates
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Create Environment File
+
+Create a `.env` file in the project root.
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Do not commit real API keys, service role keys, or credentials.
+
+### 4. Run the Development Server
+
+```bash
+npm run dev
+```
+
+### 5. Build the Project
+
+```bash
+npm run build
+```
+
+---
+
+## Supabase Edge Functions
+
+MEDISENS uses Supabase Edge Functions for privileged and sensitive server-side operations.
+
+Current functions include:
+
+- `create-user` — secure Admin-created user accounts
+- `create-audit-log` — secure audit log inserts
+- `archive-patient-record` — secure Admin-only patient archive/restore actions
+
+Deploy functions using:
+
+```bash
+npx supabase functions deploy create-user
+npx supabase functions deploy create-audit-log
+npx supabase functions deploy archive-patient-record
+```
+
+Set required Supabase secrets:
+
+```bash
+npx supabase secrets set PROJECT_URL="your_project_url"
+npx supabase secrets set ANON_KEY="your_anon_key"
+npx supabase secrets set SERVICE_ROLE_KEY="your_service_role_key"
+```
+
+Never expose the service role key in frontend code.
 
 ---
 
@@ -155,12 +245,67 @@ Patient information must only be collected, accessed, stored, and processed for 
 MEDISENS incorporates multiple security measures to protect patient information and maintain system integrity:
 
 - Role-based module visibility and access control
-- Secure authentication using Supabase Auth
-- Read-only Audit Log for authorized users (Admin and Doctor)
-- Server-side audit logging through Supabase Edge Functions
-- User-friendly error messages without exposing internal system details
-- Sensitive clinical information is not intentionally stored in audit metadata
+- Supabase authentication
 - Secure administrator-controlled user account creation
+- Read-only Audit Log for authorized users
+- Server-side audit logging through Supabase Edge Functions
+- Server-side archive/restore protection through Supabase Edge Functions
+- User-friendly error messages without exposing raw technical details
+- Sensitive clinical information is not intentionally stored in audit metadata
+- Soft archiving instead of deleting or moving patient records
+
+---
+
+## Development Standards
+
+The project uses documentation and standards to guide consistent development:
+
+- `README.md` — project overview and setup
+- `UI-SKILL.md` — MEDISENS healthcare UI/UX design standard
+- `DESIGN_SYSTEM.md` — visual system and component design direction
+- `UPDATE.md` — implementation and change tracking
+- `SECURITY_ROADMAP.md` — planned security hardening
+- `ARCHIVING_ROADMAP.md` — patient record archiving plan
+- `ANALYTICS_ROADMAP.md` — RHU analytics and performance dashboard plan
+
+Before committing changes, run:
+
+```bash
+npm run build
+git status
+```
+
+Recommended commit workflow:
+
+```bash
+git add .
+git commit -m "your commit message"
+git push origin your-branch-name
+```
+
+---
+
+## Current Development Notes
+
+MEDISENS is under active development and refinement. Recent major improvements include:
+
+- Healthcare-oriented UI/UX refinement
+- Read-only Audit Log for Admin and Doctor users
+- Patient history improvements
+- Safer error handling and UTF-8 cleanup
+- Soft patient record archiving support
+- Archive Review workspace
+- Supabase Edge Functions for sensitive operations
+- Data Privacy Act notices
+- Role-based UI consistency improvements
+
+Remaining recommended work includes:
+
+- Full authenticated browser QA for every role
+- Final RLS hardening review
+- `last_activity_at` instrumentation across all patient-linked write paths
+- RHU Analytics & Performance Dashboard
+- Final Vercel staging/production deployment testing
 
 ---
 
