@@ -11,6 +11,7 @@ import { itemizeText } from '../../features/patients/itemization';
 import { Icon } from '../../components/shared/Icon';
 import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
 import { clinicalInputClass, clinicalLabelClass, clinicalTextareaClass } from '../../components/ui/ClinicalForm';
+import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 // --- Interfaces ---------------------------------------------------------------
@@ -235,13 +236,7 @@ function HistoryPanel({ patientId, patientName, onClose }: { patientId: string; 
                     </div>
                     <div className="py-4 bg-[#F8FAFC]">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center h-40 gap-3">
-                                <svg className="animate-spin w-7 h-7 text-slate-600" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                <span className="text-sm text-slate-400 font-medium">Loading records...</span>
-                            </div>
+                            <SkeletonList rows={3} />
                         ) : totalCount === 0 ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-2">
                                 <Icon name="inbox" className="h-8 w-8 text-slate-400" />
@@ -1049,7 +1044,18 @@ export function ConsultationPage({
     );
 
     if (patientLoading) {
-        return <div className="p-8 text-center text-slate-500 animate-pulse">Loading patient chart...</div>;
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white p-5" role="status" aria-live="polite" aria-busy="true">
+                <div className="mb-5 flex items-center gap-4">
+                    <Skeleton className="h-14 w-14 rounded-full" />
+                    <div className="min-w-0 flex-1">
+                        <Skeleton className="h-5 w-52 max-w-full" />
+                        <Skeleton className="mt-3 h-3 w-40" />
+                    </div>
+                </div>
+                <SkeletonList rows={4} />
+            </div>
+        );
     }
 
     if (!patient) {

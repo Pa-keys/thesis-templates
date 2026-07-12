@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAuditLogs, type AuditLog, type AuditLogFilters } from './services';
 import { Icon } from '../../components/shared/Icon';
-import { LoadingState } from '../../components/shared/LoadingState';
 import { EmptyState } from '../../components/shared/EmptyState';
 import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 
 const PAGE_SIZE = 25;
@@ -337,7 +337,24 @@ export function AuditLogPage() {
                 )}
 
                 {isLoading ? (
-                    <LoadingState label="Loading audit logs..." />
+                    <div className="clinical-table-scroll">
+                        <table className="clinical-table min-w-[1100px]">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Module</th>
+                                    <th>Affected Record</th>
+                                    <th>Description</th>
+                                    <th className="text-right">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colSpan={7}><SkeletonTable rows={6} columns={7} /></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 ) : error ? (
                     <div className="m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>
                 ) : logs.length === 0 ? (

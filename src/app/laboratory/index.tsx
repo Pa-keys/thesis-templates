@@ -12,9 +12,9 @@ import { upsertCompletedLabResult } from '../../features/laboratory/services';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { Topbar } from '../../components/layout/Topbar';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { LoadingState } from '../../components/shared/LoadingState';
 import { EmptyState } from '../../components/shared/EmptyState';
 import { Modal } from '../../components/ui/Modal';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 
 
 interface LabRequest {
@@ -625,7 +625,7 @@ const LaboratoryDashboard = () => {
                                         {loading ? (
                                             <tr>
                                                 <td colSpan={7} className="px-6 py-12 text-center">
-                                                    <LoadingState label="Loading requests..." />
+                                                    <SkeletonTable rows={6} columns={7} />
                                                 </td>
                                             </tr>
                                         ) : filtered.length === 0 ? (

@@ -7,6 +7,7 @@ import { getInitials } from '../../lib/utils/names';
 import { Icon } from '../../components/shared/Icon';
 import { Topbar } from '../../components/layout/Topbar';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { SkeletonList } from '../../components/ui/Skeleton';
 import { safeTrim } from '../../lib/utils/strings';
 
 
@@ -22,8 +23,8 @@ const PatientDetailModal = lazy(() => import('../../components/patient/PatientDe
 const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
 
 const LazyPanelFallback = () => (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
-        Loading workspace...
+    <div className="rounded-xl border border-slate-200 bg-white">
+        <SkeletonList rows={4} />
     </div>
 );
 
@@ -271,7 +272,7 @@ const BhwDashboard = () => {
                         {activePage === 'reports' && (
                             <div className="w-full bg-[#F8FAFC] min-h-[500px] m-3 md:m-4 xl:m-5">
                                 {/* Pass the newly fetched FHSIS logs down to the generator */}
-                                <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">Loading report generator...</div>}>
+                                <Suspense fallback={<LazyPanelFallback />}>
                                     <ReportGenerator records={records} />
                                 </Suspense>
                             </div>

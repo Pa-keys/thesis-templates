@@ -4,6 +4,7 @@ import { useToast } from '../../components/feedback/Toast';
 import { requireRole } from '../../lib/auth/roles';
 import { createLabRequest } from '../../features/consultation/services';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 interface LabRequestData {
   date: string; labNo: string; name: string; age: string; sex: string; address: string; cc: string;
@@ -72,7 +73,17 @@ function LabRequest() {
     }
   };
 
-  if (!role) return <div>Loading clinical workspace...</div>;
+  if (!role) return (
+    <div className="w-full rounded-lg border bg-white p-4 shadow md:p-6" role="status" aria-live="polite" aria-busy="true">
+      <Skeleton className="mx-auto mb-6 h-6 w-64" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-9 w-full" />)}
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+        {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}
+      </div>
+    </div>
+  );
 
   const isLab = role === 'labaratory';
   const inputStyle = "border-b border-gray-400 focus:border-slate-700 outline-none bg-transparent px-2 text-sm w-full";

@@ -5,8 +5,8 @@ import {
     type PatientTransaction,
 } from '../../features/patients/history';
 import { EmptyState } from '../shared/EmptyState';
-import { LoadingState } from '../shared/LoadingState';
 import { StatusBadge } from '../shared/StatusBadge';
+import { Skeleton, SkeletonList } from '../ui/Skeleton';
 
 interface PatientTransactionHistoryProps {
     patientId?: string;
@@ -211,8 +211,21 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
                 title: 'No transactions found',
                 description: 'Registration, consent, consultations, lab, pharmacy, vaccine, and follow-up records will appear here.',
             };
+    const isInitialHistoryLoading = (isLoading || isFetching) && visibleTransactions.length === 0;
+    const isRefreshingHistory = (isLoading || isFetching) && visibleTransactions.length > 0;
 
-    if (isLoading || isFetching) return <LoadingState label="Loading complete patient history..." />;
+    if (isInitialHistoryLoading) {
+        return (
+            <div role="status" aria-live="polite" aria-busy="true">
+                <div className="mb-4 flex flex-wrap gap-2">
+                    <Skeleton className="h-9 w-20 rounded-lg" />
+                    <Skeleton className="h-9 w-32 rounded-lg" />
+                    <Skeleton className="h-9 w-24 rounded-lg" />
+                </div>
+                <SkeletonList rows={4} />
+            </div>
+        );
+    }
 
     if (visibleError) {
         return (
@@ -270,7 +283,13 @@ export function PatientTransactionHistory({ patientId, transactions, isLoading, 
 
     return (
         <div className="relative">
-            {filterControls}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                {filterControls}
+                <div className={`doctor-analytics-updating ${isRefreshingHistory ? 'is-visible' : ''}`} role="status" aria-live="polite">
+                    <span className="doctor-analytics-spinner" aria-hidden="true" />
+                    <span>Updating</span>
+                </div>
+            </div>
             <HistoryWarning warnings={visibleWarnings} onRetry={retry} />
 
             <div className="absolute bottom-3 left-[18px] top-3 hidden w-0.5 bg-slate-200 sm:block" />

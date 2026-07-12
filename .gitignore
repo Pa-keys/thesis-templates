@@ -3,3 +3,4 @@ dist/
 .env
 supabase/.temp/
 docs/
+skills-lock.json

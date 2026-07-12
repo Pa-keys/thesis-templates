@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase/client';
 import { useToast } from '../../components/feedback/Toast';
 import { Icon } from '../../components/shared/Icon';
-import { LoadingState } from '../../components/shared/LoadingState';
+import { SkeletonTable } from '../../components/ui/Skeleton';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { safeTrim } from '../../lib/utils/strings';
 import { logAuditEvent } from '../audit/services';
 
-type ArchiveFilter = 'candidates' | 'active' | 'archived' | 'protected';
+type ArchiveFilter = 'candidates' | 'active' | 'archived';
 type ArchiveAction = 'archive' | 'restore';
 
 interface ArchivePatient {
@@ -26,13 +26,11 @@ interface ArchivePatient {
     archive_reason: string | null;
     archive_reviewed_at: string | null;
     archive_reviewed_by: string | null;
-    archive_protected: boolean;
-    archive_protection_reason: string | null;
     last_activity_at: string | null;
 }
 
-const ARCHIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, age, sex, address, contactNumber, created_at, archive_status, archived_at, archived_by, archive_reason, archive_reviewed_at, archive_reviewed_by, archive_protected, archive_protection_reason, last_activity_at';
-const ACTIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, bloodType, address, contactNumber, birthday, civilStatus, nationality, religion, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress, created_at, archive_status, archive_protected';
+const ARCHIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, age, sex, address, contactNumber, created_at, archive_status, archived_at, archived_by, archive_reason, archive_reviewed_at, archive_reviewed_by, last_activity_at';
+const ACTIVE_PATIENT_COLUMNS = 'id, firstName, middleName, lastName, suffix, age, sex, bloodType, address, contactNumber, birthday, civilStatus, nationality, religion, educationalAttain, employmentStatus, philhealthNo, philhealthStatus, category, categoryOthers, relativeName, relativeRelation, relativeAddress, created_at, archive_status';
 const ARCHIVE_REVIEW_LIMIT = 200;
 
 function formatDate(value?: string | null) {
@@ -54,7 +52,6 @@ function archiveCutoffIso() {
 }
 
 function ArchiveStatusBadge({ patient }: { patient: ArchivePatient }) {
-    if (patient.archive_protected) return <span className="clinical-status-badge">Protected</span>;
     if (patient.archive_status === 'archived') return <span className="clinical-status-badge">Archived</span>;
     return <span className="clinical-status-badge success">Active</span>;
 }
@@ -86,14 +83,8 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
             } else if (filter === 'candidates') {
                 query = query
                     .or('archive_status.eq.active,archive_status.is.null')
-                    .or('archive_protected.eq.false,archive_protected.is.null')
                     .lte('last_activity_at', archiveCutoffIso())
                     .order('last_activity_at', { ascending: true, nullsFirst: true });
-            } else if (filter === 'protected') {
-                query = query
-                    .eq('archive_protected', true)
-                    .or('archive_status.eq.active,archive_status.is.null')
-                    .order('lastName', { ascending: true });
             } else if (filter === 'archived') {
                 query = query
                     .eq('archive_status', 'archived')
@@ -133,7 +124,6 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
     };
 
     useEffect(() => {
-        console.log('[DEBUG Admin Archive] useEffect triggered, filter:', filter);
         void loadArchivePatients();
     }, [filter]);
 
@@ -217,7 +207,7 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                 {[
                     ['Visible Records', visiblePatients.length, 'Current filter result'],
                     ['Review Policy', '5 years', 'No automatic archiving'],
-                    ['Archive Mode', filter === 'candidates' ? 'Candidates' : filter[0].toUpperCase() + filter.slice(1), 'Soft archive only'],
+                    ['Archive Mode', filter === 'candidates' ? 'Candidates' : filter[0].toUpperCase() + filter.slice(1), 'Manual review only'],
                 ].map(([label, value, note]) => (
                     <div key={label} className="ops-summary-card">
                         <div className="ops-summary-label">{label}</div>
@@ -226,6 +216,9 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                     </div>
                 ))}
             </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-relaxed text-amber-900">
+                Only patients with no activity for at least 5 years and no pending follow-ups, laboratory requests, or other ongoing care may be archived.
+            </div>
 
             <section className="clinical-table-panel">
                 <div className="clinical-table-titlebar">
@@ -233,8 +226,8 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                         <h2 className="clinical-table-title">Patient Archive Review</h2>
                         <p className="clinical-table-subtitle">
                             {readOnly
-                                ? 'Read-only view. Archive and restore actions are restricted to the Administrator role.'
-                                : 'Soft archive only. Patient records and relationships remain in place.'}
+                                ? 'Read-only review. Archive and restore actions are not available in this workspace.'
+                                : 'Archived patients are hidden from active records and can be restored later.'}
                         </p>
                     </div>
                     <span className="clinical-count-badge">{visiblePatients.length} result{visiblePatients.length !== 1 ? 's' : ''}</span>
@@ -256,7 +249,6 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                             ['candidates', 'Candidates'],
                             ['active', 'Active'],
                             ['archived', 'Archived'],
-                            ['protected', 'Protected'],
                         ] as Array<[ArchiveFilter, string]>).map(([value, label]) => (
                             <button
                                 key={value}
@@ -272,22 +264,30 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                 </div>
 
                 <div className="clinical-table-scroll">
-                    <table className="clinical-table min-w-[920px]">
+                    <table className={`clinical-table archive-review-table ${readOnly ? 'is-read-only min-w-[860px]' : 'min-w-[980px]'}`}>
+                        <colgroup>
+                            <col className="archive-col-patient" />
+                            <col className="archive-col-demographics" />
+                            <col className="archive-col-date" />
+                            <col className="archive-col-status" />
+                            <col className="archive-col-notes" />
+                            {!readOnly && <col className="archive-col-action" />}
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>Patient</th>
                                 <th>Age / Sex</th>
                                 <th>Last Activity</th>
-                                <th>Status</th>
+                                <th className="archive-table-center">Status</th>
                                 <th>Archive Notes</th>
-                                <th className="text-right">{readOnly ? 'Status' : 'Action'}</th>
+                                {!readOnly && <th className="archive-table-center">Action</th>}
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
-                                <tr><td colSpan={6}><LoadingState label="Loading archive review records..." /></td></tr>
+                                <tr><td colSpan={readOnly ? 5 : 6}><SkeletonTable rows={5} columns={readOnly ? 5 : 6} /></td></tr>
                             ) : visiblePatients.length === 0 ? (
-                                <tr><td colSpan={6}><div className="clinical-table-state">No patient records match this archive filter.</div></td></tr>
+                                <tr><td colSpan={readOnly ? 5 : 6}><div className="clinical-table-state">No patient records match this archive filter.</div></td></tr>
                             ) : visiblePatients.map(patient => (
                                 <tr key={patient.id}>
                                     <td>
@@ -296,27 +296,23 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                                     </td>
                                     <td>{patient.age ?? '-'} / {patient.sex || '-'}</td>
                                     <td>{formatDate(patient.last_activity_at || patient.created_at)}</td>
-                                    <td><ArchiveStatusBadge patient={patient} /></td>
+                                    <td className="archive-table-center"><ArchiveStatusBadge patient={patient} /></td>
                                     <td>
                                         <div className="max-w-[260px] text-sm text-slate-600">
-                                            {patient.archive_protected
-                                                ? patient.archive_protection_reason || 'Protected from archive review.'
-                                                : patient.archive_reason || 'No archive note recorded.'}
+                                            {patient.archive_reason || 'No archive note recorded.'}
                                         </div>
                                     </td>
-                                    <td className="text-right">
-                                        {readOnly ? (
-                                            <span className="clinical-secondary">
-                                                {patient.archive_status === 'archived' ? 'Archived' : patient.archive_protected ? 'Protected' : 'Active'}
-                                            </span>
-                                        ) : patient.archive_status === 'archived' ? (
-                                            <button type="button" className="clinical-row-action" onClick={() => openAction(patient, 'restore')}>Restore</button>
-                                        ) : patient.archive_protected ? (
-                                            <span className="clinical-secondary">Protected</span>
-                                        ) : (
-                                            <button type="button" className="clinical-row-action danger" onClick={() => openAction(patient, 'archive')}>Archive</button>
-                                        )}
-                                    </td>
+                                    {!readOnly && (
+                                        <td className="archive-table-center">
+                                            <div className="archive-action-cell">
+                                                {patient.archive_status === 'archived' ? (
+                                                    <button type="button" className="clinical-row-action min-w-[5.5rem]" onClick={() => openAction(patient, 'restore')}>Restore</button>
+                                                ) : (
+                                                    <button type="button" className="clinical-row-action danger min-w-[5.5rem]" onClick={() => openAction(patient, 'archive')}>Archive</button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -333,7 +329,7 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                         </div>
                         <div className="space-y-4 p-5">
                             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                                This is a soft archive action. Patient records, encounters, laboratory records, prescriptions, and FHSIS entries remain linked to this patient.
+                                Archiving will hide this patient from active records. Their medical history and other health information will remain available and can be restored later.
                             </div>
                             <label className="block">
                                 <span className="clinical-field-label">{action === 'archive' ? 'Archive Reason' : 'Restore Reason'} *</span>
@@ -341,7 +337,7 @@ export function ArchiveReviewPage({ isOnline, readOnly = false }: { isOnline: bo
                                     value={reason}
                                     onChange={event => setReason(event.target.value)}
                                     className="mt-1 min-h-[110px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20"
-                                    placeholder={action === 'archive' ? 'Explain why this inactive patient record should be archived.' : 'Explain why this patient record should be restored to active records.'}
+                                    placeholder={action === 'archive' ? 'Enter the reason for archiving this patient record.' : 'Explain why this patient record should be restored to active records.'}
                                 />
                             </label>
                         </div>

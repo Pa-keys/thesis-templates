@@ -5,6 +5,7 @@ import { useToast } from '../../components/feedback/Toast';
 import { requireRole } from '../../lib/auth/roles';
 import { createPrescription } from '../../features/consultation/services';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 interface Medication { name: string; dosage: string; frequency: string; duration: string; quantity: string; }
 
@@ -68,7 +69,20 @@ function EPrescription() {
     }
   };
 
-  if (!role) return <div>Loading clinical workspace...</div>;
+  if (!role) return (
+    <div className="w-full rounded-lg border-t-8 border-slate-800 bg-white p-4 shadow-sm md:p-6" role="status" aria-live="polite" aria-busy="true">
+      <div className="mb-8 border-b-2 border-gray-200 pb-4">
+        <Skeleton className="mx-auto h-5 w-64" />
+        <Skeleton className="mx-auto mt-3 h-4 w-80 max-w-full" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-9 w-full" />)}
+      </div>
+      <div className="mt-6 space-y-3">
+        {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-10 w-full" />)}
+      </div>
+    </div>
+  );
 
   const inputStyle = "w-full border-b border-gray-400 focus:border-slate-700 outline-none bg-transparent py-1 px-2 text-sm";
 
