@@ -13,6 +13,7 @@ import { RELIGION_OPTIONS } from '../../types/patient';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { updatePatientRecord } from '../../features/patients/services';
 import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
+import { Skeleton, SkeletonList } from '../../components/ui/Skeleton';
 import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 
@@ -251,7 +252,16 @@ function DetailsPage() {
                         {error ? (
                             <div className="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 font-semibold text-center">{error}</div>
                         ) : !patient ? (
-                            <div className="text-center py-10 text-slate-400 font-bold animate-pulse">Loading patient chart...</div>
+                            <div className="rounded-xl border border-slate-200 bg-white p-5" role="status" aria-live="polite" aria-busy="true">
+                                <div className="mb-5 flex items-center gap-4">
+                                    <Skeleton className="h-16 w-16 rounded-full" />
+                                    <div className="min-w-0 flex-1">
+                                        <Skeleton className="h-5 w-52 max-w-full" />
+                                        <Skeleton className="mt-3 h-3 w-36" />
+                                    </div>
+                                </div>
+                                <SkeletonList rows={4} />
+                            </div>
                         ) : showConsent ? (
                             <div className="">
                                 <button onClick={() => setShowConsent(false)} className="mb-4 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600">Back to Details</button>

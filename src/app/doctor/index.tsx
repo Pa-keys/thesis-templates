@@ -8,10 +8,12 @@ import { useToast } from '../../components/feedback/Toast';
 import { Icon } from '../../components/shared/Icon';
 import { Topbar } from '../../components/layout/Topbar';
 import { Modal } from '../../components/ui/Modal';
+import { SkeletonList } from '../../components/ui/Skeleton';
 import type { Patient } from '../../components/patient/PatientDetailModal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { AuditLogPage } from '../../features/audit/AuditLogPage';
 import { ArchiveReviewPage } from '../../features/admin/ArchiveReviewPage';
+import { DoctorAnalyticsPage } from '../../features/doctor/DoctorAnalyticsPage';
 
 const ConsultationPage = lazy(() => import('../consultation'));
 const RecordsComponent = lazy(() => import('../patients/records').then(module => ({ default: module.RecordsComponent })));
@@ -19,8 +21,8 @@ const TemplatesComponent = lazy(() => import('../patients/templates').then(modul
 const PatientDetailModal = lazy(() => import('../../components/patient/PatientDetailModal').then(module => ({ default: module.PatientDetailModal })));
 
 const LazyPanelFallback = () => (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
-        Loading workspace...
+    <div className="rounded-xl border border-slate-200 bg-white">
+        <SkeletonList rows={4} />
     </div>
 );
 
@@ -54,10 +56,15 @@ const getDateRange = (period: FilterPeriod): { from: string; to: string } => {
 };
 
 const FilterTabs = ({ value, onChange }: { value: FilterPeriod; onChange: (v: FilterPeriod) => void }) => (
-    <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+    <div className="clinical-filter-group" role="group" aria-label="Dashboard period filter">
         {FILTER_OPTIONS.map(opt => (
-            <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-                className={`text-[0.7rem] font-bold px-2.5 py-1 rounded-md transition-all ${value === opt.value ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChange(opt.value)}
+                className={`clinical-filter-button ${value === opt.value ? 'is-active' : ''}`}
+                aria-pressed={value === opt.value}
+            >
                 {opt.label}
             </button>
         ))}
@@ -111,6 +118,7 @@ const DoctorDashboard = () => {
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { id: 'analytics', label: 'Analytics', icon: 'chart' },
         { id: 'records', label: 'Patient Records', icon: 'users' },
         { id: 'consultation', label: 'Consultation Room', icon: 'clipboard' },
         { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
@@ -504,7 +512,7 @@ const DoctorDashboard = () => {
 
             <main className="flex-1 overflow-auto md:ml-[240px]">
                 <Topbar
-                    title={activePage === 'dashboard' ? 'Doctor Dashboard' : activePage === 'records' ? 'Patient Records' : activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'Consultation Room'}
+                    title={activePage === 'dashboard' ? 'Doctor Dashboard' : activePage === 'analytics' ? 'Doctor Analytics' : activePage === 'records' ? 'Patient Records' : activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'Consultation Room'}
                     sectionLabel="Clinical Consultation"
                     userName={userName}
                     userInitials={userInitials}
@@ -655,6 +663,9 @@ const DoctorDashboard = () => {
                             </Suspense>
                         </div>
                     )}
+                    {activePage === 'analytics' && (
+                        <DoctorAnalyticsPage isOnline={isOnline} />
+                    )}
                     {activePage === 'new-record' && (
                         <Suspense fallback={<LazyPanelFallback />}>
                             <TemplatesComponent />
@@ -684,7 +695,7 @@ const DoctorDashboard = () => {
                         <>
                             <PageHeader
                                 title="Patient Archive Review"
-                                subtitle="Read-only review of inactive patient records. Archive and restore actions are restricted to the Administrator."
+                                subtitle="Read-only review of inactive patient records. Archive and restore actions are not available in this workspace."
                             />
                             <ArchiveReviewPage isOnline={isOnline} readOnly={true} />
                         </>

@@ -7,6 +7,8 @@ import { getInitials } from '../../lib/utils/names';
 import { Icon } from '../../components/shared/Icon';
 import { Topbar } from '../../components/layout/Topbar';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { ArchiveReviewPage } from '../../features/admin/ArchiveReviewPage';
+import { SkeletonList } from '../../components/ui/Skeleton';
 
 
 // ─── Imported Pure Components ────────────────────────────────────────────────
@@ -17,9 +19,17 @@ const TemplatesComponent = lazy(() => import('../patients/templates').then(modul
 const ConsultationComponent = lazy(() => import('../initial-consultation').then(module => ({ default: module.ConsultationComponent })));
 const PatientDetailModal = lazy(() => import('../../components/patient/PatientDetailModal').then(module => ({ default: module.PatientDetailModal })));
 
+const pageTitles: Record<string, string> = {
+    dashboard: 'Nurse Dashboard',
+    records: 'Patient Records',
+    'new-record': 'New Record',
+    consultation: 'Initial Consultation',
+    'archive-review': 'Archive Review',
+};
+
 const LazyPanelFallback = () => (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">
-        Loading workspace...
+    <div className="rounded-xl border border-slate-200 bg-white">
+        <SkeletonList rows={4} />
     </div>
 );
 
@@ -45,7 +55,8 @@ const NurseDashboard = () => {
         { id: 'dashboard', label: 'Home', icon: 'home' },
         { id: 'records', label: 'Patient Records', icon: 'users' },
         { id: 'new-record', label: 'New Record', icon: 'user-plus' },
-        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' }
+        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' },
+        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
     ];
 
     // ─── Restored from old code: navigates to consultation with patient ID in URL ───
@@ -151,7 +162,7 @@ const NurseDashboard = () => {
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
 
                 <Topbar
-                    title={activePage === 'dashboard' ? 'Nurse Dashboard' : activePage.replace('-', ' ')}
+                    title={pageTitles[activePage] || 'Nurse Dashboard'}
                     sectionLabel="Nursing"
                     userName={userName}
                     userInitials={userInitials}
@@ -279,6 +290,15 @@ const NurseDashboard = () => {
                             <Suspense fallback={<LazyPanelFallback />}>
                                 <ConsultationComponent />
                             </Suspense>
+                        )}
+                        {activePage === 'archive-review' && (
+                            <>
+                                <PageHeader
+                                    title="Patient Archive Review"
+                                    subtitle="Review inactive patient records and complete soft archive or restore actions with a required reason."
+                                />
+                                <ArchiveReviewPage isOnline={isOnline} />
+                            </>
                         )}
                     </div>
                 </div>

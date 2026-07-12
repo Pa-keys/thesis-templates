@@ -8,14 +8,13 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { useToast } from '../../components/feedback/Toast';
 import { getInitials } from '../../lib/utils/names';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { LoadingState } from '../../components/shared/LoadingState';
 import { Icon } from '../../components/shared/Icon';
+import { SkeletonList } from '../../components/ui/Skeleton';
 import type { Role } from '../../types/user';
 import { healthcareErrorMessage, logError } from '../../lib/utils/errors';
 import { safeTrim } from '../../lib/utils/strings';
 import { AuditLogPage } from '../../features/audit/AuditLogPage';
 import { logAuditEvent } from '../../features/audit/services';
-import { ArchiveReviewPage } from '../../features/admin/ArchiveReviewPage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -121,7 +120,10 @@ const AdminDashboard = () => {
 
     // Context & Auth
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [activePage, setActivePage] = useState(() => window.location.hash.replace('#', '') || 'admin');
+    const [activePage, setActivePage] = useState(() => {
+        const requestedPage = window.location.hash.replace('#', '');
+        return requestedPage === 'audit-log' ? requestedPage : 'admin';
+    });
 
     useEffect(() => {
         window.location.hash = activePage;
@@ -158,7 +160,6 @@ const AdminDashboard = () => {
 
     const navItems = [
         { id: 'admin', label: 'User Management', icon: 'users' },
-        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
         { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
     ];
 
@@ -170,15 +171,15 @@ const AdminDashboard = () => {
                 setUserName(profile.fullName);
                 setUserInitials(getInitials(profile.fullName, 'A'));
 
-                await loadUsers();
+                if (activePage === 'admin') {
+                    await loadUsers();
+                }
             } catch (err) {
                 console.error("Initialization Failed:", err);
             }
         };
 
-        if (activePage === 'admin' || activePage === 'archive-review') {
-            init();
-        }
+        init();
 
     }, [activePage]);
 
@@ -399,9 +400,9 @@ const AdminDashboard = () => {
             <main className="flex-1 min-w-0 overflow-auto md:ml-[240px] w-full">
                 {/* ─── Topbar ─── */}
                 <Topbar
-                    title={activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'User Management'}
+                    title={activePage === 'audit-log' ? 'Audit Log' : 'User Management'}
                     sectionLabel="Administration"
-                    breadcrumbs={[{ label: 'Administration' }, { label: activePage === 'audit-log' ? 'Audit Log' : activePage === 'archive-review' ? 'Archive Review' : 'User Management', current: true }]}
+                    breadcrumbs={[{ label: 'Administration' }, { label: activePage === 'audit-log' ? 'Audit Log' : 'User Management', current: true }]}
                     userName={userName}
                     userInitials={userInitials}
                     userRole="Administrator"
@@ -417,14 +418,6 @@ const AdminDashboard = () => {
                                 subtitle="Review read-only system activity across MEDISENS workflows."
                             />
                             <AuditLogPage />
-                        </>
-                    ) : activePage === 'archive-review' ? (
-                        <>
-                            <PageHeader
-                                title="Patient Archive Review"
-                                subtitle="Review inactive patient records for soft archiving while preserving patient history and relationships."
-                            />
-                            <ArchiveReviewPage isOnline={isOnline} />
                         </>
                     ) : (
                         <>
@@ -502,7 +495,7 @@ const AdminDashboard = () => {
                         {/* Table List */}
                         <div className="flex flex-col flex-1">
                             {isLoading ? (
-                                <LoadingState label="Loading staff accounts..." />
+                                <SkeletonList rows={5} />
                             ) : filteredUsers.length === 0 ? (
                                 <div className="clinical-table-state flex-col p-12">
                                     <div className="w-16 h-16 bg-slate-100 text-slate-300 rounded-2xl flex items-center justify-center mb-4"><Icon name="users" className="h-8 w-8" /></div>

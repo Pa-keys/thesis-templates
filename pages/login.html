@@ -369,25 +369,137 @@
         }
 
         @media (max-width: 560px) {
-            .left { padding: 24px 18px 4px; }
+            html,
+            body {
+                min-height: 100%;
+                overflow: auto;
+            }
+
+            .page {
+                display: flex;
+                min-height: 100vh;
+                flex-direction: column;
+            }
+
+            .left {
+                display: contents;
+                padding: 0;
+            }
+
+            .brand {
+                order: 1;
+                gap: 11px;
+                margin-bottom: 0;
+                padding: 14px 16px 4px;
+            }
+
             .brand-logo {
-                width: 48px;
-                height: 48px;
-                border-radius: 12px;
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
             }
-            .brand-name { font-size: 1.3rem; }
-            .brand-subtitle { font-size: 0.66rem; }
+
+            .brand-name { font-size: 1.08rem; }
+            .brand-subtitle {
+                margin-top: 3px;
+                font-size: 0.58rem;
+                letter-spacing: 0.12em;
+            }
+
+            .hero-text {
+                order: 3;
+                padding: 2px 16px 18px;
+            }
+
             .hero-text h1 { display: none; }
-            .trust-list { gap: 8px; }
-            .trust-item {
-                min-height: 34px;
-                padding: 7px 10px;
-                font-size: 0.76rem;
+
+            .trust-list {
+                justify-content: center;
+                gap: 7px;
+                margin-top: 8px;
             }
-            .right { padding: 20px 16px 28px; }
+
+            .trust-item {
+                min-height: 30px;
+                padding: 6px 9px;
+                font-size: 0.68rem;
+                background: rgba(8, 31, 58, 0.5);
+            }
+
+            .trust-item::before {
+                width: 6px;
+                height: 6px;
+                box-shadow: 0 0 0 3px rgba(47, 125, 117, 0.13);
+            }
+
+            .right {
+                order: 2;
+                padding: 10px 14px 8px;
+            }
+
             .card {
-                padding: 30px 24px;
-                border-radius: 14px;
+                max-width: 100%;
+                padding: 20px 18px 18px;
+                border-radius: 12px;
+                box-shadow: 0 6px 18px rgba(4, 18, 35, 0.16);
+            }
+
+            .card-header {
+                margin-bottom: 18px;
+            }
+
+            .card-kicker {
+                margin-bottom: 5px;
+                font-size: 0.66rem;
+                letter-spacing: 0.11em;
+            }
+
+            .card-header h2 {
+                font-size: 1.32rem;
+                letter-spacing: -0.01em;
+            }
+
+            .card-header p {
+                margin-top: 4px;
+                font-size: 0.8rem;
+                line-height: 1.35;
+            }
+
+            .field {
+                margin-bottom: 13px;
+            }
+
+            .field label {
+                margin-bottom: 5px;
+                font-size: 0.68rem;
+                letter-spacing: 0.06em;
+            }
+
+            .field input {
+                min-height: 44px;
+                padding: 10px 12px;
+                border-radius: 8px;
+                font-size: 0.92rem;
+            }
+
+            .login-btn {
+                min-height: 44px;
+                margin-top: 2px;
+                padding: 11px 13px;
+            }
+
+            .error-msg {
+                margin-top: 10px;
+                padding: 9px 11px;
+                font-size: 0.78rem;
+            }
+
+            .privacy-notice {
+                margin-top: 12px;
+                padding-top: 10px;
+                font-size: 0.68rem;
+                line-height: 1.38;
             }
         }
     </style>

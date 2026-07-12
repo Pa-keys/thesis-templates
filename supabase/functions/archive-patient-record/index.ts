@@ -17,7 +17,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("PROJECT_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY");
-const ADMIN_ROLE = Deno.env.get("ADMIN_ROLE") ?? "admin";
+const ARCHIVE_OPERATOR_ROLE = Deno.env.get("ARCHIVE_OPERATOR_ROLE") ?? "nurse";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -80,14 +80,14 @@ Deno.serve(async (req) => {
       .eq("id", callerUserId)
       .maybeSingle();
 
-    if (callerError || !callerProfile || callerProfile.id !== callerUserId || callerProfile.role !== ADMIN_ROLE) {
-      return jsonResponse({ error: "Only administrators can archive or restore patient records." }, 403);
+    if (callerError || !callerProfile || callerProfile.id !== callerUserId || callerProfile.role !== ARCHIVE_OPERATOR_ROLE) {
+      return jsonResponse({ error: "Only nurses can archive or restore patient records." }, 403);
     }
 
     const payload = parsePayload(await req.json());
     const { data: patient, error: patientError } = await adminClient
       .from("patients")
-      .select("id, archive_status, archive_protected, last_activity_at, created_at")
+      .select("id, archive_status, last_activity_at, created_at")
       .eq("id", payload.patient_id)
       .maybeSingle();
 
@@ -95,8 +95,7 @@ Deno.serve(async (req) => {
     if (!patient) return jsonResponse({ error: "Patient record was not found." }, 404);
 
     if (payload.action === "archive") {
-      if (patient.archive_status !== "active") return jsonResponse({ error: "Only active patient records can be archived." }, 400);
-      if (patient.archive_protected) return jsonResponse({ error: "Protected patient records cannot be archived." }, 400);
+      if (patient.archive_status && patient.archive_status !== "active") return jsonResponse({ error: "Only active patient records can be archived." }, 400);
       if (!patient.last_activity_at) return jsonResponse({ error: "Last activity date is required before archiving." }, 400);
       if (new Date(patient.last_activity_at).getTime() > new Date(archiveCutoffIso()).getTime()) {
         return jsonResponse({ error: "Patient record is not yet eligible for archiving." }, 400);
@@ -153,7 +152,7 @@ Deno.serve(async (req) => {
       patient_id: payload.patient_id,
       event_type: eventType,
       performed_by: callerUserId,
-      performed_by_role: ADMIN_ROLE,
+      performed_by_role: callerProfile.role,
       reason: payload.reason,
       metadata: { patient_id: payload.patient_id, source: "archive_patient_record_function" },
     }]);

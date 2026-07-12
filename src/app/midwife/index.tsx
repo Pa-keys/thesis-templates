@@ -6,6 +6,7 @@ import { requireRole } from '../../lib/auth/roles';
 import { getInitials } from '../../lib/utils/names';
 import { Icon } from '../../components/shared/Icon';
 import { Topbar } from '../../components/layout/Topbar';
+import { SkeletonList } from '../../components/ui/Skeleton';
 import { safeTrim } from '../../lib/utils/strings';
 import { PatientTransactionHistory } from '../../components/patient/PatientTransactionHistory';
 import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
@@ -17,6 +18,12 @@ import PatientConsent from '../patients/patient-consent';
 import { useMidwifeData } from '../../features/midwife/useMidwifeData';
 
 const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
+
+const LazyPanelFallback = () => (
+    <div className="rounded-xl border border-slate-200 bg-white">
+        <SkeletonList rows={4} />
+    </div>
+);
 
 // ─── Detail Item ──────────────────────────────────────────────────────────────
 function DetailItem({ label, value }: { label: string; value?: string | number | null }) {
@@ -352,7 +359,7 @@ const MidwifeApp = () => {
                                 />
                             )}
                             {activeTab === 'reports' && (
-                                <Suspense fallback={<div className="rounded-xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-600">Loading report generator...</div>}>
+                                <Suspense fallback={<LazyPanelFallback />}>
                                     <ReportGenerator records={records} isLoading={isLoading} />
                                 </Suspense>
                             )}

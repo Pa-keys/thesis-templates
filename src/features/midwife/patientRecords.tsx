@@ -3,6 +3,7 @@ import { normalizeVaccineRecords } from '../patients/itemization';
 import { getVaccineDisplayName } from '../vaccines/vaccineOptions';
 import { Icon } from '../../components/shared/Icon';
 import { ClinicalDrawer } from '../../components/ui/ClinicalDrawer';
+import { SkeletonList } from '../../components/ui/Skeleton';
 import { PatientChartIdentityHeader, PatientHistoryPanel } from '../../components/patient/PatientChart';
 
 interface Props {
@@ -137,10 +138,7 @@ const PatientRecords = ({ patients, records, isLoading, onPatientClick }: Props)
 
                 <div>
                     {isLoading ? (
-                        <div className="clinical-table-state flex-col py-20">
-                            <div className="animate-spin inline-block w-6 h-6 border-2 border-slate-500 border-t-transparent rounded-full mb-3" />
-                            <p className="font-bold uppercase tracking-widest text-[0.65rem]">Fetching Registry...</p>
-                        </div>
+                        <SkeletonList rows={5} />
                     ) : filteredPatients.length === 0 ? (
                         <div className="clinical-table-state flex-col py-20">
                             <Icon name="inbox" className="h-10 w-10 mx-auto mb-3 opacity-40" />

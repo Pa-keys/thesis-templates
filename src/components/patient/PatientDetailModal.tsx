@@ -14,6 +14,7 @@ import {
     getVaccineDisplayName,
 } from '../../features/vaccines/vaccineOptions';
 import { Modal } from '../ui/Modal';
+import { SkeletonList } from '../ui/Skeleton';
 import { Icon } from '../shared/Icon';
 import { RELIGION_OPTIONS } from '../../types/patient';
 import { PatientChartIdentityHeader, PatientHistoryPanel } from './PatientChart';
@@ -591,12 +592,7 @@ export function PatientDetailModal({
                                                 </button>
                                             </div>
                                         ) : vaccineLoading ? (
-                                            <div className="py-4 flex justify-center">
-                                                <svg className="animate-spin w-5 h-5 text-[#334155]" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                                </svg>
-                                            </div>
+                                            <SkeletonList rows={3} />
                                         ) : vaccineRecords.length === 0 ? (
                                             <p className="text-sm text-[#7BA1C3] italic text-center py-4 bg-white rounded-lg border border-[#DDE7EF]">
                                                 No vaccination records found.
