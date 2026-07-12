@@ -1,6 +1,3 @@
-Below is an updated and cleaner `README.md` reflecting the latest Analytics UI, responsive login, database migrations, and system-wide skeleton loading work.
-
-````md
 # MEDISENS
 
 **MEDISENS** is a secure, role-based Healthcare Information System and Electronic Medical Record (EMR) prototype designed for the Malvar Rural Health Unit (RHU).
@@ -281,7 +278,7 @@ MEDISENS/
 ├── UPDATE.md
 ├── package.json
 └── vite.config.ts
-````
+```
 
 The `supabase/migrations/` directory contains database schema and function changes and should remain tracked in Git.
 
@@ -337,12 +334,12 @@ supabase/migrations/
 
 Migrations may include:
 
-* Analytics aggregation functions
-* RPC updates
-* Access-control changes
-* Database function corrections
-* Schema changes
-* Policy and permission updates
+- Analytics aggregation functions
+- RPC updates
+- Access-control changes
+- Database function corrections
+- Schema changes
+- Policy and permission updates
 
 Migrations should be reviewed and committed to Git so database changes can be reproduced across development, staging, and production environments.
 
@@ -354,9 +351,9 @@ MEDISENS uses Supabase Edge Functions for privileged and sensitive server-side o
 
 Current functions include:
 
-* `create-user` — secure Admin-created user accounts
-* `create-audit-log` — secure audit log insertion
-* `archive-patient-record` — protected patient archive and restore actions
+- `create-user` — secure Admin-created user accounts
+- `create-audit-log` — secure audit log insertion
+- `archive-patient-record` — protected patient archive and restore actions
 
 Deploy the functions using:
 
@@ -386,10 +383,10 @@ Patient information must only be collected, accessed, stored, and processed for 
 
 User activity may be logged for:
 
-* Accountability
-* Security
-* System monitoring
-* Investigation of unauthorized activity
+- Accountability
+- Security
+- System monitoring
+- Investigation of unauthorized activity
 
 ---
 
@@ -397,28 +394,28 @@ User activity may be logged for:
 
 MEDISENS currently incorporates the following security measures:
 
-* Role-based module visibility
-* Role-based workflow restrictions
-* Supabase authentication
-* Administrator-controlled account creation
-* Read-only Audit Log access
-* Server-side audit log insertion
-* Server-side archive and restore protection
-* User-friendly error messages
-* Reduced exposure of raw technical errors
-* Soft archiving instead of destructive record deletion
-* Environment-based frontend configuration
-* Database migrations for controlled schema changes
+- Role-based module visibility
+- Role-based workflow restrictions
+- Supabase authentication
+- Administrator-controlled account creation
+- Read-only Audit Log access
+- Server-side audit log insertion
+- Server-side archive and restore protection
+- User-friendly error messages
+- Reduced exposure of raw technical errors
+- Soft archiving instead of destructive record deletion
+- Environment-based frontend configuration
+- Database migrations for controlled schema changes
 
 UI-level role visibility is not treated as the only security boundary.
 
 Authorization must also be enforced through:
 
-* Server-side validation
-* Supabase Row Level Security
-* RPC permissions
-* Database policies
-* Protected Edge Functions
+- Server-side validation
+- Supabase Row Level Security
+- RPC permissions
+- Database policies
+- Protected Edge Functions
 
 ---
 
@@ -426,13 +423,13 @@ Authorization must also be enforced through:
 
 The project uses the following documentation and standards:
 
-* `README.md` — project overview and setup
-* `UI-SKILL.md` — reusable MEDISENS UI/UX standards
-* `DESIGN_SYSTEM.md` — visual system and component direction
-* `UPDATE.md` — implementation and change tracking
-* `SECURITY_ROADMAP.md` — planned security hardening
-* `ARCHIVING_ROADMAP.md` — patient record archiving plan
-* `ANALYTICS_ROADMAP.md` — analytics development plan
+- `README.md` — project overview and setup
+- `UI-SKILL.md` — reusable MEDISENS UI/UX standards
+- `DESIGN_SYSTEM.md` — visual system and component direction
+- `UPDATE.md` — implementation and change tracking
+- `SECURITY_ROADMAP.md` — planned security hardening
+- `ARCHIVING_ROADMAP.md` — patient record archiving plan
+- `ANALYTICS_ROADMAP.md` — analytics development plan
 
 Before committing changes, run:
 
@@ -456,21 +453,21 @@ git push origin your-branch-name
 
 Recent major improvements include:
 
-* Healthcare-oriented UI/UX refinement
-* Responsive desktop and mobile login experience
-* RHU Analytics and Performance Dashboard
-* Analytics aggregation and RPC migrations
-* Read-only Audit Log for authorized users
-* Patient history and transaction improvements
-* System-wide content-shaped skeleton loading
-* Non-blocking background refresh states
-* Safer error handling
-* UTF-8 content cleanup
-* Soft patient record archiving
-* Archive Review workspace
-* Supabase Edge Functions for sensitive operations
-* Data Privacy Act notices
-* Role-based UI consistency improvements
+- Healthcare-oriented UI/UX refinement
+- Responsive desktop and mobile login experience
+- RHU Analytics and Performance Dashboard
+- Analytics aggregation and RPC migrations
+- Read-only Audit Log for authorized users
+- Patient history and transaction improvements
+- System-wide content-shaped skeleton loading
+- Non-blocking background refresh states
+- Safer error handling
+- UTF-8 content cleanup
+- Soft patient record archiving
+- Archive Review workspace
+- Supabase Edge Functions for sensitive operations
+- Data Privacy Act notices
+- Role-based UI consistency improvements
 
 ---
 
@@ -480,56 +477,56 @@ Before production deployment, the remaining recommended work includes:
 
 ### Offline and Network Support
 
-* Define the offline and online synchronization architecture
-* Add controlled local data storage where appropriate
-* Implement pending-sync and conflict states
-* Prevent silent overwriting of newer clinical information
-* Provide manual or foreground sync fallback
-* Validate queued operations again on the server
+- Define the offline and online synchronization architecture
+- Add controlled local data storage where appropriate
+- Implement pending-sync and conflict states
+- Prevent silent overwriting of newer clinical information
+- Provide manual or foreground sync fallback
+- Validate queued operations again on the server
 
 ### Database Protection
 
-* Prevent abusive or unnecessarily expensive queries
-* Add pagination and safe result limits
-* Review database indexes
-* Debounce repeated searches
-* Prevent duplicate submissions
-* Review Realtime subscriptions and connection usage
+- Prevent abusive or unnecessarily expensive queries
+- Add pagination and safe result limits
+- Review database indexes
+- Debounce repeated searches
+- Prevent duplicate submissions
+- Review Realtime subscriptions and connection usage
 
 ### Rate Limiting
 
-* Add request limits for sensitive or expensive actions
-* Protect public and unauthenticated endpoints
-* Add abuse protection for repeated login and form attempts
-* Apply user-based or IP-based throttling where appropriate
+- Add request limits for sensitive or expensive actions
+- Protect public and unauthenticated endpoints
+- Add abuse protection for repeated login and form attempts
+- Apply user-based or IP-based throttling where appropriate
 
 ### Authorization Hardening
 
-* Complete the final Row Level Security review
-* Review RPC execution permissions
-* Review `SECURITY DEFINER` functions
-* Verify server-side authorization for every protected action
-* Test direct database and API access outside the UI
+- Complete the final Row Level Security review
+- Review RPC execution permissions
+- Review `SECURITY DEFINER` functions
+- Verify server-side authorization for every protected action
+- Test direct database and API access outside the UI
 
 ### General Security Hardening
 
-* Review Content Security Policy and security headers
-* Review file upload restrictions
-* Validate and sanitize all user-controlled input
-* Review environment secrets
-* Perform dependency and vulnerability scanning
-* Conduct penetration testing
-* Configure monitoring, backups, and incident recovery
+- Review Content Security Policy and security headers
+- Review file upload restrictions
+- Validate and sanitize all user-controlled input
+- Review environment secrets
+- Perform dependency and vulnerability scanning
+- Conduct penetration testing
+- Configure monitoring, backups, and incident recovery
 
 ### Final Deployment Validation
 
-* Complete authenticated browser QA for every role
-* Complete `last_activity_at` instrumentation
-* Test Vercel staging deployment
-* Test production Supabase configuration
-* Verify migrations in a clean environment
-* Validate Edge Function secrets and permissions
-* Conduct final role and workflow regression testing
+- Complete authenticated browser QA for every role
+- Complete `last_activity_at` instrumentation
+- Test Vercel staging deployment
+- Test production Supabase configuration
+- Verify migrations in a clean environment
+- Validate Edge Function secrets and permissions
+- Conduct final role and workflow regression testing
 
 ---
 
@@ -537,12 +534,12 @@ Before production deployment, the remaining recommended work includes:
 
 MEDISENS was developed as an undergraduate capstone project to demonstrate how a digital Healthcare Information System can improve:
 
-* Patient record management
-* Clinical workflows
-* Reporting
-* Accountability
-* Healthcare data visibility
-* Rural Health Unit operations
+- Patient record management
+- Clinical workflows
+- Reporting
+- Accountability
+- Healthcare data visibility
+- Rural Health Unit operations
 
 Although MEDISENS has been designed with security, usability, and healthcare practices in mind, additional security review, penetration testing, infrastructure hardening, and real-world validation are required before deployment in an actual production healthcare environment.
 
@@ -550,9 +547,9 @@ Although MEDISENS has been designed with security, usability, and healthcare pra
 
 ## Contributors
 
-* Ivan Joseph V. Jaurigue
-* Mark Jerome R. Kinchasan
-* Jan Ernest Pacey P. Nario
+- Ivan Joseph V. Jaurigue
+- Mark Jerome R. Kinchasan
+- Jan Ernest Pacey P. Nario
 
 ---
 
@@ -561,6 +558,3 @@ Although MEDISENS has been designed with security, usability, and healthcare pra
 This project is intended for academic and research purposes only.
 
 Unauthorized commercial use, redistribution, or deployment in a production healthcare environment without appropriate authorization, validation, and security assessment is not recommended.
-
-```
-```
