@@ -41,9 +41,19 @@ interface CreateUserResponse {
     details?: Record<string, unknown>;
 }
 
+interface UpdateUserRoleResponse {
+    user?: UserProfile;
+    error?: string;
+}
+
+interface DeleteUserResponse {
+    ok?: boolean;
+    error?: string;
+}
+
 const isAdminRole = (value: string): value is AdminRole => (ROLES as readonly string[]).includes(value);
 
-async function getFunctionErrorMessage(error: unknown, data?: CreateUserResponse | null): Promise<string> {
+async function getFunctionErrorMessage(error: unknown, data?: { error?: string } | null, fallback = 'Function request failed.'): Promise<string> {
     if (data?.error) return data.error;
 
     const context = error && typeof error === 'object' && 'context' in error
@@ -52,7 +62,7 @@ async function getFunctionErrorMessage(error: unknown, data?: CreateUserResponse
 
     if (context instanceof Response) {
         try {
-            const body = await context.clone().json() as CreateUserResponse;
+            const body = await context.clone().json() as { error?: string };
             if (body.error) return body.error;
         } catch {
             try {
@@ -64,7 +74,7 @@ async function getFunctionErrorMessage(error: unknown, data?: CreateUserResponse
         }
     }
 
-    return error instanceof Error ? error.message : 'Create-user function failed.';
+    return error instanceof Error ? error.message : fallback;
 }
 
 // ─── Utility Components ───────────────────────────────────────────────────────
@@ -266,30 +276,22 @@ const AdminDashboard = () => {
 
         if (isEditMode && editingUserId) {
             // Update existing user
-            const { error } = await supabase
-                .from('profiles')
-                .update({ full_name: fullName, role })
-                .eq('id', editingUserId);
+            const { data, error } = await supabase.functions.invoke<UpdateUserRoleResponse>('update-user-role', {
+                body: { userId: editingUserId, fullName, role },
+            });
 
             setIsSaving(false);
 
-            if (error) {
-                logError('Failed to update user profile', error);
+            if (error || data?.error || !data?.user) {
+                const message = await getFunctionErrorMessage(error, data, 'Update-user-role function failed.');
+                logError('Failed to update user profile', { error, response: data, message });
                 showToast(healthcareErrorMessage('update the user profile'), true);
                 return;
             }
-            showToast(`${fullName}'s profile updated successfully.`);
-            void logAuditEvent({
-                action: 'update',
-                module: 'Administration',
-                recordId: editingUserId,
-                recordType: 'profile',
-                description: 'Updated RHU user profile.',
-                metadata: { profile_id: editingUserId, action_scope: 'user_profile' },
-            });
+            showToast(`${data.user.full_name || fullName}'s profile updated successfully.`);
             
             // Optimistically update local state
-            setAllUsers(prev => prev.map(u => u.id === editingUserId ? { ...u, full_name: fullName, role } : u));
+            setAllUsers(prev => prev.map(u => u.id === editingUserId ? { ...u, ...data.user } : u));
             
             closeUserModal();
             loadUsers();
@@ -356,15 +358,15 @@ const AdminDashboard = () => {
         }
 
         setIsSaving(true);
-        const { error } = await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', userToDelete.id);
+        const { data, error } = await supabase.functions.invoke<DeleteUserResponse>('delete-user', {
+            body: { userId: userToDelete.id },
+        });
 
         setIsSaving(false);
 
-        if (error) {
-            logError('Failed to delete user profile', error);
+        if (error || data?.error || !data?.ok) {
+            const message = await getFunctionErrorMessage(error, data, 'Delete-user function failed.');
+            logError('Failed to delete user profile', { error, response: data, message });
             showToast(healthcareErrorMessage('delete the user profile'), true);
             closeConfirmModal();
             return;
