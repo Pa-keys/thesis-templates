@@ -78,6 +78,20 @@ interface PatientDetailModalProps {
     onConsult?: (patient: Patient) => void;
 }
 
+interface DetailItemProps {
+    label: string;
+    value?: string | number | null;
+    name: keyof Patient;
+    type?: "text" | "select" | "date" | "number";
+    options?: readonly string[];
+    isEditing: boolean;
+    editForm: Patient;
+    otherReligion: string;
+    inputCls: string;
+    onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+    onOtherReligionChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'Unknown'] as const;
 const CIVIL_STATUSES = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'] as const;
 const EDUCATION_LEVELS = [
@@ -86,6 +100,113 @@ const EDUCATION_LEVELS = [
     'College Level', 'College Graduate', 'Post-Graduate'
 ] as const;
 const EMPLOYMENT_STATUSES = ['Employed', 'Unemployed', 'Self-Employed', 'Student', 'Retired'] as const;
+const DIGITS_ONLY_PATTERN = '[0-9]*';
+const NAME_TEXT_PATTERN = "[A-Za-z .'-]*";
+const NUMERIC_ONLY_PATIENT_FIELDS = new Set<keyof Patient>(['age', 'contactNumber']);
+const NAME_TEXT_PATIENT_FIELDS = new Set<keyof Patient>([
+    'firstName',
+    'middleName',
+    'lastName',
+    'nationality',
+    'relativeName',
+    'relativeRelation',
+]);
+
+function sanitizePatientEditValue(name: keyof Patient, value: string) {
+    if (NUMERIC_ONLY_PATIENT_FIELDS.has(name)) return value.replace(/\D/g, '');
+    if (NAME_TEXT_PATIENT_FIELDS.has(name)) return value.replace(/[^a-zA-Z\s'.-]/g, '');
+    return value;
+}
+
+function getPatientInputProps(
+    name: keyof Patient,
+    type: DetailItemProps['type']
+): Pick<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'inputMode' | 'pattern'> {
+    if (NUMERIC_ONLY_PATIENT_FIELDS.has(name)) {
+        return { type: 'text', inputMode: 'numeric' as const, pattern: DIGITS_ONLY_PATTERN };
+    }
+    if (NAME_TEXT_PATIENT_FIELDS.has(name)) {
+        return { type: type || 'text', pattern: NAME_TEXT_PATTERN };
+    }
+    return { type: type || 'text' };
+}
+
+function DetailItem({
+    label,
+    value,
+    name,
+    type = "text",
+    options,
+    isEditing,
+    editForm,
+    otherReligion,
+    inputCls,
+    onInputChange,
+    onOtherReligionChange,
+}: DetailItemProps) {
+    const isEmpty = value === null || value === undefined || value === '';
+    const inputProps = getPatientInputProps(name, type);
+
+    if (isEditing) {
+        return (
+            <div className="flex flex-col gap-1">
+                <label className="clinical-field-label">{label}</label>
+                {name === 'religion' ? (
+                    <>
+                        <select
+                            name={name}
+                            value={(editForm.religion || '').startsWith('Other:') ? 'Other' : editForm.religion || ''}
+                            onChange={onInputChange}
+                            className={inputCls}
+                        >
+                            <option value="">Select...</option>
+                            {RELIGION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        {(editForm.religion === 'Other' || (editForm.religion || '').startsWith('Other:')) && (
+                            <input
+                                type="text"
+                                value={otherReligion || ((editForm.religion || '').startsWith('Other:') ? (editForm.religion || '').replace(/^Other:\s*/, '') : '')}
+                                onChange={onOtherReligionChange}
+                                className={`${inputCls} mt-2`}
+                                placeholder="Enter religion"
+                                pattern={NAME_TEXT_PATTERN}
+                            />
+                        )}
+                    </>
+                ) : type === "select" ? (
+                    <select
+                        name={name}
+                        value={editForm[name] as string || ''}
+                        onChange={onInputChange}
+                        className={inputCls}
+                    >
+                        <option value="">Select...</option>
+                        {options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                ) : (
+                    <input
+                        type={inputProps.type}
+                        name={name}
+                        value={editForm[name] as string | number || ''}
+                        onChange={onInputChange}
+                        inputMode={inputProps.inputMode}
+                        pattern={inputProps.pattern}
+                        className={inputCls}
+                    />
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="clinical-field-label">{label}</div>
+            <div className={`patient-chart-field ${isEmpty ? 'is-empty' : ''}`}>
+                {isEmpty ? 'Not provided' : value}
+            </div>
+        </div>
+    );
+}
 
 export function PatientDetailModal({
     patient: initialPatient,
@@ -210,8 +331,10 @@ export function PatientDetailModal({
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setEditForm(prev => ({ ...prev, [name]: value }));
-        if (name === 'religion' && value !== 'Other') setOtherReligion('');
+        const fieldName = name as keyof Patient;
+        const sanitizedValue = sanitizePatientEditValue(fieldName, value);
+        setEditForm(prev => ({ ...prev, [fieldName]: sanitizedValue }));
+        if (fieldName === 'religion' && sanitizedValue !== 'Other') setOtherReligion('');
     };
 
     const handleOtherReligion = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,73 +371,6 @@ export function PatientDetailModal({
         }
     };
 
-    const DetailItem = ({ label, value, name, type = "text", options }: {
-        label: string;
-        value?: string | number | null;
-        name: keyof Patient;
-        type?: "text" | "select" | "date" | "number";
-        options?: readonly string[];
-    }) => {
-        const isEmpty = value === null || value === undefined || value === '';
-
-        if (isEditing) {
-            return (
-                <div className="flex flex-col gap-1">
-                    <label className="clinical-field-label">{label}</label>
-                    {name === 'religion' ? (
-                        <>
-                            <select
-                                name={name}
-                                value={(editForm.religion || '').startsWith('Other:') ? 'Other' : editForm.religion || ''}
-                                onChange={handleInputChange}
-                                className={inputCls}
-                            >
-                                <option value="">Select...</option>
-                                {RELIGION_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                            {(editForm.religion === 'Other' || (editForm.religion || '').startsWith('Other:')) && (
-                                <input
-                                    type="text"
-                                    value={otherReligion || ((editForm.religion || '').startsWith('Other:') ? (editForm.religion || '').replace(/^Other:\s*/, '') : '')}
-                                    onChange={handleOtherReligion}
-                                    className={`${inputCls} mt-2`}
-                                    placeholder="Enter religion"
-                                />
-                            )}
-                        </>
-                    ) : type === "select" ? (
-                        <select
-                            name={name}
-                            value={editForm[name] as string || ''}
-                            onChange={handleInputChange}
-                            className={inputCls}
-                        >
-                            <option value="">Select...</option>
-                            {options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                    ) : (
-                        <input
-                            type={type}
-                            name={name}
-                            value={editForm[name] as string | number || ''}
-                            onChange={handleInputChange}
-                            className={inputCls}
-                        />
-                    )}
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col gap-1">
-                <div className="clinical-field-label">{label}</div>
-                <div className={`patient-chart-field ${isEmpty ? 'is-empty' : ''}`}>
-                    {isEmpty ? 'Not provided' : value}
-                </div>
-            </div>
-        );
-    };
-
     const displayCategory = () => {
         if (patient.category === 'Other/s') return `Others (${patient.categoryOthers || 'Unspecified'})`;
         return patient.category || 'N/A';
@@ -325,6 +381,14 @@ export function PatientDetailModal({
     const focusCls = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#334155]";
     const inputCls = `w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-left text-sm font-semibold text-[#172033] shadow-sm transition-colors focus:border-[#334155] focus:ring-2 focus:ring-[#334155]/20 ${focusCls}`;
     const vaccineInputCls = `w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm font-medium text-[#172033] transition-colors focus:border-[#334155] focus:ring-2 focus:ring-[#334155]/20 ${focusCls}`;
+    const detailItemProps = {
+        isEditing,
+        editForm,
+        otherReligion,
+        inputCls,
+        onInputChange: handleInputChange,
+        onOtherReligionChange: handleOtherReligion,
+    };
 
     return (
         <>
@@ -417,21 +481,21 @@ export function PatientDetailModal({
                                 <div className={sectionCls}>
                                     <div className={headerCls}>Demographics</div>
                                     <div className="patient-chart-section-body grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        <DetailItem label="First Name" value={patient.firstName} name="firstName" />
-                                        <DetailItem label="Middle Name" value={patient.middleName} name="middleName" />
-                                        <DetailItem label="Last Name" value={patient.lastName} name="lastName" />
-                                        <DetailItem label="Age" value={patient.age} name="age" type="number" />
-                                        <DetailItem label="Sex" value={patient.sex} name="sex" type="select" options={['Male', 'Female']} />
-                                        <DetailItem label="Birthday" value={patient.birthday} name="birthday" type="date" />
-                                        <DetailItem label="Blood Type" value={patient.bloodType} name="bloodType" type="select" options={BLOOD_TYPES} />
-                                        <DetailItem label="Civil Status" value={patient.civilStatus} name="civilStatus" type="select" options={CIVIL_STATUSES} />
-                                        <DetailItem label="Nationality" value={patient.nationality} name="nationality" />
-                                        <DetailItem label="Religion" value={patient.religion} name="religion" type="select" options={RELIGION_OPTIONS} />
-                                        <DetailItem label="Contact Number" value={patient.contactNumber} name="contactNumber" />
-                                        <DetailItem label="Educational Attainment" value={patient.educationalAttain} name="educationalAttain" type="select" options={EDUCATION_LEVELS} />
-                                        <DetailItem label="Employment Status" value={patient.employmentStatus} name="employmentStatus" type="select" options={EMPLOYMENT_STATUSES} />
+                                        <DetailItem {...detailItemProps} label="First Name" value={patient.firstName} name="firstName" />
+                                        <DetailItem {...detailItemProps} label="Middle Name" value={patient.middleName} name="middleName" />
+                                        <DetailItem {...detailItemProps} label="Last Name" value={patient.lastName} name="lastName" />
+                                        <DetailItem {...detailItemProps} label="Age" value={patient.age} name="age" type="number" />
+                                        <DetailItem {...detailItemProps} label="Sex" value={patient.sex} name="sex" type="select" options={['Male', 'Female']} />
+                                        <DetailItem {...detailItemProps} label="Birthday" value={patient.birthday} name="birthday" type="date" />
+                                        <DetailItem {...detailItemProps} label="Blood Type" value={patient.bloodType} name="bloodType" type="select" options={BLOOD_TYPES} />
+                                        <DetailItem {...detailItemProps} label="Civil Status" value={patient.civilStatus} name="civilStatus" type="select" options={CIVIL_STATUSES} />
+                                        <DetailItem {...detailItemProps} label="Nationality" value={patient.nationality} name="nationality" />
+                                        <DetailItem {...detailItemProps} label="Religion" value={patient.religion} name="religion" type="select" options={RELIGION_OPTIONS} />
+                                        <DetailItem {...detailItemProps} label="Contact Number" value={patient.contactNumber} name="contactNumber" />
+                                        <DetailItem {...detailItemProps} label="Educational Attainment" value={patient.educationalAttain} name="educationalAttain" type="select" options={EDUCATION_LEVELS} />
+                                        <DetailItem {...detailItemProps} label="Employment Status" value={patient.employmentStatus} name="employmentStatus" type="select" options={EMPLOYMENT_STATUSES} />
                                         <div className="col-span-2 sm:col-span-3">
-                                            <DetailItem label="Address" value={patient.address} name="address" />
+                                            <DetailItem {...detailItemProps} label="Address" value={patient.address} name="address" />
                                         </div>
                                     </div>
                                 </div>
@@ -439,17 +503,17 @@ export function PatientDetailModal({
                                 <div className={sectionCls}>
                                     <div className={headerCls}>Coverage & Patient Category</div>
                                     <div className="patient-chart-section-body grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        <DetailItem label="PhilHealth No." value={patient.philhealthNo} name="philhealthNo" />
-                                        <DetailItem label="PhilHealth Status" value={patient.philhealthStatus} name="philhealthStatus" type="select" options={['Member', 'Dependent', '4Ps', 'None']} />
+                                        <DetailItem {...detailItemProps} label="PhilHealth No." value={patient.philhealthNo} name="philhealthNo" />
+                                        <DetailItem {...detailItemProps} label="PhilHealth Status" value={patient.philhealthStatus} name="philhealthStatus" type="select" options={['Member', 'Dependent', '4Ps', 'None']} />
                                         {isEditing ? (
                                             <>
-                                                <DetailItem label="Category" value={editForm.category} name="category" type="select" options={['4Ps', 'Other/s']} />
+                                                <DetailItem {...detailItemProps} label="Category" value={editForm.category} name="category" type="select" options={['4Ps', 'Other/s']} />
                                                 {editForm.category === 'Other/s' && (
-                                                    <DetailItem label="Specify Category" value={editForm.categoryOthers} name="categoryOthers" />
+                                                    <DetailItem {...detailItemProps} label="Specify Category" value={editForm.categoryOthers} name="categoryOthers" />
                                                 )}
                                             </>
                                         ) : (
-                                            <DetailItem label="Category" value={displayCategory()} name="category" />
+                                            <DetailItem {...detailItemProps} label="Category" value={displayCategory()} name="category" />
                                         )}
                                     </div>
                                 </div>
@@ -658,10 +722,10 @@ export function PatientDetailModal({
                                 <div className={sectionCls}>
                                     <div className={headerCls}>Emergency Contact</div>
                                     <div className="patient-chart-section-body grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        <DetailItem label="Relative's Name" value={patient.relativeName} name="relativeName" />
-                                        <DetailItem label="Relationship" value={patient.relativeRelation} name="relativeRelation" />
+                                        <DetailItem {...detailItemProps} label="Relative's Name" value={patient.relativeName} name="relativeName" />
+                                        <DetailItem {...detailItemProps} label="Relationship" value={patient.relativeRelation} name="relativeRelation" />
                                         <div className="col-span-2 sm:col-span-3">
-                                            <DetailItem label="Relative's Address" value={patient.relativeAddress} name="relativeAddress" />
+                                            <DetailItem {...detailItemProps} label="Relative's Address" value={patient.relativeAddress} name="relativeAddress" />
                                         </div>
                                     </div>
                                 </div>
