@@ -438,17 +438,17 @@ const DoctorDashboard = () => {
                         labels: trendData.map(d => d.date),
                         datasets: [{
                             label: 'Visits', data: trendData.map(d => d.count),
-                            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)',
+                            borderColor: '#5A81FA', backgroundColor: 'rgba(90,129,250,0.12)',
                             borderWidth: 2, fill: true, tension: 0.4,
-                            pointBackgroundColor: '#3b82f6', pointRadius: 4, pointHoverRadius: 6,
+                            pointBackgroundColor: '#5A81FA', pointRadius: 4, pointHoverRadius: 6,
                         }]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                            y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1, precision: 0, color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+                            x: { grid: { display: false }, ticks: { color: '#A8B1CE', font: { size: 10 } } },
+                            y: { grid: { color: '#EEF1FB' }, ticks: { stepSize: 1, precision: 0, color: '#A8B1CE', font: { size: 10 } }, beginAtZero: true }
                         }
                     }
                 });
@@ -460,7 +460,7 @@ const DoctorDashboard = () => {
                     type: 'bar',
                     data: {
                         labels: morbidityData.map(m => m.label),
-                        datasets: [{ label: 'Cases', data: morbidityData.map(m => m.percentage), backgroundColor: '#93c5fd', borderRadius: 2, barThickness: 16 }]
+                        datasets: [{ label: 'Cases', data: morbidityData.map(m => m.percentage), backgroundColor: '#D1DDFF', borderRadius: 2, barThickness: 16 }]
                     },
                     options: {
                         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -469,8 +469,8 @@ const DoctorDashboard = () => {
                             tooltip: { callbacks: { label: (ctx) => { const item = morbidityData[ctx.dataIndex]; return ` ${item.percentage}%  (${item.count} cases)`; } } }
                         },
                         scales: {
-                            x: { grid: { color: '#f1f5f9' }, ticks: { color: '#94a3b8', font: { size: 10 }, callback: (v) => `${v}%` }, beginAtZero: true, max: 100 },
-                            y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+                            x: { grid: { color: '#EEF1FB' }, ticks: { color: '#A8B1CE', font: { size: 10 }, callback: (v) => `${v}%` }, beginAtZero: true, max: 100 },
+                            y: { grid: { display: false }, ticks: { color: '#6A6E83', font: { size: 11 } } }
                         }
                     }
                 });
@@ -492,7 +492,7 @@ const DoctorDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
+        <div className="flex h-screen bg-[var(--bg)] overflow-hidden w-full">
             <ToastComponent />
             <Sidebar
                 activePage={activePage}

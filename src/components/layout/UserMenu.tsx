@@ -9,12 +9,12 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userName, userInitials, userRole, isOnline = true, onLogoutClick }: UserMenuProps) {
-    const avatarColor = isOnline ? 'bg-[#42AEE8]' : 'bg-amber-500';
+    const avatarColor = isOnline ? 'bg-[var(--brand-primary)]' : 'bg-amber-500';
     const content = (
         <>
             <div className="hidden min-w-0 text-right sm:block">
-                <div className="truncate text-sm font-bold leading-tight text-[#0F3154]">{userName}</div>
-                <div className="truncate text-[0.7rem] font-semibold text-[#334155]">{userRole}</div>
+                <div className="truncate text-sm font-bold leading-tight text-[var(--text)]">{userName}</div>
+                <div className="truncate text-[0.7rem] font-semibold text-[var(--brand-active)]">{userRole}</div>
             </div>
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white shadow-sm ${avatarColor}`}>
                 {userInitials}
@@ -31,7 +31,7 @@ export function UserMenu({ userName, userInitials, userRole, isOnline = true, on
         <button
             type="button"
             onClick={onLogoutClick}
-            className="group flex min-w-0 items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-[#F8FAFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#42AEE8]"
+            className="group flex min-w-0 items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-[var(--brand-soft-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-color)]"
             title="Open user menu"
         >
             {content}

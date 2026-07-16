@@ -522,7 +522,7 @@ const LaboratoryDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden w-full">
+        <div className="flex h-screen bg-[var(--bg)] overflow-hidden w-full">
             <ToastComponent />
             <Sidebar
                 activePage="lab"
@@ -549,7 +549,7 @@ const LaboratoryDashboard = () => {
                     onOpenNavigation={() => setIsMobileMenuOpen(true)}
                 />
 
-                <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[#F8FAFC]">
+                <div className="flex-1 overflow-x-hidden overflow-y-auto w-full bg-[var(--bg)]">
                     <div className="w-full">
                         <PageHeader
                             title="Laboratory Work Queue"

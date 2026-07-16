@@ -175,7 +175,7 @@ export async function upsertLatestFollowUpByPatient(patientId: string, payload: 
 }
 
 export async function createLabRequest(payload: WorkflowPayload): Promise<void> {
-    const { error } = await supabase.from('lab_request').insert([payload]);
+    const { error } = await supabase.from('lab_request').insert([{ ...payload, status: 'Pending' }]);
     if (error) throw error;
     void logAuditEvent({
         action: 'create',

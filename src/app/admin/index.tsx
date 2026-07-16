@@ -146,6 +146,7 @@ const AdminDashboard = () => {
     // Data State
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -193,32 +194,45 @@ const AdminDashboard = () => {
 
     }, [activePage]);
 
-    // Background Refresh Interval (1.5s)
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (activePage === 'admin' && isOnline) {
-                loadUsers(true);
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && activePage === 'admin' && isOnline) {
+                void loadUsers(true);
             }
-        }, 1500);
-        return () => clearInterval(interval);
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [activePage, isOnline]);
 
     const loadUsers = async (isSilent = false) => {
-        if (!isSilent) setIsLoading(true);
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('id, full_name, role, email')
-            .order('role', { ascending: true });
-
-        if (error) {
-            if (!isSilent) {
-                logError('Failed to load users', error);
-                showToast(healthcareErrorMessage('load user accounts'), true);
-            }
+        if (isSilent) {
+            setIsRefreshingUsers(true);
         } else {
-            setAllUsers((data as UserProfile[]) || []);
+            setIsLoading(true);
         }
-        if (!isSilent) setIsLoading(false);
+
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, role, email')
+                .order('role', { ascending: true });
+
+            if (error) {
+                if (!isSilent) {
+                    logError('Failed to load users', error);
+                    showToast(healthcareErrorMessage('load user accounts'), true);
+                }
+            } else {
+                setAllUsers((data as UserProfile[]) || []);
+            }
+        } finally {
+            if (isSilent) {
+                setIsRefreshingUsers(false);
+            } else {
+                setIsLoading(false);
+            }
+        }
     };
 
     const filteredUsers = useMemo(() => {
@@ -294,7 +308,7 @@ const AdminDashboard = () => {
             setAllUsers(prev => prev.map(u => u.id === editingUserId ? { ...u, ...data.user } : u));
             
             closeUserModal();
-            loadUsers();
+            void loadUsers(true);
         } else {
             // Create new user
             const email = safeTrim(fEmail);
@@ -327,7 +341,7 @@ const AdminDashboard = () => {
             });
             setAllUsers(prev => [data.user as UserProfile, ...prev]);
             closeUserModal();
-            loadUsers();
+            void loadUsers(true);
         }
     };
 
@@ -380,7 +394,7 @@ const AdminDashboard = () => {
         closeConfirmModal();
         
         // Then re-fetch to ensure sync with server
-        loadUsers();
+        void loadUsers(true);
     };
 
     return (
@@ -447,9 +461,22 @@ const AdminDashboard = () => {
                     {/* Main Content Card */}
                     <div className="ops-panel flex flex-col">
                         {/* Card Header */}
-                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60">
-                            <h2 className="text-base font-semibold text-slate-800 tracking-tight">Staff Accounts</h2>
-                            <p className="text-sm text-slate-500">Maintain authorized MEDISENS access and role assignments.</p>
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h2 className="text-base font-semibold text-slate-800 tracking-tight">Staff Accounts</h2>
+                                <p className="text-sm text-slate-500">Maintain authorized MEDISENS access and role assignments.</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {isRefreshingUsers && <span className="text-xs font-semibold text-slate-400" role="status">Updating...</span>}
+                                <button
+                                    type="button"
+                                    onClick={() => void loadUsers(true)}
+                                    disabled={isRefreshingUsers || !isOnline}
+                                    className="clinical-row-action min-w-[96px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Icon name="refresh" className="h-3.5 w-3.5" /> Refresh
+                                </button>
+                            </div>
                         </div>
 
                         {/* Filter Bar */}

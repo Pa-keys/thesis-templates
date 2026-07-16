@@ -12,9 +12,9 @@ export interface ToastProps {
 }
 
 const typeClasses = {
-    success: 'bg-[#2F7D75]',
+    success: 'bg-green-700',
     error: 'bg-red-700',
-    info: 'bg-[#334155]',
+    info: 'bg-[var(--brand-active)]',
 } as const;
 
 export function Toast({ message, type = 'success', subText, onClose, className, icon }: ToastProps) {

@@ -175,7 +175,7 @@ function PatientModal({
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 ">
-            <div className="bg-[#F8FAFC] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-sm flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+            <div className="bg-[var(--bg)] rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl shadow-sm flex flex-col max-h-[92vh] sm:max-h-[88vh]">
 
                 {/* Modal Header */}
                 <div className="px-5 py-4 border-b border-slate-200 bg-white rounded-t-2xl flex items-center justify-between shrink-0">
@@ -301,7 +301,7 @@ const MidwifeApp = () => {
     ];
 
     return (
-        <div className="flex h-screen w-full bg-[#F8FAFC] overflow-hidden">
+        <div className="flex h-screen w-full bg-[var(--bg)] overflow-hidden">
             <Sidebar
                 activePage={activeTab}
                 userName={userData.name}
@@ -330,7 +330,7 @@ const MidwifeApp = () => {
                 />
 
                 {/* Content */}
-                <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[#F8FAFC]">
+                <div className="flex-1 overflow-x-hidden overflow-y-auto bg-[var(--bg)]">
                     <div className="w-full min-h-full pwa-page-pad">
                         <div className="w-full">
                             {activeTab === 'dashboard' && (

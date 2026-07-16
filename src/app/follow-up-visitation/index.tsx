@@ -145,7 +145,7 @@ export default function FollowUp() {
     const patientInitials = patient ? `${patient.firstName?.[0] || ''}${patient.lastName?.[0] || ''}`.toUpperCase() : '?';
 
     return (
-        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden font-sans">
+        <div className="flex w-full min-h-screen bg-[var(--bg)] text-slate-800 overflow-x-hidden font-sans">
             
             <ToastComponent />
 

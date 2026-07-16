@@ -256,7 +256,7 @@ function DetailsPage() {
     const labelCls = "block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2";
 
     return (
-        <div className="flex w-full min-h-screen bg-[#F8FAFC] text-slate-800 overflow-x-hidden relative">
+        <div className="flex w-full min-h-screen bg-[var(--bg)] text-slate-800 overflow-x-hidden relative">
             <ToastComponent />
 
             <Sidebar activePage="records" userName={userName} userInitials={userInitials} userRole={role.toUpperCase()} navItems={navItems} onNavigate={handleNavigate} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} isOnline={isOnline} />
