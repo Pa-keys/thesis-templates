@@ -16,6 +16,7 @@ import PatientRecords from '../../features/midwife/patientRecords';
 import CensusEntry from '../../features/midwife/censusEntry';
 import PatientConsent from '../patients/patient-consent';
 import { useMidwifeData } from '../../features/midwife/useMidwifeData';
+import { DoctorAnalyticsPage } from '../../features/doctor/DoctorAnalyticsPage';
 
 const ReportGenerator = lazy(() => import('../../features/midwife/reportGenerator'));
 
@@ -294,10 +295,11 @@ const MidwifeApp = () => {
     }, [handleRealtimeChange]);
 
     const midwifeNavItems = [
-        { id: 'dashboard', label: 'Home',           icon: 'home' },
-        { id: 'records',   label: 'Patient Records', icon: 'users' },
-        { id: 'census',    label: 'Census Entry',    icon: 'clipboard' },
-        { id: 'reports',   label: 'OCR Reports',     icon: 'chart' },
+        { id: 'dashboard', label: 'Home',           icon: 'home', group: 'Overview' },
+        { id: 'analytics', label: 'Analytics',      icon: 'chart', group: 'Insights' },
+        { id: 'records',   label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'census',    label: 'Census Entry',    icon: 'clipboard', group: 'Maternal & Community Care' },
+        { id: 'reports',   label: 'OCR Reports',     icon: 'chart', group: 'Records & Governance' },
     ];
 
     return (
@@ -317,6 +319,7 @@ const MidwifeApp = () => {
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-[240px] w-full">
                 <Topbar
                     title={activeTab === 'dashboard' ? 'Midwife Dashboard'
+                        : activeTab === 'analytics' ? 'Analytics'
                         : activeTab === 'records' ? 'Patient Records'
                         : activeTab === 'census' ? 'Census Entry'
                         : activeTab === 'reports' ? 'OCR Generation'
@@ -341,6 +344,9 @@ const MidwifeApp = () => {
                                     onNavigateToRecords={() => setActiveTab('records')}
                                     onPatientClick={(p) => setSelectedPatient(p)}  // ← passes modal opener
                                 />
+                            )}
+                            {activeTab === 'analytics' && (
+                                <DoctorAnalyticsPage isOnline={isOnline} />
                             )}
                             {activeTab === 'records' && (
                                 <PatientRecords

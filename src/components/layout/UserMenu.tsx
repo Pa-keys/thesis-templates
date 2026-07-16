@@ -13,10 +13,10 @@ export function UserMenu({ userName, userInitials, userRole, isOnline = true, on
     const content = (
         <>
             <div className="hidden min-w-0 text-right sm:block">
-                <div className="truncate text-sm font-bold leading-tight text-[var(--text)]">{userName}</div>
-                <div className="truncate text-[0.7rem] font-semibold text-[var(--brand-active)]">{userRole}</div>
+                <div className="truncate text-[length:var(--type-label-size)] font-semibold leading-[var(--type-label-line)] text-[var(--text)]">{userName}</div>
+                <div className="truncate text-[length:var(--type-caption-size)] font-medium leading-[var(--type-caption-line)] text-[var(--brand-active)]">{userRole}</div>
             </div>
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white shadow-sm ${avatarColor}`}>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[length:var(--type-label-size)] font-semibold text-white shadow-sm ${avatarColor}`}>
                 {userInitials}
             </div>
             {onLogoutClick && <Icon name="logout" className="hidden h-4 w-4 text-slate-400 transition-colors group-hover:text-red-600 sm:block" />}

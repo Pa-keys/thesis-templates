@@ -45,10 +45,10 @@ const BhwDashboard = () => {
     }, [activePage]);
 
     const navItems = [
-        { id: 'dashboard', label: 'Home', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
-        { id: 'reports', label: 'OCR Generation', icon: 'chart' }
+        { id: 'dashboard', label: 'Home', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus', group: 'Patient Care' },
+        { id: 'reports', label: 'OCR Generation', icon: 'chart', group: 'Records & Governance' }
     ];
 
     useEffect(() => {

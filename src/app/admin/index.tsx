@@ -170,8 +170,8 @@ const AdminDashboard = () => {
     const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
 
     const navItems = [
-        { id: 'admin', label: 'User Management', icon: 'users' },
-        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
+        { id: 'admin', label: 'User Management', icon: 'users', group: 'Administration' },
+        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard', group: 'Records & Governance' },
     ];
 
     useEffect(() => {

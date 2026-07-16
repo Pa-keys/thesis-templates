@@ -52,11 +52,11 @@ const NurseDashboard = () => {
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Home', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
-        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' },
-        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
+        { id: 'dashboard', label: 'Home', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus', group: 'Patient Care' },
+        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard', group: 'Clinical Workflow' },
+        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard', group: 'Records & Governance' },
     ];
 
     // ─── Restored from old code: navigates to consultation with patient ID in URL ───

@@ -67,7 +67,7 @@ function PharmacyDashboard() {
     const isOnline = useOnlineStatus();
 
     const pharmacistNavItems = [
-        { id: 'queue', label: 'Pending Queue', icon: 'pill' }
+        { id: 'queue', label: 'Pending Queue', icon: 'pill', group: 'Pharmacy Operations' }
     ];
 
     useEffect(() => {

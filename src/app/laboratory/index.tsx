@@ -373,7 +373,7 @@ const LaboratoryDashboard = () => {
     const { showToast, ToastComponent } = useToast();
 
     const navItems = [
-        { id: 'lab', label: 'Dashboard', icon: 'flask' },
+        { id: 'lab', label: 'Dashboard', icon: 'flask', group: 'Diagnostics' },
     ];
 
     useEffect(() => {

@@ -31,7 +31,7 @@ interface Patient {
 }
 
 interface EditForm extends Omit<Patient, 'id' | 'age' | 'consent_signed'> { age: string; }
-interface NavItem { id: string; label: string; icon: string; }
+interface NavItem { id: string; label: string; icon: string; group?: string; }
 
 const BLOOD_TYPES = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'] as const;
 const EDUCATION_LEVELS = [
@@ -45,25 +45,25 @@ const PATIENT_DETAILS_COLUMNS = 'id, firstName, middleName, lastName, suffix, ag
 
 const PATIENT_DETAILS_NAV_ITEMS: Record<(typeof PATIENT_DETAILS_ROLES)[number], NavItem[]> = {
     doctor: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'consultation', label: 'Consultation', icon: 'clipboard' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'consultation', label: 'Consultation', icon: 'clipboard', group: 'Clinical Workflow' },
     ],
     nurse: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
-        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus', group: 'Patient Care' },
+        { id: 'consultation', label: 'Initial Consultation', icon: 'clipboard', group: 'Clinical Workflow' },
     ],
     midwives: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'reports', label: 'OCR Reports', icon: 'chart' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'reports', label: 'OCR Reports', icon: 'chart', group: 'Records & Governance' },
     ],
     BHW: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'new-record', label: 'New Record', icon: 'user-plus' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', group: 'Overview' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'new-record', label: 'New Record', icon: 'user-plus', group: 'Patient Care' },
     ],
 };
 

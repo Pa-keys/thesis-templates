@@ -1401,10 +1401,10 @@ export function DoctorAnalyticsPage({ isOnline }: { isOnline: boolean }) {
                     setActivePeriod(period);
                 }
             } catch (err) {
-                logError('Failed to load doctor analytics', err);
+                logError('Failed to load clinical analytics', err);
                 if (isCurrent) {
                     setError(err instanceof Error && err.message === 'permission_denied'
-                        ? 'Analytics access is limited to authorized Doctor accounts.'
+                        ? 'Analytics access is limited to authorized clinical analytics accounts.'
                         : healthcareErrorMessage('load analytics'));
                 }
             } finally {
@@ -1446,7 +1446,7 @@ export function DoctorAnalyticsPage({ isOnline }: { isOnline: boolean }) {
                 logError('Failed to load barangay drill-down analytics', err);
                 if (isCurrent) {
                     setDrilldownError(err instanceof Error && err.message === 'permission_denied'
-                        ? 'Barangay drill-down is limited to authorized Doctor accounts.'
+                        ? 'Barangay drill-down is limited to authorized clinical analytics accounts.'
                         : 'Unable to load barangay drill-down. Please try again.');
                 }
             } finally {
@@ -1522,7 +1522,7 @@ export function DoctorAnalyticsPage({ isOnline }: { isOnline: boolean }) {
                     <p className="doctor-analytics-period-label">{displayPeriod.from} to {displayPeriod.toExclusive}</p>
                 </div>
                 <div className="doctor-analytics-controls">
-                    <div className="clinical-filter-group" aria-label="Doctor analytics date presets">
+                    <div className="clinical-filter-group" aria-label="Analytics date presets">
                         {PRESETS.map(item => (
                             <button
                                 key={item.key}
@@ -1674,7 +1674,7 @@ export function DoctorAnalyticsPage({ isOnline }: { isOnline: boolean }) {
                 <section aria-label="Detailed records" className="doctor-analytics-section">
                     <SectionHeading title="Detailed Records" subtitle="Secondary aggregate tables for drill-down review." />
                     <SectionPanel title="Details" subtitle="Supporting aggregate tables for closer review.">
-                        <div className="doctor-analytics-tabs" role="tablist" aria-label="Doctor analytics detail">
+                        <div className="doctor-analytics-tabs" role="tablist" aria-label="Analytics detail">
                             {([
                                 ['clinical', 'Diagnoses & Complaints'],
                                 ['laboratory', 'Lab Trends'],

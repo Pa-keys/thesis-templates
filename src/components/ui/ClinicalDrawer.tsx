@@ -42,8 +42,8 @@ export function ClinicalDrawer({
             >
                 <div className="clinical-drawer-header">
                     <div className="min-w-0">
-                        <div id={labelledBy} className="font-semibold text-[var(--text)] text-base">{title}</div>
-                        {subtitle && <div className="text-xs text-[var(--text-secondary)] mt-0.5">{subtitle}</div>}
+                        <div id={labelledBy} className="text-[length:var(--type-card-title-size)] font-semibold leading-[var(--type-card-title-line)] text-[var(--text)]">{title}</div>
+                        {subtitle && <div className="mt-0.5 text-[length:var(--type-caption-size)] leading-[var(--type-caption-line)] text-[var(--text-secondary)]">{subtitle}</div>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {status}

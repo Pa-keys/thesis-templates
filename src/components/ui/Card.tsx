@@ -31,7 +31,7 @@ export function CardBody({ children, className, ...props }: CardProps) {
 
 export function CardTitle({ children, className, ...props }: CardProps) {
     return (
-        <h2 className={cn('text-base font-semibold leading-tight text-[var(--text)]', className)} {...props}>
+        <h2 className={cn('text-[length:var(--type-card-title-size)] font-semibold leading-[var(--type-card-title-line)] tracking-[var(--tracking-normal)] text-[var(--text)]', className)} {...props}>
             {children}
         </h2>
     );

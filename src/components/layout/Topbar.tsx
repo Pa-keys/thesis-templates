@@ -43,8 +43,8 @@ export function Topbar({
                     <Icon name="menu" className="h-5 w-5" />
                 </button>
                 <div className="min-w-0">
-                    <div className="hidden text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] sm:block">{sectionLabel}</div>
-                    <h1 className="truncate text-base font-semibold leading-tight text-[var(--text)]">{title}</h1>
+                    <div className="hidden text-[length:var(--type-category-size)] font-semibold uppercase leading-[var(--type-category-line)] tracking-[var(--tracking-category)] text-[var(--text-secondary)] sm:block">{sectionLabel}</div>
+                    <h1 className="truncate text-[length:var(--type-card-title-size)] font-semibold leading-[var(--type-card-title-line)] tracking-[var(--tracking-normal)] text-[var(--text)]">{title}</h1>
                     {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
                 </div>
             </div>

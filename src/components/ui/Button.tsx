@@ -22,9 +22,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-    sm: 'min-h-8 rounded-md px-3 py-1 text-xs',
-    md: 'min-h-9 rounded-lg px-3 py-2 text-sm',
-    lg: 'min-h-10 rounded-lg px-4 py-2 text-sm',
+    sm: 'min-h-8 rounded-md px-3 py-1 text-[length:var(--type-caption-size)]',
+    md: 'min-h-9 rounded-lg px-3 py-2 text-[length:var(--type-button-size)]',
+    lg: 'min-h-10 rounded-lg px-4 py-2 text-[length:var(--type-button-size)]',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
@@ -45,7 +45,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
             type={type}
             disabled={disabled || isLoading}
             className={cn(
-                'inline-flex max-w-full items-center justify-center gap-2 border font-semibold leading-tight transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-color)] disabled:cursor-not-allowed disabled:border-[var(--disabled-border)] disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)] disabled:shadow-none',
+                'inline-flex max-w-full items-center justify-center gap-2 border font-semibold leading-[var(--type-button-line)] tracking-[var(--tracking-normal)] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-color)] disabled:cursor-not-allowed disabled:border-[var(--disabled-border)] disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)] disabled:shadow-none',
                 sizeClasses[size],
                 variantClasses[variant],
                 className,

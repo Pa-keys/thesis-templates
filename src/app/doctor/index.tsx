@@ -117,12 +117,12 @@ const DoctorDashboard = () => {
     const morbChartInst = useRef<any>(null);
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-        { id: 'analytics', label: 'Analytics', icon: 'chart' },
-        { id: 'records', label: 'Patient Records', icon: 'users' },
-        { id: 'consultation', label: 'Consultation Room', icon: 'clipboard' },
-        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard' },
-        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'home', group: 'Overview' },
+        { id: 'analytics', label: 'Analytics', icon: 'chart', group: 'Insights' },
+        { id: 'records', label: 'Patient Records', icon: 'users', group: 'Patient Care' },
+        { id: 'consultation', label: 'Consultation Room', icon: 'clipboard', group: 'Clinical Workflow' },
+        { id: 'archive-review', label: 'Archive Review', icon: 'clipboard', group: 'Records & Governance' },
+        { id: 'audit-log', label: 'Audit Log', icon: 'clipboard', group: 'Records & Governance' },
     ];
 
     const formatTime = (t: string | null) => {

@@ -15,8 +15,8 @@ export function EmptyState({ icon, title, description, className = '' }: EmptySt
             <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-md border border-[var(--brand-accent-surface)] bg-white text-[var(--brand-active)]">
                 {icon ?? <Icon name="inbox" className="h-5 w-5" />}
             </div>
-            <h3 className="max-w-full break-words text-sm font-semibold leading-snug text-[var(--text)]">{title}</h3>
-            {description && <p className="mt-1 max-w-sm break-words text-xs leading-relaxed text-[var(--text-secondary)]">{description}</p>}
+            <h3 className="max-w-full break-words text-[length:var(--type-card-title-size)] font-semibold leading-[var(--type-card-title-line)] text-[var(--text)]">{title}</h3>
+            {description && <p className="mt-1 max-w-sm break-words text-[length:var(--type-supporting-size)] leading-[var(--type-supporting-line)] text-[var(--text-secondary)]">{description}</p>}
         </div>
     );
 }
