@@ -4,3 +4,5 @@ dist/
 supabase/.temp/
 docs/
 skills-lock.json
+.codex
+.agents
