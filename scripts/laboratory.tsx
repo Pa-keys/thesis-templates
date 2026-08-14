@@ -111,7 +111,6 @@ function LabRequestDetail({
         return 'bg-amber-100 text-amber-700 border-amber-200';
     };
 
-    const tests: { label: string; value: boolean }[] = [
     const tests: { key: string; label: string; value: boolean }[] = [
         { key: 'clinicalMicroscopy', label: 'Clinical Microscopy', value: Boolean(request.is_clinical_microscopy) },
         { key: 'bloodChemistry', label: 'Blood Chemistry', value: Boolean(request.is_blood_chemistry) },
@@ -382,13 +381,13 @@ const LaboratoryDashboard = () => {
         };
     }, []);
 
-    // Background Refresh Interval (1.5s)
+    // Background Refresh Interval (30s)
     useEffect(() => {
         const interval = setInterval(() => {
             if (isOnline) {
                 loadRequests(false);
             }
-        }, 1500);
+        }, 30000);
         return () => clearInterval(interval);
     }, [isOnline]);
 
@@ -486,7 +485,7 @@ const LaboratoryDashboard = () => {
     };
 
     const countTests = (r: LabRequest) =>
-        [r.is_cbc, r.is_cbc_platelet, r.is_hgb_hct, r.is_xray, r.is_ultrasound, r.is_urinalysis, r.is_fecalysis, r.is_sputum, r.is_rbs, r.is_fbs, r.is_uric_acid, r.is_cholesterol]
+        [r.is_clinical_microscopy, r.is_blood_chemistry, r.is_pregnancy_test, r.is_hbsag_screening, r.is_hiv_screening, r.is_parasitology, r.is_dengue_rdt]
             .filter(Boolean).length + (r.others ? 1 : 0);
 
     const filtered = requests.filter(r => {
