@@ -12,18 +12,13 @@ interface LabRequest {
     request_date: string | null;
     lab_no: string | null;
     chief_complaint: string | null;
-    is_cbc: boolean;
-    is_cbc_platelet: boolean;
-    is_hgb_hct: boolean;
-    is_xray: boolean;
-    is_ultrasound: boolean;
-    is_rbs: boolean;
-    is_fbs: boolean;
-    is_uric_acid: boolean;
-    is_cholesterol: boolean;
-    is_urinalysis: boolean;
-    is_fecalysis: boolean;
-    is_sputum: boolean;
+    is_clinical_microscopy: boolean;
+    is_blood_chemistry: boolean;
+    is_pregnancy_test: boolean;
+    is_hbsag_screening: boolean;
+    is_hiv_screening: boolean;
+    is_parasitology: boolean;
+    is_dengue_rdt: boolean;
     others: string | null;
     requested_by: string | null;
     status: string | null;
@@ -117,18 +112,14 @@ function LabRequestDetail({
     };
 
     const tests: { label: string; value: boolean }[] = [
-        { label: 'Complete Blood Count (CBC)', value: request.is_cbc },
-        { label: 'CBC with Platelet Count', value: request.is_cbc_platelet },
-        { label: 'Hemoglobin and Hematocrit', value: request.is_hgb_hct },
-        { label: 'Chest X-Ray (PA View)', value: request.is_xray },
-        { label: 'Ultrasound', value: request.is_ultrasound },
-        { label: 'Urinalysis', value: request.is_urinalysis },
-        { label: 'Fecalysis', value: request.is_fecalysis },
-        { label: 'Sputum', value: request.is_sputum },
-        { label: 'Random Blood Sugar (RBS)', value: request.is_rbs },
-        { label: 'Fasting Blood Sugar (FBS)', value: request.is_fbs },
-        { label: 'Uric Acid', value: request.is_uric_acid },
-        { label: 'Cholesterol', value: request.is_cholesterol },
+    const tests: { key: string; label: string; value: boolean }[] = [
+        { key: 'clinicalMicroscopy', label: 'Clinical Microscopy', value: Boolean(request.is_clinical_microscopy) },
+        { key: 'bloodChemistry', label: 'Blood Chemistry', value: Boolean(request.is_blood_chemistry) },
+        { key: 'pregnancyTest', label: 'Pregnancy Test', value: Boolean(request.is_pregnancy_test) },
+        { key: 'hbsagScreening', label: 'HBsAg Screening', value: Boolean(request.is_hbsag_screening) },
+        { key: 'hivScreening', label: 'HIV Screening', value: Boolean(request.is_hiv_screening) },
+        { key: 'parasitology', label: 'Parasitology', value: Boolean(request.is_parasitology) },
+        { key: 'dengueRdt', label: 'Dengue RDT', value: Boolean(request.is_dengue_rdt) },
     ];
     const activeTests = tests.filter(t => t.value);
 
@@ -251,58 +242,26 @@ function LabRequestDetail({
                             <p className="text-sm text-slate-400 italic">No tests specified.</p>
                         ) : (
                             <div className="space-y-2">
-                                {(() => {
-                                    const routine = activeTests.filter(t =>
-                                        ['Complete Blood Count (CBC)', 'CBC with Platelet Count', 'Hemoglobin and Hematocrit', 'Chest X-Ray (PA View)', 'Ultrasound', 'Urinalysis', 'Fecalysis', 'Sputum'].includes(t.label)
-                                    );
-                                    const fasting = activeTests.filter(t =>
-                                        ['Random Blood Sugar (RBS)', 'Fasting Blood Sugar (FBS)', 'Uric Acid', 'Cholesterol'].includes(t.label)
-                                    );
-                                    return (
-                                        <>
-                                            {routine.length > 0 && (
-                                                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Routine Tests</div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {routine.map(t => (
-                                                            <div key={t.label} className="flex items-center gap-2.5">
-                                                                <div className="w-4 h-4 rounded bg-blue-600 flex items-center justify-center shrink-0">
-                                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                </div>
-                                                                <span className="text-sm text-slate-700">{t.label}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        {activeTests.map(t => (
+                                            <div key={t.key} className="flex items-center gap-2.5">
+                                                <div className="w-4 h-4 rounded bg-blue-600 flex items-center justify-center shrink-0">
+                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                    </svg>
                                                 </div>
-                                            )}
-                                            {fasting.length > 0 && (
-                                                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Fasting Tests <span className="font-normal normal-case">(8–10 hrs)</span></div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {fasting.map(t => (
-                                                            <div key={t.label} className="flex items-center gap-2.5">
-                                                                <div className="w-4 h-4 rounded bg-orange-500 flex items-center justify-center shrink-0">
-                                                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                </div>
-                                                                <span className="text-sm text-slate-700">{t.label}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {request.others && (
-                                                <div className="bg-white border border-slate-200 rounded-xl p-4">
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Others</div>
-                                                    <div className="text-sm text-slate-700">{request.others}</div>
-                                                </div>
-                                            )}
-                                        </>
-                                    );
-                                })()}
+                                                <span className="text-sm font-semibold text-slate-800">{t.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {request.others && (
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Others</div>
+                                        <div className="text-sm text-slate-700">{request.others}</div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
